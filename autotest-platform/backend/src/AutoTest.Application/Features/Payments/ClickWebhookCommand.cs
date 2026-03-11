@@ -130,8 +130,10 @@ public class ClickWebhookCommandHandler(
         if (transaction is null)
             return Err(request, TransactionNotFound, "Transaction not found");
 
+        // Idempotent: return success if already completed (Click retries on non-zero error)
         if (transaction.Status == PaymentStatus.Completed)
-            return Err(request, AlreadyPaid, "Already paid");
+            return new ClickWebhookResult(Ok, "Success", request.ClickTransId,
+                request.MerchantTransId, request.MerchantPrepareId, transaction.Id.ToString());
 
         if (transaction.Status == PaymentStatus.Failed)
             return Err(request, TransactionCancelled, "Transaction cancelled");
