@@ -1,0 +1,6 @@
+@AutoTest.Api_HostAddress = http://localhost:5228
+
+GET {{AutoTest.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

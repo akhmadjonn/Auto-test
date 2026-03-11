@@ -1,0 +1,48 @@
+# Visual Studio / .NET artifacts
+[Bb]in/
+[Oo]bj/
+**/*.dll
+**/*.exe
+**/*.user
+**/*.suo
+*.vs/
+.vscode/
+.nuget/
+project.lock.json
+project.fragment.lock.json
+
+# Visual Studio profiler
+*.psess
+*.vsp
+
+# Build results
+*.log
+
+# Rider
+.idea/
+
+# NuGet
+*.nupkg
+# The packages folder can be ignored because of Package Restore
+**/packages/*
+# except build/, which is used as an MSBuild target.
+!**/packages/build/
+
+# OS
+Thumbs.db
+ehthumbs.db
+
+# dotCover
+*.dotCover
+
+# Azure Pipelines
+.azure-pipelines.yml
+
+# user-specific files
+*.[Cc]ache
+*.[Uu]ser
+
+# Others
+*.bak
+*.swp
+*.tmp

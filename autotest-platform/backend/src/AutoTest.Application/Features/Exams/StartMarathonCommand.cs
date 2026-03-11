@@ -1,0 +1,115 @@
+using AutoTest.Application.Common.Interfaces;
+using AutoTest.Application.Common.Models;
+using AutoTest.Domain.Common.Enums;
+using AutoTest.Domain.Entities;
+using FluentValidation;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+
+namespace AutoTest.Application.Features.Exams;
+
+public record StartMarathonCommand(
+    LicenseCategory LicenseCategory = LicenseCategory.AB,
+    Language Language = Language.UzLatin) : IRequest<ApiResponse<MarathonSessionDto>>;
+
+public record MarathonSessionDto(
+    Guid SessionId,
+    int TotalQuestions,
+    int LastQuestionIndex,
+    List<ExamQuestionDto> Questions);
+
+public class StartMarathonCommandHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    IFileStorageService storage,
+    IDateTimeProvider dateTime,
+    ILogger<StartMarathonCommandHandler> logger) : IRequestHandler<StartMarathonCommand, ApiResponse<MarathonSessionDto>>
+{
+    public async Task<ApiResponse<MarathonSessionDto>> Handle(StartMarathonCommand request, CancellationToken ct)
+    {
+        if (currentUser.UserId is null)
+            return ApiResponse<MarathonSessionDto>.Fail("UNAUTHORIZED", "Not authenticated.");
+
+        var userId = currentUser.UserId.Value;
+        var now = dateTime.UtcNow;
+
+        // Check for existing active marathon — resume it
+        var existing = await db.ExamSessions
+            .Include(s => s.SessionQuestions)
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.Status == ExamStatus.InProgress, ct);
+
+        if (existing is not null && existing.Mode == ExamMode.Marathon)
+        {
+            var resumeLastIndex = existing.SessionQuestions.Count(sq => sq.SelectedAnswerId.HasValue);
+            return ApiResponse<MarathonSessionDto>.Ok(new MarathonSessionDto(
+                existing.Id, existing.SessionQuestions.Count, resumeLastIndex, []));
+        }
+
+        if (existing is not null)
+            return ApiResponse<MarathonSessionDto>.Fail("ACTIVE_SESSION_EXISTS",
+                "You already have an active exam session. Complete or abandon it first.");
+
+        // Load ALL active questions in order
+        var questions = await db.Questions
+            .AsNoTracking()
+            .Include(q => q.AnswerOptions)
+            .Where(q => q.IsActive && (q.LicenseCategory == request.LicenseCategory || q.LicenseCategory == LicenseCategory.Both))
+            .OrderBy(q => q.TicketNumber)
+            .ThenBy(q => q.Id)
+            .ToListAsync(ct);
+
+        if (questions.Count == 0)
+            return ApiResponse<MarathonSessionDto>.Fail("NO_QUESTIONS", "No questions available.");
+
+        var session = new ExamSession
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Status = ExamStatus.InProgress,
+            Mode = ExamMode.Marathon,
+            LicenseCategory = request.LicenseCategory,
+            ExpiresAt = null, // marathon has no timer
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        var sessionQuestions = questions.Select((q, idx) => new SessionQuestion
+        {
+            Id = Guid.NewGuid(),
+            ExamSessionId = session.Id,
+            QuestionId = q.Id,
+            Order = idx + 1,
+            CreatedAt = now,
+            UpdatedAt = now
+        }).ToList();
+
+        session.SessionQuestions = sessionQuestions;
+        db.ExamSessions.Add(session);
+        await db.SaveChangesAsync(ct);
+
+        // Return first batch of questions (up to 20)
+        var firstBatch = questions.Take(20).ToList();
+        var questionDtos = await Task.WhenAll(firstBatch.Select(async (q, idx) =>
+        {
+            var imgUrl = q.ImageUrl is not null ? await storage.GetPresignedUrlAsync(q.ImageUrl, ct) : null;
+            var shuffledOptions = q.AnswerOptions.OrderBy(_ => Random.Shared.Next()).ToList();
+
+            var optDtos = await Task.WhenAll(shuffledOptions.Select(async a =>
+            {
+                var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
+                return new ExamAnswerOptionDto(a.Id, a.Text.Get(request.Language), optImg);
+            }));
+
+            return new ExamQuestionDto(
+                sessionQuestions[idx].Id, q.Id, idx + 1,
+                q.Text.Get(request.Language), imgUrl, [..optDtos]);
+        }));
+
+        logger.LogInformation("Marathon started: session {SessionId} for user {UserId}, {Total} questions",
+            session.Id, userId, questions.Count);
+
+        return ApiResponse<MarathonSessionDto>.Ok(new MarathonSessionDto(
+            session.Id, questions.Count, 0, [..questionDtos]));
+    }
+}

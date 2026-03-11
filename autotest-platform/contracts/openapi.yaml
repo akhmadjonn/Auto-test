@@ -1,0 +1,3068 @@
+openapi: 3.1.0
+info:
+  title: Avtolider API
+  description: Uzbekistan UBDD Driving License Exam Preparation Platform
+  version: 1.0.0
+  contact:
+    name: Avtolider Team
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Development
+  - url: https://api.avtolider.uz/api/v1
+    description: Production
+
+tags:
+  - name: Auth
+  - name: Categories
+  - name: Questions
+  - name: Exams
+  - name: Practice
+  - name: Progress
+  - name: Subscriptions
+  - name: Payments
+  - name: Admin Questions
+  - name: Admin Categories
+  - name: Admin Dashboard
+  - name: Admin Plans
+  - name: Admin Payments
+  - name: Admin Exam Templates
+  - name: Admin Reports
+  - name: Admin Audit Log
+  - name: Admin Settings
+  - name: Admin Users
+  - name: Admin Announcements
+  - name: Announcements
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LocalizedText:
+      type: object
+      required: [uz, uzLatin, ru]
+      properties:
+        uz:
+          type: string
+          description: Uzbek Cyrillic
+        uzLatin:
+          type: string
+          description: Uzbek Latin
+        ru:
+          type: string
+          description: Russian
+
+    PaginationMeta:
+      type: object
+      required: [page, pageSize, totalCount, totalPages]
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    ApiResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        data: {}
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    # ─── Auth ───────────────────────────────────
+    SendOtpRequest:
+      type: object
+      required: [phoneNumber]
+      properties:
+        phoneNumber:
+          type: string
+          pattern: '^998[0-9]{9}$'
+
+    SendOtpResponse:
+      type: object
+      required: [expiresInSeconds, retryAfterSeconds]
+      properties:
+        expiresInSeconds:
+          type: integer
+        retryAfterSeconds:
+          type: integer
+
+    VerifyOtpRequest:
+      type: object
+      required: [phoneNumber, code]
+      properties:
+        phoneNumber:
+          type: string
+          pattern: '^998[0-9]{9}$'
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+
+    AuthResponse:
+      type: object
+      required: [accessToken, refreshToken, expiresAt, user]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresAt:
+          type: integer
+          description: Unix timestamp
+        user:
+          $ref: '#/components/schemas/UserDto'
+
+    TelegramLoginRequest:
+      type: object
+      required: [id, firstName, authDate, hash]
+      properties:
+        id:
+          type: integer
+          format: int64
+        firstName:
+          type: string
+        lastName:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        photoUrl:
+          type: string
+          nullable: true
+        authDate:
+          type: integer
+        hash:
+          type: string
+
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    UserDto:
+      type: object
+      required: [id, phoneNumber, role, subscriptionStatus, preferredLanguage, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        phoneNumber:
+          type: string
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [user, admin]
+        subscriptionStatus:
+          type: string
+          enum: [none, active, expired, cancelled]
+        preferredLanguage:
+          type: string
+          enum: [uz, uzLatin, ru]
+        createdAt:
+          type: string
+          format: date-time
+
+    # ─── Tickets ────────────────────────────────
+    TicketDto:
+      type: object
+      required: [ticketNumber, questionCount]
+      properties:
+        ticketNumber:
+          type: integer
+        questionCount:
+          type: integer
+
+    # ─── Categories ─────────────────────────────
+    CategoryTreeDto:
+      type: object
+      required: [id, name, description, questionCount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        description:
+          $ref: '#/components/schemas/LocalizedText'
+        iconUrl:
+          type: string
+          nullable: true
+        questionCount:
+          type: integer
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryTreeDto'
+
+    # ─── Questions ──────────────────────────────
+    AnswerOptionDto:
+      type: object
+      required: [id, text]
+      properties:
+        id:
+          type: string
+          format: uuid
+        text:
+          $ref: '#/components/schemas/LocalizedText'
+        imageUrl:
+          type: string
+          nullable: true
+
+    QuestionDto:
+      type: object
+      required: [id, text, difficulty, categoryId, categoryName, ticketNumber, answerOptions]
+      properties:
+        id:
+          type: string
+          format: uuid
+        text:
+          $ref: '#/components/schemas/LocalizedText'
+        imageUrl:
+          type: string
+          nullable: true
+        difficulty:
+          type: integer
+          enum: [1, 2, 3]
+        categoryId:
+          type: string
+          format: uuid
+        categoryName:
+          $ref: '#/components/schemas/LocalizedText'
+        ticketNumber:
+          type: integer
+        answerOptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnswerOptionDto'
+
+    # ─── Exams ──────────────────────────────────
+    StartExamRequest:
+      type: object
+      required: [licenseCategory]
+      properties:
+        templateId:
+          type: string
+          format: uuid
+          nullable: true
+        licenseCategory:
+          type: string
+          enum: [AB, CD]
+
+    ExamQuestionDto:
+      type: object
+      required: [id, questionId, order, text, answerOptions]
+      properties:
+        id:
+          type: string
+          format: uuid
+        questionId:
+          type: string
+          format: uuid
+        order:
+          type: integer
+        text:
+          $ref: '#/components/schemas/LocalizedText'
+        imageUrl:
+          type: string
+          nullable: true
+        answerOptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnswerOptionDto'
+
+    ExamSessionDto:
+      type: object
+      required: [id, status, totalQuestions, passingScore, timeLimitMinutes, mode, questions]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [inProgress, completed, expired]
+        totalQuestions:
+          type: integer
+        passingScore:
+          type: integer
+        timeLimitMinutes:
+          type: integer
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Null for marathon mode (no timer)
+        mode:
+          type: string
+          enum: [exam, ticket, marathon]
+        ticketNumber:
+          type: integer
+          nullable: true
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExamQuestionDto'
+
+    SubmitAnswerRequest:
+      type: object
+      required: [sessionQuestionId, selectedAnswerId]
+      properties:
+        sessionQuestionId:
+          type: string
+          format: uuid
+        selectedAnswerId:
+          type: string
+          format: uuid
+        timeSpentSeconds:
+          type: integer
+          nullable: true
+
+    SubmitAnswerResponse:
+      type: object
+      required: [recorded, answeredCount, totalCount]
+      properties:
+        recorded:
+          type: boolean
+        answeredCount:
+          type: integer
+        totalCount:
+          type: integer
+
+    ExamResultQuestionDto:
+      type: object
+      required: [questionId, text, selectedAnswerId, correctAnswerId, isCorrect]
+      properties:
+        questionId:
+          type: string
+          format: uuid
+        text:
+          $ref: '#/components/schemas/LocalizedText'
+        imageUrl:
+          type: string
+          nullable: true
+        selectedAnswerId:
+          type: string
+          format: uuid
+          nullable: true
+        correctAnswerId:
+          type: string
+          format: uuid
+        isCorrect:
+          type: boolean
+        explanation:
+          $ref: '#/components/schemas/LocalizedText'
+        timeSpentSeconds:
+          type: integer
+          nullable: true
+
+    ExamResultDto:
+      type: object
+      required: [examId, score, correctAnswers, totalQuestions, passingScore, passed, timeTakenSeconds, completedAt, questions]
+      properties:
+        examId:
+          type: string
+          format: uuid
+        score:
+          type: integer
+        correctAnswers:
+          type: integer
+        totalQuestions:
+          type: integer
+        passingScore:
+          type: integer
+        passed:
+          type: boolean
+        timeTakenSeconds:
+          type: integer
+        completedAt:
+          type: string
+          format: date-time
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExamResultQuestionDto'
+
+    ExamHistoryItemDto:
+      type: object
+      required: [examId, score, totalQuestions, passed, completedAt, timeTakenSeconds]
+      properties:
+        examId:
+          type: string
+          format: uuid
+        score:
+          type: integer
+        totalQuestions:
+          type: integer
+        passed:
+          type: boolean
+        completedAt:
+          type: string
+          format: date-time
+        timeTakenSeconds:
+          type: integer
+
+    # ─── Practice ───────────────────────────────
+    PracticeQuestionDto:
+      type: object
+      required: [id, text, categoryName, difficulty, answerOptions, leitnerBox]
+      properties:
+        id:
+          type: string
+          format: uuid
+        text:
+          $ref: '#/components/schemas/LocalizedText'
+        imageUrl:
+          type: string
+          nullable: true
+        categoryName:
+          $ref: '#/components/schemas/LocalizedText'
+        difficulty:
+          type: integer
+          enum: [1, 2, 3]
+        answerOptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnswerOptionDto'
+        leitnerBox:
+          type: integer
+          minimum: 0
+          maximum: 5
+
+    PracticeSessionDto:
+      type: object
+      required: [questions, dueReviewCount]
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeQuestionDto'
+        dueReviewCount:
+          type: integer
+
+    SubmitPracticeAnswerRequest:
+      type: object
+      required: [questionId, selectedAnswerId]
+      properties:
+        questionId:
+          type: string
+          format: uuid
+        selectedAnswerId:
+          type: string
+          format: uuid
+        timeSpentSeconds:
+          type: integer
+          nullable: true
+
+    PracticeAnswerResultDto:
+      type: object
+      required: [isCorrect, correctAnswerId, explanation, newLeitnerBox, nextReviewDate]
+      properties:
+        isCorrect:
+          type: boolean
+        correctAnswerId:
+          type: string
+          format: uuid
+        explanation:
+          $ref: '#/components/schemas/LocalizedText'
+        newLeitnerBox:
+          type: integer
+        nextReviewDate:
+          type: string
+          format: date-time
+
+    # ─── Progress ───────────────────────────────
+    AccuracyDataPoint:
+      type: object
+      required: [date, accuracy]
+      properties:
+        date:
+          type: string
+          format: date
+        accuracy:
+          type: number
+          format: double
+
+    RecentExamSummary:
+      type: object
+      required: [examId, score, passed, completedAt]
+      properties:
+        examId:
+          type: string
+          format: uuid
+        score:
+          type: integer
+        passed:
+          type: boolean
+        completedAt:
+          type: string
+          format: date-time
+
+    DashboardDto:
+      type: object
+      required: [totalQuestionsPracticed, totalExamsTaken, averageExamScore, currentStreak, dueForReview, questionsAnsweredToday, examPassRate, recentExams, accuracyOverTime]
+      properties:
+        totalQuestionsPracticed:
+          type: integer
+        totalExamsTaken:
+          type: integer
+        averageExamScore:
+          type: number
+          format: double
+        currentStreak:
+          type: integer
+        dueForReview:
+          type: integer
+        questionsAnsweredToday:
+          type: integer
+        examPassRate:
+          type: number
+          format: double
+        recentExams:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentExamSummary'
+        accuracyOverTime:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccuracyDataPoint'
+
+    CategoryPerformanceDto:
+      type: object
+      required: [categoryId, categoryName, totalAttempts, correctAttempts, accuracy, questionsInCategory, questionsPracticed]
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+        categoryName:
+          $ref: '#/components/schemas/LocalizedText'
+        totalAttempts:
+          type: integer
+        correctAttempts:
+          type: integer
+        accuracy:
+          type: number
+          format: double
+        questionsInCategory:
+          type: integer
+        questionsPracticed:
+          type: integer
+
+    # ─── Subscriptions ──────────────────────────
+    PlanDto:
+      type: object
+      required: [id, name, description, priceInTiyins, durationDays, features]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        description:
+          $ref: '#/components/schemas/LocalizedText'
+        priceInTiyins:
+          type: integer
+          format: int64
+        durationDays:
+          type: integer
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalizedText'
+
+    CreateSubscriptionRequest:
+      type: object
+      required: [planId, paymentProvider]
+      properties:
+        planId:
+          type: string
+          format: uuid
+        paymentProvider:
+          type: string
+          enum: [payme, click]
+
+    SubscriptionResultDto:
+      type: object
+      required: [subscriptionId, paymentUrl, status]
+      properties:
+        subscriptionId:
+          type: string
+          format: uuid
+        paymentUrl:
+          type: string
+        status:
+          type: string
+          enum: [none, active, expired, cancelled]
+
+    SubscriptionStatusDto:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [none, active, expired, cancelled]
+        planName:
+          $ref: '#/components/schemas/LocalizedText'
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        autoRenew:
+          type: boolean
+
+    # ─── Admin ──────────────────────────────────
+    AdminDashboardDto:
+      type: object
+      required: [totalUsers, activeSubscriptions, totalQuestions, activeQuestions, totalExamsToday, revenueThisMonth]
+      properties:
+        totalUsers:
+          type: integer
+        activeSubscriptions:
+          type: integer
+        totalQuestions:
+          type: integer
+        activeQuestions:
+          type: integer
+        totalExamsToday:
+          type: integer
+        revenueThisMonth:
+          type: integer
+          format: int64
+          description: Amount in tiyins
+
+    BulkImportResultDto:
+      type: object
+      required: [totalRows, imported, updated, skipped, errors]
+      properties:
+        totalRows:
+          type: integer
+        imported:
+          type: integer
+        updated:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            required: [row, column, error]
+            properties:
+              row:
+                type: integer
+              column:
+                type: string
+              error:
+                type: string
+
+    AdminPlanDto:
+      type: object
+      required: [id, name, description, priceInTiyins, durationDays, features, isActive, subscriberCount, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        description:
+          $ref: '#/components/schemas/LocalizedText'
+        priceInTiyins:
+          type: integer
+          format: int64
+        durationDays:
+          type: integer
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalizedText'
+        isActive:
+          type: boolean
+        subscriberCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    CreatePlanRequest:
+      type: object
+      required: [name, description, priceInTiyins, durationDays, features, isActive]
+      properties:
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        description:
+          $ref: '#/components/schemas/LocalizedText'
+        priceInTiyins:
+          type: integer
+          format: int64
+        durationDays:
+          type: integer
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalizedText'
+        isActive:
+          type: boolean
+
+    UpdatePlanRequest:
+      type: object
+      required: [name, description, priceInTiyins, durationDays, features, isActive]
+      properties:
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        description:
+          $ref: '#/components/schemas/LocalizedText'
+        priceInTiyins:
+          type: integer
+          format: int64
+        durationDays:
+          type: integer
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalizedText'
+        isActive:
+          type: boolean
+
+    PaymentTransactionDto:
+      type: object
+      required: [id, userId, userName, userPhone, provider, amount, currency, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        userName:
+          type: string
+          nullable: true
+        userPhone:
+          type: string
+        provider:
+          type: string
+          enum: [payme, click]
+        providerTransactionId:
+          type: string
+          nullable: true
+        amount:
+          type: integer
+          format: int64
+          description: Amount in tiyins
+        currency:
+          type: string
+          default: UZS
+        status:
+          type: string
+          enum: [pending, completed, failed, refunded]
+        planName:
+          $ref: '#/components/schemas/LocalizedText'
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ProviderRevenue:
+      type: object
+      required: [provider, revenue, count]
+      properties:
+        provider:
+          type: string
+        revenue:
+          type: integer
+          format: int64
+        count:
+          type: integer
+
+    PeriodRevenue:
+      type: object
+      required: [date, revenue, count]
+      properties:
+        date:
+          type: string
+        revenue:
+          type: integer
+          format: int64
+        count:
+          type: integer
+
+    PlanRevenue:
+      type: object
+      required: [planName, revenue, count]
+      properties:
+        planName:
+          type: string
+        revenue:
+          type: integer
+          format: int64
+        count:
+          type: integer
+
+    RevenueReportDto:
+      type: object
+      required: [totalRevenue, transactionCount, averageTransaction, byProvider, byPeriod, byPlan]
+      properties:
+        totalRevenue:
+          type: integer
+          format: int64
+          description: Amount in tiyins
+        transactionCount:
+          type: integer
+        averageTransaction:
+          type: integer
+          format: int64
+        byProvider:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderRevenue'
+        byPeriod:
+          type: array
+          items:
+            $ref: '#/components/schemas/PeriodRevenue'
+        byPlan:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanRevenue'
+
+    ExamPoolRuleDto:
+      type: object
+      required: [categoryId, questionCount]
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+        categoryName:
+          $ref: '#/components/schemas/LocalizedText'
+        difficulty:
+          type: integer
+          enum: [1, 2, 3]
+          nullable: true
+        questionCount:
+          type: integer
+
+    ExamTemplateDto:
+      type: object
+      required: [id, title, totalQuestions, passingScore, timeLimitMinutes, isActive, poolRules]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          $ref: '#/components/schemas/LocalizedText'
+        totalQuestions:
+          type: integer
+        passingScore:
+          type: integer
+        timeLimitMinutes:
+          type: integer
+        isActive:
+          type: boolean
+        poolRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExamPoolRuleDto'
+
+    CreateExamTemplateRequest:
+      type: object
+      required: [title, totalQuestions, passingScore, timeLimitMinutes, isActive, poolRules]
+      properties:
+        title:
+          $ref: '#/components/schemas/LocalizedText'
+        totalQuestions:
+          type: integer
+        passingScore:
+          type: integer
+        timeLimitMinutes:
+          type: integer
+        isActive:
+          type: boolean
+        poolRules:
+          type: array
+          items:
+            type: object
+            required: [categoryId, questionCount]
+            properties:
+              categoryId:
+                type: string
+                format: uuid
+              difficulty:
+                type: integer
+                enum: [1, 2, 3]
+                nullable: true
+              questionCount:
+                type: integer
+
+    AuditLogDto:
+      type: object
+      required: [id, userId, userName, action, entityType, entityId, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        userName:
+          type: string
+          nullable: true
+        action:
+          type: string
+          enum: [Create, Update, Delete, StatusChange, Login, Export]
+        entityType:
+          type: string
+          enum: [Question, Plan, User, ExamTemplate, Setting, Announcement]
+        entityId:
+          type: string
+          nullable: true
+        changes:
+          type: array
+          items:
+            type: object
+            required: [field]
+            properties:
+              field:
+                type: string
+              oldValue:
+                type: string
+                nullable: true
+              newValue:
+                type: string
+                nullable: true
+        ipAddress:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    SystemSettingDto:
+      type: object
+      required: [key, value, description]
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+        description:
+          type: string
+          nullable: true
+        updatedBy:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    UserDetailDto:
+      type: object
+      required: [id, phoneNumber, role, createdAt, stats]
+      properties:
+        id:
+          type: string
+          format: uuid
+        phoneNumber:
+          type: string
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [user, admin]
+        authProvider:
+          type: string
+          enum: [phone, telegram]
+          nullable: true
+        preferredLanguage:
+          type: string
+          enum: [uz, uzLatin, ru]
+        createdAt:
+          type: string
+          format: date-time
+        lastActiveAt:
+          type: string
+          format: date-time
+          nullable: true
+        subscription:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [none, active, expired, cancelled]
+            planName:
+              $ref: '#/components/schemas/LocalizedText'
+            expiresAt:
+              type: string
+              format: date-time
+              nullable: true
+            autoRenew:
+              type: boolean
+        stats:
+          type: object
+          required: [totalExams, avgScore, passRate, totalQuestionsPracticed, currentStreak, dueForReview]
+          properties:
+            totalExams:
+              type: integer
+            avgScore:
+              type: number
+              format: double
+            passRate:
+              type: number
+              format: double
+            totalQuestionsPracticed:
+              type: integer
+            currentStreak:
+              type: integer
+            dueForReview:
+              type: integer
+        recentExams:
+          type: array
+          items:
+            type: object
+            required: [examId, score, passed, date]
+            properties:
+              examId:
+                type: string
+                format: uuid
+              score:
+                type: integer
+              passed:
+                type: boolean
+              date:
+                type: string
+                format: date-time
+        payments:
+          type: array
+          items:
+            type: object
+            required: [id, amount, provider, status, date]
+            properties:
+              id:
+                type: string
+                format: uuid
+              amount:
+                type: integer
+                format: int64
+              provider:
+                type: string
+                enum: [payme, click]
+              status:
+                type: string
+                enum: [pending, completed, failed, refunded]
+              date:
+                type: string
+                format: date-time
+
+    AnnouncementDto:
+      type: object
+      required: [id, title, content, type, isActive, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          $ref: '#/components/schemas/LocalizedText'
+        content:
+          $ref: '#/components/schemas/LocalizedText'
+        type:
+          type: string
+          enum: [info, warning, important]
+        isActive:
+          type: boolean
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdBy:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateAnnouncementRequest:
+      type: object
+      required: [title, content, type, isActive]
+      properties:
+        title:
+          $ref: '#/components/schemas/LocalizedText'
+        content:
+          $ref: '#/components/schemas/LocalizedText'
+        type:
+          type: string
+          enum: [info, warning, important]
+        isActive:
+          type: boolean
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+
+paths:
+  # ═══════════ AUTH ═══════════
+  /auth/send-otp:
+    post:
+      tags: [Auth]
+      operationId: sendOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendOtpRequest'
+      responses:
+        '200':
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SendOtpResponse'
+        '429':
+          description: Rate limited
+
+  /auth/verify-otp:
+    post:
+      tags: [Auth]
+      operationId: verifyOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyOtpRequest'
+      responses:
+        '200':
+          description: OTP verified
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+
+  /auth/telegram-login:
+    post:
+      tags: [Auth]
+      operationId: telegramLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramLoginRequest'
+      responses:
+        '200':
+          description: Telegram login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+
+  /auth/refresh-token:
+    post:
+      tags: [Auth]
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserDto'
+
+  # ═══════════ CATEGORIES ═══════════
+  /categories:
+    get:
+      tags: [Categories]
+      operationId: getCategories
+      parameters:
+        - name: lang
+          in: query
+          schema:
+            type: string
+            enum: [uz, uzLatin, ru]
+      responses:
+        '200':
+          description: Category tree
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CategoryTreeDto'
+
+  # ═══════════ QUESTIONS ═══════════
+  /questions:
+    get:
+      tags: [Questions]
+      operationId: getQuestions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: difficulty
+          in: query
+          schema:
+            type: integer
+            enum: [1, 2, 3]
+        - name: ticketNumber
+          in: query
+          schema:
+            type: integer
+        - name: lang
+          in: query
+          schema:
+            type: string
+            enum: [uz, uzLatin, ru]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated questions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/QuestionDto'
+                          meta:
+                            $ref: '#/components/schemas/PaginationMeta'
+
+  # ═══════════ TICKETS ═══════════
+  /questions/tickets:
+    get:
+      tags: [Questions]
+      operationId: getTicketsList
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of tickets with question counts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TicketDto'
+
+  /questions/tickets/{number}:
+    get:
+      tags: [Questions]
+      operationId: getQuestionsByTicket
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: number
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Questions for a specific ticket
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/QuestionDto'
+
+  # ═══════════ EXAMS ═══════════
+  /exams/start:
+    post:
+      tags: [Exams]
+      operationId: startExam
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartExamRequest'
+      responses:
+        '200':
+          description: Exam started
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExamSessionDto'
+
+  /exams/start-ticket:
+    post:
+      tags: [Exams]
+      operationId: startTicketExam
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ticketNumber]
+              properties:
+                ticketNumber:
+                  type: integer
+      responses:
+        '200':
+          description: Ticket exam started
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExamSessionDto'
+
+  /exams/start-marathon:
+    post:
+      tags: [Exams]
+      operationId: startMarathon
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+      responses:
+        '200':
+          description: Marathon started (all questions, no timer)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExamSessionDto'
+
+  /exams/{examId}/answer:
+    post:
+      tags: [Exams]
+      operationId: submitExamAnswer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitAnswerRequest'
+      responses:
+        '200':
+          description: Answer recorded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SubmitAnswerResponse'
+
+  /exams/{examId}/complete:
+    post:
+      tags: [Exams]
+      operationId: completeExam
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Exam completed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExamResultDto'
+
+  /exams/{examId}:
+    get:
+      tags: [Exams]
+      operationId: getExamSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Exam session
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExamSessionDto'
+
+  /exams/history:
+    get:
+      tags: [Exams]
+      operationId: getExamHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Exam history
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ExamHistoryItemDto'
+                          meta:
+                            $ref: '#/components/schemas/PaginationMeta'
+
+  # ═══════════ PRACTICE ═══════════
+  /practice/session:
+    get:
+      tags: [Practice]
+      operationId: getPracticeSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: batchSize
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Practice session
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PracticeSessionDto'
+
+  /practice/answer:
+    post:
+      tags: [Practice]
+      operationId: submitPracticeAnswer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitPracticeAnswerRequest'
+      responses:
+        '200':
+          description: Practice answer result
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PracticeAnswerResultDto'
+
+  # ═══════════ PROGRESS ═══════════
+  /progress/dashboard:
+    get:
+      tags: [Progress]
+      operationId: getUserDashboard
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User dashboard
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DashboardDto'
+
+  /progress/categories:
+    get:
+      tags: [Progress]
+      operationId: getCategoryPerformance
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Category performance
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CategoryPerformanceDto'
+
+  # ═══════════ SUBSCRIPTIONS ═══════════
+  /subscriptions/plans:
+    get:
+      tags: [Subscriptions]
+      operationId: getPlans
+      responses:
+        '200':
+          description: Available plans
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PlanDto'
+
+  /subscriptions:
+    post:
+      tags: [Subscriptions]
+      operationId: createSubscription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubscriptionRequest'
+      responses:
+        '200':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SubscriptionResultDto'
+
+  /subscriptions/status:
+    get:
+      tags: [Subscriptions]
+      operationId: getSubscriptionStatus
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Subscription status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SubscriptionStatusDto'
+
+  /subscriptions/cancel:
+    delete:
+      tags: [Subscriptions]
+      operationId: cancelSubscription
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Subscription cancelled
+
+  # ═══════════ PAYMENTS ═══════════
+  /payments/payme/webhook:
+    post:
+      tags: [Payments]
+      operationId: paymeWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: JSON-RPC 2.0 request
+      responses:
+        '200':
+          description: JSON-RPC 2.0 response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /payments/click/webhook:
+    post:
+      tags: [Payments]
+      operationId: clickWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Click webhook request
+      responses:
+        '200':
+          description: Click webhook response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ═══════════ ANNOUNCEMENTS (User-facing) ═══════════
+  /announcements/active:
+    get:
+      tags: [Announcements]
+      operationId: getActiveAnnouncements
+      responses:
+        '200':
+          description: Active announcements
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AnnouncementDto'
+
+  # ═══════════ ADMIN — QUESTIONS ═══════════
+  /admin/questions:
+    get:
+      tags: [Admin Questions]
+      operationId: adminGetQuestions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+        - name: difficulty
+          in: query
+          schema:
+            type: integer
+            enum: [1, 2, 3]
+        - name: ticketNumber
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated admin questions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/QuestionDto'
+                          meta:
+                            $ref: '#/components/schemas/PaginationMeta'
+    post:
+      tags: [Admin Questions]
+      operationId: adminCreateQuestion
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [categoryId, textUz, textUzLatin, textRu, difficulty, ticketNumber, licenseCategory]
+              properties:
+                categoryId:
+                  type: string
+                  format: uuid
+                textUz:
+                  type: string
+                  description: Uzbek Cyrillic
+                textUzLatin:
+                  type: string
+                  description: Uzbek Latin
+                textRu:
+                  type: string
+                  description: Russian
+                explanationUz:
+                  type: string
+                explanationUzLatin:
+                  type: string
+                explanationRu:
+                  type: string
+                difficulty:
+                  type: integer
+                  enum: [1, 2, 3]
+                ticketNumber:
+                  type: integer
+                licenseCategory:
+                  type: string
+                  enum: [AB, CD, BOTH]
+                isActive:
+                  type: boolean
+                  default: true
+                questionImage:
+                  type: string
+                  format: binary
+                options[0].textUz:
+                  type: string
+                options[0].textUzLatin:
+                  type: string
+                options[0].textRu:
+                  type: string
+                options[0].isCorrect:
+                  type: boolean
+                options[0].image:
+                  type: string
+                  format: binary
+                options[1].textUz:
+                  type: string
+                options[1].textUzLatin:
+                  type: string
+                options[1].textRu:
+                  type: string
+                options[1].isCorrect:
+                  type: boolean
+                options[1].image:
+                  type: string
+                  format: binary
+                options[2].textUz:
+                  type: string
+                options[2].textUzLatin:
+                  type: string
+                options[2].textRu:
+                  type: string
+                options[2].isCorrect:
+                  type: boolean
+                options[2].image:
+                  type: string
+                  format: binary
+                options[3].textUz:
+                  type: string
+                options[3].textUzLatin:
+                  type: string
+                options[3].textRu:
+                  type: string
+                options[3].isCorrect:
+                  type: boolean
+                options[3].image:
+                  type: string
+                  format: binary
+                options[4].textUz:
+                  type: string
+                options[4].textUzLatin:
+                  type: string
+                options[4].textRu:
+                  type: string
+                options[4].isCorrect:
+                  type: boolean
+                options[4].image:
+                  type: string
+                  format: binary
+                options[5].textUz:
+                  type: string
+                options[5].textUzLatin:
+                  type: string
+                options[5].textRu:
+                  type: string
+                options[5].isCorrect:
+                  type: boolean
+                options[5].image:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Question created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/QuestionDto'
+
+  /admin/questions/{id}:
+    put:
+      tags: [Admin Questions]
+      operationId: adminUpdateQuestion
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                categoryId:
+                  type: string
+                  format: uuid
+                textUz:
+                  type: string
+                  description: Uzbek Cyrillic
+                textUzLatin:
+                  type: string
+                  description: Uzbek Latin
+                textRu:
+                  type: string
+                  description: Russian
+                explanationUz:
+                  type: string
+                explanationUzLatin:
+                  type: string
+                explanationRu:
+                  type: string
+                difficulty:
+                  type: integer
+                  enum: [1, 2, 3]
+                ticketNumber:
+                  type: integer
+                licenseCategory:
+                  type: string
+                  enum: [AB, CD, BOTH]
+                isActive:
+                  type: boolean
+                keepQuestionImage:
+                  type: boolean
+                questionImage:
+                  type: string
+                  format: binary
+                keepOptionImages[0]:
+                  type: boolean
+                keepOptionImages[1]:
+                  type: boolean
+                keepOptionImages[2]:
+                  type: boolean
+                keepOptionImages[3]:
+                  type: boolean
+                keepOptionImages[4]:
+                  type: boolean
+                keepOptionImages[5]:
+                  type: boolean
+                options[0].textUz:
+                  type: string
+                options[0].textUzLatin:
+                  type: string
+                options[0].textRu:
+                  type: string
+                options[0].isCorrect:
+                  type: boolean
+                options[0].image:
+                  type: string
+                  format: binary
+                options[1].textUz:
+                  type: string
+                options[1].textUzLatin:
+                  type: string
+                options[1].textRu:
+                  type: string
+                options[1].isCorrect:
+                  type: boolean
+                options[1].image:
+                  type: string
+                  format: binary
+                options[2].textUz:
+                  type: string
+                options[2].textUzLatin:
+                  type: string
+                options[2].textRu:
+                  type: string
+                options[2].isCorrect:
+                  type: boolean
+                options[2].image:
+                  type: string
+                  format: binary
+                options[3].textUz:
+                  type: string
+                options[3].textUzLatin:
+                  type: string
+                options[3].textRu:
+                  type: string
+                options[3].isCorrect:
+                  type: boolean
+                options[3].image:
+                  type: string
+                  format: binary
+                options[4].textUz:
+                  type: string
+                options[4].textUzLatin:
+                  type: string
+                options[4].textRu:
+                  type: string
+                options[4].isCorrect:
+                  type: boolean
+                options[4].image:
+                  type: string
+                  format: binary
+                options[5].textUz:
+                  type: string
+                options[5].textUzLatin:
+                  type: string
+                options[5].textRu:
+                  type: string
+                options[5].isCorrect:
+                  type: boolean
+                options[5].image:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Question updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/QuestionDto'
+    delete:
+      tags: [Admin Questions]
+      operationId: adminSoftDeleteQuestion
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Question soft-deleted
+
+  /admin/questions/{id}/permanent:
+    delete:
+      tags: [Admin Questions]
+      operationId: adminPermanentDeleteQuestion
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: confirm
+          in: query
+          required: true
+          schema:
+            type: boolean
+      responses:
+        '204':
+          description: Question permanently deleted
+
+  /admin/questions/{id}/status:
+    patch:
+      tags: [Admin Questions]
+      operationId: adminToggleQuestionStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isActive]
+              properties:
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Status toggled
+
+  /admin/questions/bulk-status:
+    patch:
+      tags: [Admin Questions]
+      operationId: adminBulkToggleStatus
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [questionIds, isActive]
+              properties:
+                questionIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Bulk status updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          updatedCount:
+                            type: integer
+
+  /admin/questions/bulk-import:
+    post:
+      tags: [Admin Questions]
+      operationId: adminBulkImportQuestions
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [excelFile]
+              properties:
+                excelFile:
+                  type: string
+                  format: binary
+                imagesZip:
+                  type: string
+                  format: binary
+                duplicateStrategy:
+                  type: string
+                  enum: [skip, update, error]
+                  default: skip
+      responses:
+        '200':
+          description: Import result
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/BulkImportResultDto'
+
+  /admin/questions/export-template:
+    get:
+      tags: [Admin Questions]
+      operationId: adminExportTemplate
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Excel template
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  # ═══════════ ADMIN — DASHBOARD ═══════════
+  /admin/dashboard:
+    get:
+      tags: [Admin Dashboard]
+      operationId: adminGetDashboard
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Admin dashboard
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AdminDashboardDto'
+
+  # ═══════════ ADMIN — PLANS ═══════════
+  /admin/plans:
+    get:
+      tags: [Admin Plans]
+      operationId: adminGetPlans
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Admin plans list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AdminPlanDto'
+    post:
+      tags: [Admin Plans]
+      operationId: adminCreatePlan
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlanRequest'
+      responses:
+        '201':
+          description: Plan created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AdminPlanDto'
+
+  /admin/plans/{id}:
+    put:
+      tags: [Admin Plans]
+      operationId: adminUpdatePlan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePlanRequest'
+      responses:
+        '200':
+          description: Plan updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AdminPlanDto'
+
+  /admin/plans/{id}/status:
+    patch:
+      tags: [Admin Plans]
+      operationId: adminTogglePlanStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isActive]
+              properties:
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Plan status toggled
+
+  # ═══════════ ADMIN — PAYMENTS ═══════════
+  /admin/payments/transactions:
+    get:
+      tags: [Admin Payments]
+      operationId: adminGetTransactions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: provider
+          in: query
+          schema:
+            type: string
+            enum: [payme, click]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, completed, failed, refunded]
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Paginated transactions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/PaymentTransactionDto'
+                          meta:
+                            $ref: '#/components/schemas/PaginationMeta'
+
+  /admin/payments/revenue:
+    get:
+      tags: [Admin Payments]
+      operationId: adminGetRevenue
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, monthly]
+            default: daily
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Revenue report
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RevenueReportDto'
+
+  /admin/payments/revenue/export:
+    get:
+      tags: [Admin Payments]
+      operationId: adminExportRevenue
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Revenue export Excel
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  # ═══════════ ADMIN — EXAM TEMPLATES ═══════════
+  /admin/exam-templates:
+    get:
+      tags: [Admin Exam Templates]
+      operationId: adminGetExamTemplates
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Exam templates
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ExamTemplateDto'
+    post:
+      tags: [Admin Exam Templates]
+      operationId: adminCreateExamTemplate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExamTemplateRequest'
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExamTemplateDto'
+
+  /admin/exam-templates/{id}:
+    put:
+      tags: [Admin Exam Templates]
+      operationId: adminUpdateExamTemplate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExamTemplateRequest'
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExamTemplateDto'
+
+  # ═══════════ ADMIN — REPORTS ═══════════
+  /admin/reports/users/export:
+    get:
+      tags: [Admin Reports]
+      operationId: adminExportUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: subscriptionStatus
+          in: query
+          schema:
+            type: string
+            enum: [none, active, expired, cancelled]
+      responses:
+        '200':
+          description: Users export Excel
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  /admin/reports/exams/export:
+    get:
+      tags: [Admin Reports]
+      operationId: adminExportExams
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Exams export Excel
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  /admin/reports/questions/export:
+    get:
+      tags: [Admin Reports]
+      operationId: adminExportQuestions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Questions export Excel
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  # ═══════════ ADMIN — AUDIT LOG ═══════════
+  /admin/audit-logs:
+    get:
+      tags: [Admin Audit Log]
+      operationId: adminGetAuditLogs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [Create, Update, Delete, StatusChange, Login, Export]
+        - name: entityType
+          in: query
+          schema:
+            type: string
+            enum: [Question, Plan, User, ExamTemplate, Setting, Announcement]
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Paginated audit logs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AuditLogDto'
+                          meta:
+                            $ref: '#/components/schemas/PaginationMeta'
+
+  # ═══════════ ADMIN — SETTINGS ═══════════
+  /admin/settings:
+    get:
+      tags: [Admin Settings]
+      operationId: adminGetSettings
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: System settings
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SystemSettingDto'
+
+  /admin/settings/{key}:
+    put:
+      tags: [Admin Settings]
+      operationId: adminUpdateSetting
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value:
+                  type: string
+      responses:
+        '200':
+          description: Setting updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SystemSettingDto'
+
+  # ═══════════ ADMIN — USERS ═══════════
+  /admin/users:
+    get:
+      tags: [Admin Users]
+      operationId: adminGetUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: subscriptionStatus
+          in: query
+          schema:
+            type: string
+            enum: [none, active, expired, cancelled]
+      responses:
+        '200':
+          description: Paginated users
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/UserDto'
+                          meta:
+                            $ref: '#/components/schemas/PaginationMeta'
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin Users]
+      operationId: adminGetUserDetail
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserDetailDto'
+
+  /admin/users/{id}/role:
+    patch:
+      tags: [Admin Users]
+      operationId: adminUpdateUserRole
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [user, admin]
+      responses:
+        '200':
+          description: Role updated
+
+  /admin/users/{id}/status:
+    patch:
+      tags: [Admin Users]
+      operationId: adminUpdateUserStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isBlocked]
+              properties:
+                isBlocked:
+                  type: boolean
+      responses:
+        '200':
+          description: User status updated
+
+  # ═══════════ ADMIN — ANNOUNCEMENTS ═══════════
+  /admin/announcements:
+    get:
+      tags: [Admin Announcements]
+      operationId: adminGetAnnouncements
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Paginated announcements
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AnnouncementDto'
+                          meta:
+                            $ref: '#/components/schemas/PaginationMeta'
+    post:
+      tags: [Admin Announcements]
+      operationId: adminCreateAnnouncement
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAnnouncementRequest'
+      responses:
+        '201':
+          description: Announcement created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AnnouncementDto'
+
+  /admin/announcements/{id}:
+    put:
+      tags: [Admin Announcements]
+      operationId: adminUpdateAnnouncement
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAnnouncementRequest'
+      responses:
+        '200':
+          description: Announcement updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AnnouncementDto'
+    delete:
+      tags: [Admin Announcements]
+      operationId: adminDeleteAnnouncement
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Announcement deleted

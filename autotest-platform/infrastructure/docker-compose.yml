@@ -1,0 +1,273 @@
+version: "3.8"
+
+services:
+  traefik:
+    image: traefik:v3.0
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role == manager
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    volumes:
+      - traefik-certs:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    configs:
+      - source: traefik-config
+        target: /etc/traefik/traefik.yml
+    networks:
+      - app-public
+
+  api:
+    image: autotest-api:latest
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.api.rule=Host(`api.autotest.uz`)"
+        - "traefik.http.routers.api.entrypoints=websecure"
+        - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+        - "traefik.http.services.api.loadbalancer.server.port=8080"
+        - "traefik.http.services.api.loadbalancer.healthcheck.path=/health"
+        - "traefik.http.services.api.loadbalancer.healthcheck.interval=10s"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=autotest;Username=autotest;Password_File=/run/secrets/db-password
+      - Redis__Configuration=redis:6379,password_file=/run/secrets/redis-password
+      - Minio__Endpoint=minio:9000
+    secrets:
+      - db-password
+      - redis-password
+      - jwt-secret
+      - eskiz-email
+      - eskiz-password
+      - payme-merchant-id
+      - payme-merchant-key
+      - click-merchant-id
+      - click-secret-key
+      - telegram-bot-token
+      - minio-access-key
+      - minio-secret-key
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - app-public
+      - app-internal
+
+  frontend:
+    image: autotest-frontend:latest
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.frontend.rule=Host(`autotest.uz`)"
+        - "traefik.http.routers.frontend.entrypoints=websecure"
+        - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+        - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+    networks:
+      - app-public
+
+  postgres:
+    image: postgres:16-alpine
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+    environment:
+      POSTGRES_DB: autotest
+      POSTGRES_USER: autotest
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
+    secrets:
+      - db-password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autotest -d autotest"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - app-internal
+
+  redis:
+    image: redis:7-alpine
+    command: >
+      sh -c '
+        if [ -f /run/secrets/redis-password ]; then
+          REDIS_PASS=$$(cat /run/secrets/redis-password);
+          redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass "$$REDIS_PASS";
+        else
+          redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru;
+        fi
+      '
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+    secrets:
+      - redis-password
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-internal
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+    environment:
+      MINIO_ROOT_USER_FILE: /run/secrets/minio-access-key
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio-secret-key
+    secrets:
+      - minio-access-key
+      - minio-secret-key
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - app-internal
+
+  pg-backup:
+    image: kartoza/pg-backup:16
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DBNAME: autotest
+      POSTGRES_USER: autotest
+      POSTGRES_PASS_FILE: /run/secrets/db-password
+      CRON_SCHEDULE: "0 2 * * *"
+      REMOVE_BEFORE: "14"
+      STORAGE_BACKEND: FILE
+      DBNAME_OVERRIDES: autotest
+    secrets:
+      - db-password
+    volumes:
+      - backups:/backups
+    depends_on:
+      - postgres
+    networks:
+      - app-internal
+
+networks:
+  app-public:
+    driver: overlay
+  app-internal:
+    driver: overlay
+    internal: true
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  backups:
+  traefik-certs:
+
+secrets:
+  db-password:
+    external: true
+  redis-password:
+    external: true
+  jwt-secret:
+    external: true
+  eskiz-email:
+    external: true
+  eskiz-password:
+    external: true
+  payme-merchant-id:
+    external: true
+  payme-merchant-key:
+    external: true
+  click-merchant-id:
+    external: true
+  click-secret-key:
+    external: true
+  telegram-bot-token:
+    external: true
+  minio-access-key:
+    external: true
+  minio-secret-key:
+    external: true
+
+configs:
+  traefik-config:
+    file: ./traefik/traefik.yml
