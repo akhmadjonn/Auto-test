@@ -55,7 +55,8 @@
       "Bash(npx shadcn@latest add card input dialog progress badge tabs dropdown-menu avatar separator skeleton toast alert sheet -y)",
       "Bash(npx shadcn@latest add sonner -y)",
       "Bash(docker compose -f infrastructure/docker-compose.yml config)",
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "Bash(dotnet build --no-restore -v q)"
     ]
   }
 }
