@@ -4,12 +4,14 @@ using AutoTest.Domain.Common.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/admin/categories")]
 [Authorize(Roles = "Admin")]
+[EnableRateLimiting("authenticated")]
 public class AdminCategoriesController(IMediator mediator) : ControllerBase
 {
     [HttpGet]

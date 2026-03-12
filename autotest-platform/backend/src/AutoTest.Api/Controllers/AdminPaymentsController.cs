@@ -3,12 +3,14 @@ using AutoTest.Domain.Common.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/admin/payments")]
 [Authorize(Roles = "Admin")]
+[EnableRateLimiting("authenticated")]
 public class AdminPaymentsController(IMediator mediator) : ControllerBase
 {
     [HttpGet("transactions")]

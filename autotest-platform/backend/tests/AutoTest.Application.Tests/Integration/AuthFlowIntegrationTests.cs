@@ -22,6 +22,13 @@ public class AuthFlowIntegrationTests
     private readonly FakeDateTimeProvider _dateTime = new() { UtcNow = DateTimeOffset.UtcNow };
     private readonly FakeCurrentUser _currentUser = new();
 
+    public AuthFlowIntegrationTests()
+    {
+        // Default: allow verify attempts (brute-force protection passes)
+        _otpService.CheckAndIncrementVerifyAttemptsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((true, 5));
+    }
+
     [Fact]
     public async Task FullAuthFlow_SendOtp_VerifyOtp_GetCurrentUser()
     {

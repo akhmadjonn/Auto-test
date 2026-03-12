@@ -4,12 +4,14 @@ using System.Text.Json;
 using AutoTest.Application.Features.Payments;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
 [Route("api/payments")]
+[EnableRateLimiting("anonymous")]
 public class PaymentsController(ISender mediator, IConfiguration configuration) : ControllerBase
 {
     [HttpPost("initiate")]

@@ -6,4 +6,6 @@ public interface IOtpService
     Task<bool> VerifyAsync(string phoneNumber, string code, CancellationToken ct = default);
     Task<bool> IsRateLimitedAsync(string phoneNumber, CancellationToken ct = default);
     Task<bool> IsOnCooldownAsync(string phoneNumber, CancellationToken ct = default);
+    Task<(bool Allowed, int Remaining)> CheckAndIncrementVerifyAttemptsAsync(string phoneNumber, CancellationToken ct = default);
+    Task ResetVerifyAttemptsAsync(string phoneNumber, CancellationToken ct = default);
 }

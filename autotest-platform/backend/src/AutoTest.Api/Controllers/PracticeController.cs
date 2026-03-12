@@ -3,12 +3,14 @@ using AutoTest.Domain.Common.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
 [Route("api/practice")]
 [Authorize]
+[EnableRateLimiting("authenticated")]
 public class PracticeController(ISender mediator) : ControllerBase
 {
     [HttpGet("session")]

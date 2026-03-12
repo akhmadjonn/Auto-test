@@ -56,7 +56,11 @@
       "Bash(npx shadcn@latest add sonner -y)",
       "Bash(docker compose -f infrastructure/docker-compose.yml config)",
       "Bash(npm run build)",
-      "Bash(dotnet build --no-restore -v q)"
+      "Bash(dotnet build --no-restore -v q)",
+      "Bash(ls *.cs)",
+      "Bash(python3 /tmp/apply_rate_limiting.py)",
+      "Bash(dotnet build --no-restore)",
+      "Bash(dotnet test --no-build --verbosity normal)"
     ]
   }
 }

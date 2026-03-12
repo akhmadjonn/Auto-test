@@ -2,12 +2,14 @@ using AutoTest.Application.Features.Admin;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/admin/reports")]
 [Authorize(Roles = "Admin")]
+[EnableRateLimiting("authenticated")]
 public class AdminReportsController(IMediator mediator) : ControllerBase
 {
     [HttpGet("users/export")]

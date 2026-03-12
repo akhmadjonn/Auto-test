@@ -3,12 +3,14 @@ using AutoTest.Application.Features.Admin;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/admin/plans")]
 [Authorize(Roles = "Admin")]
+[EnableRateLimiting("authenticated")]
 public class AdminPlansController(IMediator mediator) : ControllerBase
 {
     [HttpGet]

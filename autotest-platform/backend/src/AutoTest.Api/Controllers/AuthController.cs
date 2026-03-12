@@ -2,11 +2,13 @@ using AutoTest.Application.Features.Auth;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/auth")]
+[EnableRateLimiting("anonymous")]
 public class AuthController(IMediator mediator) : ControllerBase
 {
     [HttpPost("otp/send")]
