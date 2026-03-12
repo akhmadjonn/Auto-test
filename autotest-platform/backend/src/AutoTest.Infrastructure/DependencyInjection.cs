@@ -70,8 +70,27 @@ public static class DependencyInjection
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddHttpContextAccessor();
 
+        // Practice / Spaced Repetition
+        services.AddScoped<IPracticeService, LeitnerBoxService>();
+
+        // Payment providers
+        services.AddHttpClient("Payme", client =>
+        {
+            client.BaseAddress = new Uri(configuration["PaymeSettings:BaseUrl"] ?? "https://checkout.paycom.uz/api");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddHttpClient("Click", client =>
+        {
+            client.BaseAddress = new Uri(configuration["ClickSettings:BaseUrl"] ?? "https://api.click.uz/v2/merchant");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddScoped<PaymePaymentProvider>();
+        services.AddScoped<ClickPaymentProvider>();
+        services.AddScoped<IPaymentProviderFactory, PaymentProviderFactory>();
+
         // Background services
         services.AddHostedService<SessionExpirationService>();
+        services.AddHostedService<SubscriptionBillingService>();
 
         return services;
     }
