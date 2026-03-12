@@ -3,12 +3,14 @@ using AutoTest.Domain.Common.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/questions")]
 [Authorize]
+[EnableRateLimiting("authenticated")]
 public class QuestionsController(IMediator mediator) : ControllerBase
 {
     [HttpGet("category/{categoryId}")]

@@ -4,14 +4,24 @@ using System.Text.Json;
 using AutoTest.Application.Features.Payments;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
 [Route("api/payments")]
+[EnableRateLimiting("anonymous")]
 public class PaymentsController(ISender mediator, IConfiguration configuration) : ControllerBase
 {
+    [HttpPost("initiate")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> Initiate([FromBody] InitiatePaymentCommand command, CancellationToken ct)
+    {
+        var result = await mediator.Send(command, ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     // Payme JSON-RPC webhook — authenticated via Basic auth (merchant_id:secret_key)
     [HttpPost("payme/webhook")]
     public async Task<IActionResult> PaymeWebhook(CancellationToken ct)

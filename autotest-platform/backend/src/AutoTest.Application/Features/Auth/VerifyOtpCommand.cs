@@ -31,9 +31,17 @@ public class VerifyOtpCommandHandler(
 {
     public async Task<ApiResponse<AuthTokensDto>> Handle(VerifyOtpCommand request, CancellationToken ct)
     {
+        // Brute-force protection: limit verify attempts per phone number
+        var (allowed, remaining) = await otpService.CheckAndIncrementVerifyAttemptsAsync(request.PhoneNumber, ct);
+        if (!allowed)
+            return ApiResponse<AuthTokensDto>.Fail("OTP_TOO_MANY_ATTEMPTS", "Too many attempts. Try again in 15 minutes.");
+
         var valid = await otpService.VerifyAsync(request.PhoneNumber, request.Code, ct);
         if (!valid)
-            return ApiResponse<AuthTokensDto>.Fail("OTP_INVALID", "Invalid or expired OTP code.");
+            return ApiResponse<AuthTokensDto>.Fail("OTP_INVALID", $"Invalid or expired OTP code. {remaining} attempts remaining.");
+
+        // Successful verify — reset attempt counter
+        await otpService.ResetVerifyAttemptsAsync(request.PhoneNumber, ct);
 
         var isNew = false;
         var user = await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber, ct);

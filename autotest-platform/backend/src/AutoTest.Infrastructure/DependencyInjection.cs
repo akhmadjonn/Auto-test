@@ -29,6 +29,7 @@ public static class DependencyInjection
         var redisConnection = configuration.GetConnectionString("Redis") ?? "localhost:6379";
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnection));
         services.AddScoped<ICacheService, RedisCacheService>();
+        services.AddSingleton<IDistributedLockService, RedisDistributedLockService>();
 
         // MinIO (S3-compatible)
         var minioEndpoint = configuration["MinioSettings:Endpoint"] ?? "localhost:9000";
@@ -65,6 +66,10 @@ public static class DependencyInjection
         services.AddScoped<IQuestionImportService, ExcelQuestionParser>();
         services.AddScoped<IExcelExportService, ExcelExportService>();
 
+        // Admin services
+        services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddSingleton<ISystemSettingsService, SystemSettingsService>();
+
         // Core services
         services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
@@ -72,6 +77,9 @@ public static class DependencyInjection
 
         // Practice / Spaced Repetition
         services.AddScoped<IPracticeService, LeitnerBoxService>();
+
+        // Transliteration
+        services.AddSingleton<ITransliterationService, UzbekTransliterator>();
 
         // Payment providers
         services.AddHttpClient("Payme", client =>
@@ -91,6 +99,7 @@ public static class DependencyInjection
         // Background services
         services.AddHostedService<SessionExpirationService>();
         services.AddHostedService<SubscriptionBillingService>();
+        services.AddHostedService<EskizTokenRefreshService>();
 
         return services;
     }

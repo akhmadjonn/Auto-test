@@ -14,6 +14,8 @@ public class OtpService(IConnectionMultiplexer redis, IConfiguration configurati
     private int RateLimitCount => int.TryParse(configuration["OtpSettings:RateLimitCount"], out var v) ? v : 3;
     private int RateLimitWindowMinutes => int.TryParse(configuration["OtpSettings:RateLimitWindowMinutes"], out var v) ? v : 15;
     private int CooldownSeconds => int.TryParse(configuration["OtpSettings:CooldownSeconds"], out var v) ? v : 60;
+    private int VerifyMaxAttempts => int.TryParse(configuration["OtpSettings:VerifyMaxAttempts"], out var v) ? v : 5;
+    private int VerifyWindowMinutes => int.TryParse(configuration["OtpSettings:VerifyWindowMinutes"], out var v) ? v : 15;
     private string HmacSecret => configuration["OtpSettings:HmacSecret"] ?? "otp-hmac-secret-for-dev";
 
     public async Task<string> GenerateAndStoreAsync(string phoneNumber, CancellationToken ct = default)
@@ -69,7 +71,23 @@ public class OtpService(IConnectionMultiplexer redis, IConfiguration configurati
         return Convert.ToHexString(HMACSHA256.HashData(key, data));
     }
 
+    public async Task<(bool Allowed, int Remaining)> CheckAndIncrementVerifyAttemptsAsync(
+        string phoneNumber, CancellationToken ct = default)
+    {
+        var key = VerifyAttemptsKey(phoneNumber);
+        var count = await _db.StringIncrementAsync(key);
+        if (count == 1)
+            await _db.KeyExpireAsync(key, TimeSpan.FromMinutes(VerifyWindowMinutes));
+
+        var max = VerifyMaxAttempts;
+        return (count <= max, (int)Math.Max(0, max - count));
+    }
+
+    public async Task ResetVerifyAttemptsAsync(string phoneNumber, CancellationToken ct = default) =>
+        await _db.KeyDeleteAsync(VerifyAttemptsKey(phoneNumber));
+
     private static string OtpKey(string phone) => $"avtolider:otp:{phone}";
     private static string RateLimitKey(string phone) => $"avtolider:otp:ratelimit:{phone}";
     private static string CooldownKey(string phone) => $"avtolider:otp:cooldown:{phone}";
+    private static string VerifyAttemptsKey(string phone) => $"avtolider:otp:verify_attempts:{phone}";
 }

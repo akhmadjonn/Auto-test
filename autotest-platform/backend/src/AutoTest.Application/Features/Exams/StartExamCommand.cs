@@ -44,6 +44,7 @@ public class StartExamCommandHandler(
     ICurrentUser currentUser,
     IFileStorageService storage,
     ICacheService cache,
+    IDistributedLockService lockService,
     IDateTimeProvider dateTime,
     ILogger<StartExamCommandHandler> logger) : IRequestHandler<StartExamCommand, ApiResponse<ExamSessionDto>>
 {
@@ -53,6 +54,12 @@ public class StartExamCommandHandler(
             return ApiResponse<ExamSessionDto>.Fail("UNAUTHORIZED", "Not authenticated.");
 
         var userId = currentUser.UserId.Value;
+
+        // Distributed lock prevents concurrent exam starts for the same user
+        await using var lockHandle = await lockService.TryAcquireAsync(
+            $"avtolider:lock:exam:{userId}", TimeSpan.FromSeconds(10), ct);
+        if (lockHandle is null)
+            return ApiResponse<ExamSessionDto>.Fail("CONCURRENT_REQUEST", "Another exam start is in progress.");
 
         // Check free daily limit vs subscription
         var now = dateTime.UtcNow;

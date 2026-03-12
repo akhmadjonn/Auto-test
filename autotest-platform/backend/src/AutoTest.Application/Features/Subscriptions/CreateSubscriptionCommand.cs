@@ -35,6 +35,7 @@ public class CreateSubscriptionCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     IPaymentProviderFactory paymentFactory,
+    IDistributedLockService lockService,
     IDateTimeProvider dateTime,
     ILogger<CreateSubscriptionCommandHandler> logger)
     : IRequestHandler<CreateSubscriptionCommand, ApiResponse<CreateSubscriptionResultDto>>
@@ -47,6 +48,12 @@ public class CreateSubscriptionCommandHandler(
 
         var userId = currentUser.UserId.Value;
         var now = dateTime.UtcNow;
+
+        // Distributed lock prevents double subscription creation for same user
+        await using var lockHandle = await lockService.TryAcquireAsync(
+            $"avtolider:lock:subscription:{userId}", TimeSpan.FromSeconds(30), ct);
+        if (lockHandle is null)
+            return ApiResponse<CreateSubscriptionResultDto>.Fail("CONCURRENT_REQUEST", "Subscription creation in progress.");
 
         var plan = await db.SubscriptionPlans
             .FirstOrDefaultAsync(p => p.Id == request.PlanId && p.IsActive, ct);
