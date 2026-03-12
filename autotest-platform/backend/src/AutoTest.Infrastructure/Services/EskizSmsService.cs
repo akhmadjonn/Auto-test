@@ -83,6 +83,27 @@ public class EskizSmsService(
         return _cachedToken;
     }
 
+    // Called by EskizTokenRefreshService to proactively refresh token before expiry
+    public async Task RefreshTokenIfNeededAsync(CancellationToken ct)
+    {
+        if (_cachedToken is not null && DateTime.UtcNow.AddHours(24) < _tokenExpiresAt)
+            return;
+
+        await _lock.WaitAsync(ct);
+        try
+        {
+            if (_cachedToken is not null && DateTime.UtcNow.AddHours(24) < _tokenExpiresAt)
+                return;
+
+            await FetchTokenAsync(ct);
+            logger.LogInformation("Eskiz token proactively refreshed");
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     private record EskizLoginResponse(EskizTokenData? Data);
     private record EskizTokenData(string Token);
 }

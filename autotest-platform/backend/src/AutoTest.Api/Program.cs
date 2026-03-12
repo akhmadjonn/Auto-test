@@ -113,6 +113,10 @@ using (var scope = app.Services.CreateScope())
         var minio = (AutoTest.Infrastructure.Services.MinioFileStorageService)
             scope.ServiceProvider.GetRequiredService<AutoTest.Application.Common.Interfaces.IFileStorageService>();
         await minio.EnsureBucketExistsAsync();
+
+        // Warm up system settings into memory + Redis
+        var settingsService = app.Services.GetRequiredService<AutoTest.Application.Common.Interfaces.ISystemSettingsService>();
+        await settingsService.ReloadFromDatabaseAsync();
     }
     catch (Exception ex)
     {

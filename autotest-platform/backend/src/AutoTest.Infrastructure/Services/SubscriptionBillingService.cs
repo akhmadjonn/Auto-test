@@ -5,13 +5,17 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 
 namespace AutoTest.Infrastructure.Services;
 
 public class SubscriptionBillingService(
     IServiceScopeFactory scopeFactory,
+    IConnectionMultiplexer redis,
     ILogger<SubscriptionBillingService> logger) : BackgroundService
 {
+    private const string BillingLockKey = "avtolider:lock:billing-cycle";
+    private const string ReleaseLuaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Stagger startup to avoid thundering herd
@@ -34,6 +38,28 @@ public class SubscriptionBillingService(
     }
 
     private async Task RunBillingCycleAsync(CancellationToken ct)
+    {
+        // Distributed lock: only one instance processes billing across all pods
+        var redisDb = redis.GetDatabase();
+        var lockValue = Guid.NewGuid().ToString("N");
+        var acquired = await redisDb.StringSetAsync(BillingLockKey, lockValue, TimeSpan.FromHours(1), When.NotExists);
+        if (!acquired)
+        {
+            logger.LogInformation("Billing cycle: skipped — another instance holds the lock");
+            return;
+        }
+
+        try
+        {
+            await RunBillingCycleInternalAsync(ct);
+        }
+        finally
+        {
+            await redisDb.ScriptEvaluateAsync(ReleaseLuaScript, [(RedisKey)BillingLockKey], [(RedisValue)lockValue]);
+        }
+    }
+
+    private async Task RunBillingCycleInternalAsync(CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();

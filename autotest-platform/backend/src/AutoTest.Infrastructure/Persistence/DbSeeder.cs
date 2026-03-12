@@ -99,6 +99,14 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             new() { Key = "otp_cooldown_seconds", Value = "60", Description = "Cooldown between OTP sends in seconds" },
             new() { Key = "max_active_sessions", Value = "1", Description = "Max concurrent active exam sessions per user" },
             new() { Key = "presigned_url_hours", Value = "1", Description = "MinIO presigned URL expiry in hours" },
+            new() { Key = "payme_enabled", Value = "true", Description = "Enable Payme payment provider" },
+            new() { Key = "click_enabled", Value = "true", Description = "Enable Click payment provider" },
+            new() { Key = "sms_provider", Value = "eskiz", Description = "SMS provider (eskiz)" },
+            new() { Key = "maintenance_mode", Value = "false", Description = "Enable maintenance mode" },
+            new() { Key = "min_app_version", Value = "1.0.0", Description = "Minimum supported app version" },
+            new() { Key = "max_exams_per_day", Value = "50", Description = "Max exam sessions per day per user" },
+            new() { Key = "otp_expiry_seconds", Value = "300", Description = "OTP expiry in seconds" },
+            new() { Key = "otp_max_attempts", Value = "3", Description = "Max OTP verification attempts" },
         };
 
         db.SystemSettings.AddRange(settings);

@@ -26,6 +26,7 @@ public class SubmitAnswerCommandValidator : AbstractValidator<SubmitAnswerComman
 public class SubmitAnswerCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
+    IDistributedLockService lockService,
     IDateTimeProvider dateTime,
     ILogger<SubmitAnswerCommandHandler> logger) : IRequestHandler<SubmitAnswerCommand, ApiResponse>
 {
@@ -52,6 +53,12 @@ public class SubmitAnswerCommandHandler(
             await db.SaveChangesAsync(ct);
             return ApiResponse.Fail("SESSION_EXPIRED", "Exam session has expired.");
         }
+
+        // Distributed lock prevents double-submit on the same question
+        await using var lockHandle = await lockService.TryAcquireAsync(
+            $"avtolider:lock:answer:{request.SessionQuestionId}", TimeSpan.FromSeconds(5), ct);
+        if (lockHandle is null)
+            return ApiResponse.Fail("CONCURRENT_REQUEST", "Answer submission in progress.");
 
         var sq = await db.SessionQuestions
             .Include(sq => sq.Question)

@@ -15,6 +15,8 @@
     <PackageReference Include="MediatR" Version="12.4.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.11" />
     <PackageReference Include="xunit" Version="2.5.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
   </ItemGroup>
@@ -25,6 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AutoTest.Application\AutoTest.Application.csproj" />
+    <ProjectReference Include="..\..\src\AutoTest.Infrastructure\AutoTest.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

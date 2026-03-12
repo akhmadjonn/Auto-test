@@ -23,6 +23,15 @@ public class PracticeController(ISender mediator) : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpGet("due-count")]
+    public async Task<IActionResult> GetDueCount(
+        [FromQuery] Guid? categoryId,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetDueReviewCountQuery(categoryId), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("answer")]
     public async Task<IActionResult> SubmitAnswer(
         [FromBody] SubmitPracticeAnswerCommand command,

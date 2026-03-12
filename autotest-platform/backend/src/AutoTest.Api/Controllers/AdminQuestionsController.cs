@@ -1,4 +1,5 @@
 using AutoTest.Application.Features.Questions;
+using AutoTest.Domain.Common.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,34 @@ namespace AutoTest.Api.Controllers;
 [Authorize(Roles = "Admin")]
 public class AdminQuestionsController(IMediator mediator) : ControllerBase
 {
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetQuestionByIdQuery(id), ct);
+        return result.Success ? Ok(result) : NotFound(result);
+    }
+
+    [HttpGet("by-category/{categoryId}")]
+    public async Task<IActionResult> GetByCategory(Guid categoryId, [FromQuery] Language language = Language.UzLatin, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetQuestionsByCategoryQuery(categoryId, language, page, pageSize), ct);
+        return Ok(result);
+    }
+
+    [HttpGet("by-ticket/{ticketNumber:int}")]
+    public async Task<IActionResult> GetByTicket(int ticketNumber, [FromQuery] Language language = Language.UzLatin, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetQuestionsByTicketQuery(ticketNumber, language), ct);
+        return Ok(result);
+    }
+
+    [HttpGet("tickets")]
+    public async Task<IActionResult> GetTickets([FromQuery] LicenseCategory? licenseCategory, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetTicketsListQuery(licenseCategory), ct);
+        return Ok(result);
+    }
+
     [HttpPost]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Create([FromForm] CreateQuestionFormModel form, CancellationToken ct)
