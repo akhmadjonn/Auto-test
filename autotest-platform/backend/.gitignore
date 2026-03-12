@@ -49,3 +49,4 @@ ehthumbs.db
 
 # Local development overrides — contain machine-specific credentials
 **/appsettings.Development.json
+**/appsettings.local.json
