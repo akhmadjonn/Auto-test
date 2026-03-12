@@ -46,3 +46,6 @@ ehthumbs.db
 *.bak
 *.swp
 *.tmp
+
+# Local development overrides — contain machine-specific credentials
+**/appsettings.Development.json

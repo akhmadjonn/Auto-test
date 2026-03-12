@@ -136,11 +136,22 @@ public class CreateQuestionFormModel
     public List<AnswerOptionFormItem>? AnswerOptions { get; set; }
 }
 
-public class UpdateQuestionFormModel : CreateQuestionFormModel
+public class UpdateQuestionFormModel
 {
+    public string TextUz { get; set; } = null!;
+    public string TextUzLatin { get; set; } = null!;
+    public string TextRu { get; set; } = null!;
+    public string ExplanationUz { get; set; } = null!;
+    public string ExplanationUzLatin { get; set; } = null!;
+    public string ExplanationRu { get; set; } = null!;
+    public AutoTest.Domain.Common.Enums.Difficulty Difficulty { get; set; }
+    public int TicketNumber { get; set; }
+    public AutoTest.Domain.Common.Enums.LicenseCategory LicenseCategory { get; set; }
+    public bool IsActive { get; set; }
     public bool RemoveQuestionImage { get; set; }
     public IFormFile? NewQuestionImage { get; set; }
-    public new List<UpdateAnswerOptionFormItem>? AnswerOptions { get; set; }
+    public List<IFormFile>? AnswerOptionImages { get; set; }
+    public List<UpdateAnswerOptionFormItem>? AnswerOptions { get; set; }
 }
 
 public class AnswerOptionFormItem
