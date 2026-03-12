@@ -50,3 +50,6 @@ ehthumbs.db
 # Local development overrides — contain machine-specific credentials
 **/appsettings.Development.json
 **/appsettings.local.json
+
+# Migration tool images — keep locally, not in git (19MB binary blobs)
+tools/Avtolider.DataMigration/data/apk/img/
