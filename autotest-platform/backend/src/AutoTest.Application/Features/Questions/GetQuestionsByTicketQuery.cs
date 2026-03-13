@@ -26,7 +26,7 @@ public class GetQuestionsByTicketQueryHandler(
         var dtos = await Task.WhenAll(questions.Select(async q =>
         {
             var imageUrl = q.ImageUrl is not null ? await storage.GetPresignedUrlAsync(q.ImageUrl, ct) : null;
-            var thumbUrl = q.ThumbnailUrl is not null ? await storage.GetThumbnailUrlAsync(q.ThumbnailUrl, ct) : null;
+            var thumbUrl = q.ThumbnailUrl is not null ? await storage.GetPresignedUrlAsync(q.ThumbnailUrl, ct) : null;
 
             var options = await Task.WhenAll(q.AnswerOptions.Select(async a =>
             {

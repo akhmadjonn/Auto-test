@@ -28,7 +28,7 @@ public static class DependencyInjection
         // Redis
         var redisConnection = configuration.GetConnectionString("Redis") ?? "localhost:6379";
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnection));
-        services.AddScoped<ICacheService, RedisCacheService>();
+        services.AddSingleton<ICacheService, RedisCacheService>();
         services.AddSingleton<IDistributedLockService, RedisDistributedLockService>();
 
         // MinIO (S3-compatible)
@@ -44,7 +44,8 @@ public static class DependencyInjection
             {
                 ServiceURL = $"{(useSSL ? "https" : "http")}://{minioEndpoint}",
                 ForcePathStyle = true,
-                AuthenticationRegion = "us-east-1"
+                AuthenticationRegion = "us-east-1",
+                UseHttp = !useSSL
             }));
         services.AddScoped<IFileStorageService, MinioFileStorageService>();
 
