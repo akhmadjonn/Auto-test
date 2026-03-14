@@ -54,4 +54,12 @@ public class AuthController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new GetCurrentUserQuery(), ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
+
+    [HttpPatch("profile")]
+    [Authorize]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileCommand command, CancellationToken ct)
+    {
+        var result = await mediator.Send(command, ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 }

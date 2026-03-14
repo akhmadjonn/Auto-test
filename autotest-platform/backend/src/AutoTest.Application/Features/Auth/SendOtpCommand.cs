@@ -26,34 +26,36 @@ public class SendOtpCommandHandler(
 {
     public async Task<ApiResponse> Handle(SendOtpCommand request, CancellationToken ct)
     {
-        if (await otpService.IsRateLimitedAsync(request.PhoneNumber, ct))
+        var phone = request.PhoneNumber.TrimStart('+');
+
+        if (await otpService.IsRateLimitedAsync(phone, ct))
         {
-            logger.LogWarning("OTP rate limit hit for {Phone}", request.PhoneNumber);
+            logger.LogWarning("OTP rate limit hit for {Phone}", phone);
             return ApiResponse.Fail("OTP_RATE_LIMITED", "Too many OTP requests. Please wait 15 minutes.");
         }
 
-        if (await otpService.IsOnCooldownAsync(request.PhoneNumber, ct))
+        if (await otpService.IsOnCooldownAsync(phone, ct))
             return ApiResponse.Fail("OTP_COOLDOWN", "Please wait 60 seconds before requesting another OTP.");
 
-        var code = await otpService.GenerateAndStoreAsync(request.PhoneNumber, ct);
+        var code = await otpService.GenerateAndStoreAsync(phone, ct);
 
         // Skip SMS for whitelisted test numbers
-        if (otpService.IsWhitelistedNumber(request.PhoneNumber))
+        if (otpService.IsWhitelistedNumber(phone))
         {
-            logger.LogInformation("Whitelist OTP for {Phone} | Code: {Code}", request.PhoneNumber, code);
+            logger.LogInformation("Whitelist OTP for {Phone} | Code: {Code}", phone, code);
             return ApiResponse.Ok();
         }
 
         try
         {
-            await smsService.SendAsync(request.PhoneNumber, $"Avtolider: your code is {code}. Valid for 5 minutes.", ct);
+            await smsService.SendAsync(phone, $"Avtolider: your code is {code}. Valid for 5 minutes.", ct);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "SMS send failed for {Phone} — OTP still valid in Redis", request.PhoneNumber);
+            logger.LogWarning(ex, "SMS send failed for {Phone} — OTP still valid in Redis", phone);
         }
 
-        logger.LogInformation("OTP sent to {Phone} | DEV code: {Code}", request.PhoneNumber, code);
+        logger.LogInformation("OTP sent to {Phone} | DEV code: {Code}", phone, code);
         return ApiResponse.Ok();
     }
 }

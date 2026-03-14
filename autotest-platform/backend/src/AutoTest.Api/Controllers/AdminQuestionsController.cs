@@ -13,6 +13,21 @@ namespace AutoTest.Api.Controllers;
 [EnableRateLimiting("authenticated")]
 public class AdminQuestionsController(IMediator mediator) : ControllerBase
 {
+    [HttpGet]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        [FromQuery] Difficulty? difficulty = null,
+        [FromQuery] bool? isActive = null,
+        [FromQuery] int? ticketNumber = null,
+        [FromQuery] Guid? categoryId = null,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetAdminQuestionsQuery(page, pageSize, search, difficulty, isActive, ticketNumber, categoryId), ct);
+        return Ok(result);
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct = default)
     {
