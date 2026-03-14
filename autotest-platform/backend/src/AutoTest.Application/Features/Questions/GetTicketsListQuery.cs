@@ -20,11 +20,15 @@ public class GetTicketsListQueryHandler(IApplicationDbContext db) : IRequestHand
             query = query.Where(q => q.LicenseCategory == request.LicenseCategory.Value
                 || q.LicenseCategory == Domain.Common.Enums.LicenseCategory.Both);
 
-        var tickets = await query
+        var groups = await query
             .GroupBy(q => q.TicketNumber)
-            .Select(g => new TicketSummaryDto(g.Key, g.Count()))
+            .Select(g => new { TicketNumber = g.Key, QuestionCount = g.Count() })
             .OrderBy(t => t.TicketNumber)
             .ToListAsync(ct);
+
+        var tickets = groups
+            .Select(g => new TicketSummaryDto(g.TicketNumber, g.QuestionCount))
+            .ToList();
 
         return ApiResponse<List<TicketSummaryDto>>.Ok(tickets);
     }

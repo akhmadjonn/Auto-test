@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
-[Route("api/progress")]
+[Route("api/v1/progress")]
 [Authorize]
 [EnableRateLimiting("authenticated")]
 public class ProgressController(ISender mediator) : ControllerBase

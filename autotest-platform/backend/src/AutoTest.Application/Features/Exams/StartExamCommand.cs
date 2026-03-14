@@ -1,6 +1,7 @@
 using AutoTest.Application.Common.Interfaces;
 using AutoTest.Application.Common.Models;
 using AutoTest.Domain.Common.Enums;
+using AutoTest.Domain.Common.ValueObjects;
 using AutoTest.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -10,32 +11,36 @@ using Microsoft.Extensions.Logging;
 namespace AutoTest.Application.Features.Exams;
 
 public record StartExamCommand(
-    Guid ExamTemplateId,
+    Guid? ExamTemplateId,
     LicenseCategory LicenseCategory,
     Language Language = Language.UzLatin) : IRequest<ApiResponse<ExamSessionDto>>;
 
 public record ExamSessionDto(
-    Guid SessionId,
+    Guid Id,
+    string Status,
     int TotalQuestions,
+    int PassingScore,
     int TimeLimitMinutes,
     DateTimeOffset? ExpiresAt,
+    string Mode,
+    int? TicketNumber,
     List<ExamQuestionDto> Questions);
 
 public record ExamQuestionDto(
-    Guid SessionQuestionId,
+    Guid Id,
     Guid QuestionId,
     int Order,
-    string Text,
+    LocalizedText Text,
     string? ImageUrl,
-    List<ExamAnswerOptionDto> Options);
+    List<ExamAnswerOptionDto> AnswerOptions,
+    Guid? SelectedAnswerId = null);
 
-public record ExamAnswerOptionDto(Guid Id, string Text, string? ImageUrl);
+public record ExamAnswerOptionDto(Guid Id, LocalizedText Text, string? ImageUrl);
 
 public class StartExamCommandValidator : AbstractValidator<StartExamCommand>
 {
     public StartExamCommandValidator()
     {
-        RuleFor(x => x.ExamTemplateId).NotEmpty();
     }
 }
 
@@ -78,7 +83,7 @@ public class StartExamCommandHandler(
             var limitSetting = await cache.GetAsync<string>("avtolider:settings:free_daily_exam_limit", ct);
             var limit = int.TryParse(limitSetting, out var l) ? l : 3;
 
-            var today = now.Date;
+            var today = new DateTimeOffset(now.Date, TimeSpan.Zero);
             var todayExams = await db.ExamSessions
                 .CountAsync(s => s.UserId == userId
                     && s.Mode == ExamMode.Exam
@@ -90,9 +95,10 @@ public class StartExamCommandHandler(
         }
 
         // Load template + pool rules
-        var template = await db.ExamTemplates
-            .Include(t => t.PoolRules)
-            .FirstOrDefaultAsync(t => t.Id == request.ExamTemplateId && t.IsActive, ct);
+        var templateQuery = db.ExamTemplates.Include(t => t.PoolRules).Where(t => t.IsActive);
+        var template = request.ExamTemplateId is { } tid && tid != Guid.Empty
+            ? await templateQuery.FirstOrDefaultAsync(t => t.Id == tid, ct)
+            : await templateQuery.FirstOrDefaultAsync(ct);
 
         if (template is null)
             return ApiResponse<ExamSessionDto>.Fail("TEMPLATE_NOT_FOUND", "Exam template not found.");
@@ -164,14 +170,14 @@ public class StartExamCommandHandler(
             var optDtos = await Task.WhenAll(shuffledOptions.Select(async a =>
             {
                 var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
-                return new ExamAnswerOptionDto(a.Id, a.Text.Get(request.Language), optImg);
+                return new ExamAnswerOptionDto(a.Id, a.Text, optImg);
             }));
 
             return new ExamQuestionDto(
                 sessionQuestions[idx].Id,
                 q.Id,
                 idx + 1,
-                q.Text.Get(request.Language),
+                q.Text,
                 imgUrl,
                 [..optDtos]);
         }));
@@ -179,9 +185,13 @@ public class StartExamCommandHandler(
         logger.LogInformation("Exam started: session {SessionId} for user {UserId}", session.Id, userId);
         return ApiResponse<ExamSessionDto>.Ok(new ExamSessionDto(
             session.Id,
+            "inProgress",
             shuffled.Count,
+            template.PassingScore,
             template.TimeLimitMinutes,
             expiresAt,
+            "exam",
+            null,
             [..questionDtos]));
     }
 }

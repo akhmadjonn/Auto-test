@@ -1,6 +1,7 @@
 using AutoTest.Application.Common.Interfaces;
 using AutoTest.Application.Common.Models;
 using AutoTest.Domain.Common.Enums;
+using AutoTest.Domain.Common.ValueObjects;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,14 +12,12 @@ public record GetCategoryPerformanceQuery(Language Language = Language.UzLatin)
 
 public record CategoryPerformanceDto(
     Guid CategoryId,
-    string CategoryName,
-    int TotalQuestions,
+    LocalizedText CategoryName,
     int TotalAttempts,
     int CorrectAttempts,
     double Accuracy,
-    int MasteredCount,   // LeitnerBox == Box5
-    int DueCount,        // NextReviewDate <= now
-    int NewCount);       // No state yet
+    int QuestionsInCategory,
+    int QuestionsPracticed);
 
 public class GetCategoryPerformanceQueryHandler(
     IApplicationDbContext db,
@@ -86,25 +85,20 @@ public class GetCategoryPerformanceQueryHandler(
         var result = categories.Select(c =>
         {
             stats.TryGetValue(c.Id, out var stat);
-            masteredByCategory.TryGetValue(c.Id, out var mastered);
-            dueByCategory.TryGetValue(c.Id, out var due);
             practicedQuestionCountByCategory.TryGetValue(c.Id, out var practiced);
 
             var total = stat?.TotalAttempts ?? 0;
             var correct = stat?.CorrectAttempts ?? 0;
             var accuracy = total > 0 ? Math.Round((double)correct / total * 100, 1) : 0.0;
-            var newCount = c.TotalQuestions - practiced;
 
             return new CategoryPerformanceDto(
                 c.Id,
-                c.Name.Get(request.Language),
-                c.TotalQuestions,
+                c.Name,
                 total,
                 correct,
                 accuracy,
-                mastered,
-                due,
-                Math.Max(0, newCount));
+                c.TotalQuestions,
+                practiced);
         })
         .OrderByDescending(c => c.TotalAttempts)
         .ThenBy(c => c.Accuracy)

@@ -10,23 +10,20 @@ public record GetUserDashboardQuery(Language Language = Language.UzLatin)
     : IRequest<ApiResponse<UserDashboardDto>>;
 
 public record UserDashboardDto(
-    int TotalPracticed,
-    int ExamsTaken,
-    double AvgScore,
+    int TotalQuestionsPracticed,
+    int TotalExamsTaken,
+    double AverageExamScore,
     int CurrentStreak,
     int DueForReview,
-    int PracticedToday,
-    double PassRate,
+    int QuestionsAnsweredToday,
+    double ExamPassRate,
     List<RecentExamDto> RecentExams,
-    List<DailyAccuracyDto> AccuracyLast30Days);
+    List<DailyAccuracyDto> AccuracyOverTime);
 
 public record RecentExamDto(
-    Guid SessionId,
-    string ExamTitle,
+    Guid ExamId,
     int Score,
     bool Passed,
-    int TotalQuestions,
-    int CorrectAnswers,
     DateTimeOffset CompletedAt);
 
 public record DailyAccuracyDto(DateOnly Date, double Accuracy, int QuestionCount);
@@ -44,7 +41,7 @@ public class GetUserDashboardQueryHandler(
 
         var userId = currentUser.UserId.Value;
         var now = dateTime.UtcNow;
-        var todayStart = now.Date;
+        var todayStart = new DateTimeOffset(now.Date, TimeSpan.Zero);
         var thirtyDaysAgo = now.AddDays(-30);
 
         // Sequential queries — EF Core DbContext is NOT thread-safe
@@ -116,11 +113,8 @@ public class GetUserDashboardQueryHandler(
             .Take(10)
             .Select(s => new RecentExamDto(
                 s.Id,
-                s.ExamTemplate?.Title.Get(request.Language) ?? "Exam",
                 s.Score ?? 0,
                 (s.Score ?? 0) >= (s.ExamTemplate?.PassingScore ?? 80),
-                s.ExamTemplate?.TotalQuestions ?? 0,
-                s.CorrectAnswers ?? 0,
                 s.CompletedAt ?? s.UpdatedAt ?? now))
             .ToList();
 

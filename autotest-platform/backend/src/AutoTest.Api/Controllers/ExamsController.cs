@@ -63,6 +63,20 @@ public class ExamsController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 
+    [HttpGet("active")]
+    public async Task<IActionResult> GetActive(CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetActiveExamQuery(), ct);
+        return Ok(result);
+    }
+
+    [HttpPost("{sessionId}/abandon")]
+    public async Task<IActionResult> Abandon(Guid sessionId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new AbandonExamCommand(sessionId), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("history")]
     public async Task<IActionResult> GetHistory([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {

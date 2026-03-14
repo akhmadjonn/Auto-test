@@ -40,22 +40,25 @@ public class GetExamResultQueryHandler(
             {
                 var q = sq.Question;
                 var imgUrl = q.ImageUrl is not null ? await storage.GetPresignedUrlAsync(q.ImageUrl, ct) : null;
+                var correctOptionId = q.AnswerOptions.FirstOrDefault(a => a.IsCorrect)?.Id;
 
                 var optDtos = await Task.WhenAll(q.AnswerOptions.Select(async a =>
                 {
                     var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
-                    return new ExamResultOptionDto(a.Id, a.Text.Get(request.Language), a.IsCorrect, optImg);
+                    return new ExamResultOptionDto(a.Id, a.Text, a.IsCorrect, optImg);
                 }));
 
                 return new ExamResultQuestionDto(
-                    q.Id, q.Text.Get(request.Language), imgUrl,
-                    q.Explanation.Get(request.Language),
-                    sq.SelectedAnswerId, sq.IsCorrect, [..optDtos]);
+                    q.Id, q.Text, imgUrl,
+                    q.Explanation,
+                    sq.SelectedAnswerId, correctOptionId, sq.IsCorrect,
+                    sq.TimeSpentSeconds, [..optDtos]);
             }));
 
         return ApiResponse<ExamResultDto>.Ok(new ExamResultDto(
             session.Id, total, session.CorrectAnswers ?? 0,
-            session.Score ?? 0, (session.Score ?? 0) >= passingScore,
-            session.TimeTakenSeconds, [..questionDtos]));
+            session.Score ?? 0, passingScore,
+            (session.Score ?? 0) >= passingScore,
+            session.TimeTakenSeconds, session.CompletedAt, [..questionDtos]));
     }
 }

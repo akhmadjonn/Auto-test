@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
-[Route("api/practice")]
+[Route("api/v1/practice")]
 [Authorize]
 [EnableRateLimiting("authenticated")]
 public class PracticeController(ISender mediator) : ControllerBase

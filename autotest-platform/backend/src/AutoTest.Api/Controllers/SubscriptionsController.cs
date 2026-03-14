@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
-[Route("api/subscriptions")]
+[Route("api/v1/subscriptions")]
 [Authorize]
 [EnableRateLimiting("authenticated")]
 public class SubscriptionsController(ISender mediator) : ControllerBase

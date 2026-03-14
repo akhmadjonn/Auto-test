@@ -18,12 +18,27 @@ public class OtpService(IConnectionMultiplexer redis, IConfiguration configurati
     private int VerifyWindowMinutes => int.TryParse(configuration["OtpSettings:VerifyWindowMinutes"], out var v) ? v : 15;
     private string HmacSecret => configuration["OtpSettings:HmacSecret"] ?? "otp-hmac-secret-for-dev";
 
+    public bool IsWhitelistedNumber(string phoneNumber) =>
+        configuration[$"OtpSettings:WhitelistNumbers:{NormalizePhone(phoneNumber)}"] is not null;
+
+    public string? GetWhitelistCode(string phoneNumber) =>
+        configuration[$"OtpSettings:WhitelistNumbers:{NormalizePhone(phoneNumber)}"];
+
     public async Task<string> GenerateAndStoreAsync(string phoneNumber, CancellationToken ct = default)
     {
-        var code = GenerateCode();
-        var hash = ComputeHash(phoneNumber, code);
+        // Whitelisted numbers get a fixed code, skip Redis/SMS
+        var whitelistCode = GetWhitelistCode(phoneNumber);
+        if (whitelistCode is not null)
+        {
+            var hash = ComputeHash(phoneNumber, whitelistCode);
+            await _db.StringSetAsync(OtpKey(phoneNumber), hash, TimeSpan.FromMinutes(OtpTtlMinutes));
+            return whitelistCode;
+        }
 
-        await _db.StringSetAsync(OtpKey(phoneNumber), hash, TimeSpan.FromMinutes(OtpTtlMinutes));
+        var code = GenerateCode();
+        var codeHash = ComputeHash(phoneNumber, code);
+
+        await _db.StringSetAsync(OtpKey(phoneNumber), codeHash, TimeSpan.FromMinutes(OtpTtlMinutes));
 
         // Record this send for rate limiting
         var countKey = RateLimitKey(phoneNumber);
@@ -54,12 +69,20 @@ public class OtpService(IConnectionMultiplexer redis, IConfiguration configurati
 
     public async Task<bool> IsRateLimitedAsync(string phoneNumber, CancellationToken ct = default)
     {
+        if (IsWhitelistedNumber(phoneNumber))
+            return false;
+
         var countStr = await _db.StringGetAsync(RateLimitKey(phoneNumber));
         return countStr.HasValue && long.TryParse(countStr, out var count) && count >= RateLimitCount;
     }
 
-    public async Task<bool> IsOnCooldownAsync(string phoneNumber, CancellationToken ct = default) =>
-        await _db.KeyExistsAsync(CooldownKey(phoneNumber));
+    public async Task<bool> IsOnCooldownAsync(string phoneNumber, CancellationToken ct = default)
+    {
+        if (IsWhitelistedNumber(phoneNumber))
+            return false;
+
+        return await _db.KeyExistsAsync(CooldownKey(phoneNumber));
+    }
 
     private static string GenerateCode() =>
         Random.Shared.Next(100_000, 999_999).ToString();
@@ -74,6 +97,9 @@ public class OtpService(IConnectionMultiplexer redis, IConfiguration configurati
     public async Task<(bool Allowed, int Remaining)> CheckAndIncrementVerifyAttemptsAsync(
         string phoneNumber, CancellationToken ct = default)
     {
+        if (IsWhitelistedNumber(phoneNumber))
+            return (true, 999);
+
         var key = VerifyAttemptsKey(phoneNumber);
         var count = await _db.StringIncrementAsync(key);
         if (count == 1)
@@ -85,6 +111,9 @@ public class OtpService(IConnectionMultiplexer redis, IConfiguration configurati
 
     public async Task ResetVerifyAttemptsAsync(string phoneNumber, CancellationToken ct = default) =>
         await _db.KeyDeleteAsync(VerifyAttemptsKey(phoneNumber));
+
+    private static string NormalizePhone(string phone) =>
+        phone.TrimStart('+');
 
     private static string OtpKey(string phone) => $"avtolider:otp:{phone}";
     private static string RateLimitKey(string phone) => $"avtolider:otp:ratelimit:{phone}";

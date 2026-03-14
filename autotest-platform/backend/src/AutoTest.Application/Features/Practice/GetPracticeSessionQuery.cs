@@ -1,6 +1,7 @@
 using AutoTest.Application.Common.Interfaces;
 using AutoTest.Application.Common.Models;
 using AutoTest.Domain.Common.Enums;
+using AutoTest.Domain.Common.ValueObjects;
 using AutoTest.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -14,23 +15,18 @@ public record GetPracticeSessionQuery(
 
 public record PracticeSessionDto(
     List<PracticeQuestionDto> Questions,
-    int TotalDue,
-    int TotalNew,
-    int TotalWeak);
+    int DueReviewCount);
 
 public record PracticeQuestionDto(
-    Guid QuestionId,
-    string Text,
+    Guid Id,
+    LocalizedText Text,
     string? ImageUrl,
-    List<PracticeAnswerOptionDto> Options,
-    LeitnerBox? LeitnerBox,
-    DateTimeOffset? NextReviewDate,
-    int TotalAttempts,
-    int CorrectAttempts,
-    bool IsDue,
-    bool IsNew);
+    LocalizedText CategoryName,
+    int Difficulty,
+    List<PracticeAnswerOptionDto> AnswerOptions,
+    int LeitnerBox);
 
-public record PracticeAnswerOptionDto(Guid Id, string Text, string? ImageUrl);
+public record PracticeAnswerOptionDto(Guid Id, LocalizedText Text, string? ImageUrl);
 
 public class GetPracticeSessionQueryHandler(
     IApplicationDbContext db,
@@ -47,10 +43,11 @@ public class GetPracticeSessionQueryHandler(
         var now = dateTime.UtcNow;
         var batchSize = Math.Clamp(request.BatchSize, 5, 20);
 
-        // Load active questions with answer options
+        // Load active questions with answer options and categories
         var questionsQuery = db.Questions
             .AsNoTracking()
             .Include(q => q.AnswerOptions)
+            .Include(q => q.Category)
             .Where(q => q.IsActive);
 
         if (request.CategoryId.HasValue)
@@ -104,27 +101,22 @@ public class GetPracticeSessionQueryHandler(
             var optDtos = await Task.WhenAll(shuffledOptions.Select(async a =>
             {
                 var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
-                return new PracticeAnswerOptionDto(a.Id, a.Text.Get(request.Language), optImg);
+                return new PracticeAnswerOptionDto(a.Id, a.Text, optImg);
             }));
 
             return new PracticeQuestionDto(
                 q.Id,
-                q.Text.Get(request.Language),
+                q.Text,
                 imgUrl,
+                q.Category?.Name ?? new LocalizedText("", "", ""),
+                (int)q.Difficulty,
                 [..optDtos],
-                state?.LeitnerBox,
-                state?.NextReviewDate,
-                state?.TotalAttempts ?? 0,
-                state?.CorrectAttempts ?? 0,
-                IsDue: state is not null && state.NextReviewDate <= now,
-                IsNew: state is null);
+                (int)(state?.LeitnerBox ?? LeitnerBox.Box1));
         }));
 
         return ApiResponse<PracticeSessionDto>.Ok(new PracticeSessionDto(
             [..questionDtos],
-            duePool.Count,
-            newPool.Count,
-            weakPool.Count));
+            duePool.Count));
     }
 
     private static List<Question> FillBatch(
