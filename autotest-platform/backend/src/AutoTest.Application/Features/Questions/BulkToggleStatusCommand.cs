@@ -18,7 +18,8 @@ public class BulkToggleStatusCommandValidator : AbstractValidator<BulkToggleStat
 
 public class BulkToggleStatusCommandHandler(
     IApplicationDbContext db,
-    IDateTimeProvider dateTime) : IRequestHandler<BulkToggleStatusCommand, ApiResponse<int>>
+    IDateTimeProvider dateTime,
+    ICacheService cache) : IRequestHandler<BulkToggleStatusCommand, ApiResponse<int>>
 {
     public async Task<ApiResponse<int>> Handle(BulkToggleStatusCommand request, CancellationToken ct)
     {
@@ -34,6 +35,7 @@ public class BulkToggleStatusCommandHandler(
         }
 
         await db.SaveChangesAsync(ct);
+        await CreateQuestionCommandHandler.InvalidateQuestionCachesAsync(cache, ct);
         return ApiResponse<int>.Ok(questions.Count);
     }
 }

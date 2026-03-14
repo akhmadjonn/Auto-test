@@ -82,16 +82,26 @@ public class StartTicketExamCommandHandler(
         db.ExamSessions.Add(session);
         await db.SaveChangesAsync(ct);
 
-        var questionDtos = await Task.WhenAll(questions.Select(async (q, idx) =>
+        // Batch presigned URL generation — single parallel call instead of N+1
+        var allImageKeys = new List<string>();
+        foreach (var q in questions)
         {
-            var imgUrl = q.ImageUrl is not null ? await storage.GetPresignedUrlAsync(q.ImageUrl, ct) : null;
+            if (q.ImageUrl is not null) allImageKeys.Add(q.ImageUrl);
+            foreach (var a in q.AnswerOptions)
+                if (a.ImageUrl is not null) allImageKeys.Add(a.ImageUrl);
+        }
+        var urlMap = await storage.GetPresignedUrlsBatchAsync(allImageKeys, ct);
+
+        var questionDtos = questions.Select((q, idx) =>
+        {
+            var imgUrl = q.ImageUrl is not null ? urlMap.GetValueOrDefault(q.ImageUrl) : null;
             var shuffledOptions = q.AnswerOptions.OrderBy(_ => Random.Shared.Next()).ToList();
 
-            var optDtos = await Task.WhenAll(shuffledOptions.Select(async a =>
+            var optDtos = shuffledOptions.Select(a =>
             {
-                var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
+                var optImg = a.ImageUrl is not null ? urlMap.GetValueOrDefault(a.ImageUrl) : null;
                 return new ExamAnswerOptionDto(a.Id, a.Text, optImg);
-            }));
+            }).ToList();
 
             return new ExamQuestionDto(
                 sessionQuestions[idx].Id,
@@ -99,8 +109,8 @@ public class StartTicketExamCommandHandler(
                 idx + 1,
                 q.Text,
                 imgUrl,
-                [..optDtos]);
-        }));
+                optDtos);
+        }).ToList();
 
         logger.LogInformation("Ticket exam started: session {SessionId}, ticket {Ticket}", session.Id, request.TicketNumber);
         return ApiResponse<ExamSessionDto>.Ok(new ExamSessionDto(
@@ -112,6 +122,6 @@ public class StartTicketExamCommandHandler(
             expiresAt,
             "ticket",
             request.TicketNumber,
-            [..questionDtos]));
+            questionDtos));
     }
 }

@@ -20,6 +20,7 @@ public class DeleteQuestionCommandValidator : AbstractValidator<DeleteQuestionCo
 public class DeleteQuestionCommandHandler(
     IApplicationDbContext db,
     IDateTimeProvider dateTime,
+    ICacheService cache,
     ILogger<DeleteQuestionCommandHandler> logger) : IRequestHandler<DeleteQuestionCommand, ApiResponse>
 {
     public async Task<ApiResponse> Handle(DeleteQuestionCommand request, CancellationToken ct)
@@ -31,6 +32,7 @@ public class DeleteQuestionCommandHandler(
         question.IsActive = false;
         question.UpdatedAt = dateTime.UtcNow;
         await db.SaveChangesAsync(ct);
+        await CreateQuestionCommandHandler.InvalidateQuestionCachesAsync(cache, ct);
 
         logger.LogInformation("Soft-deleted question {Id}", request.QuestionId);
         return ApiResponse.Ok();

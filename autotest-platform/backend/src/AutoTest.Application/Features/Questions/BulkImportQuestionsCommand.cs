@@ -31,6 +31,7 @@ public class BulkImportQuestionsCommandHandler(
     IImageProcessingService imageProcessor,
     IFileStorageService storage,
     IDateTimeProvider dateTime,
+    ICacheService cache,
     ILogger<BulkImportQuestionsCommandHandler> logger) : IRequestHandler<BulkImportQuestionsCommand, ApiResponse<BulkImportResultDto>>
 {
     private const int BatchSize = 100;
@@ -143,6 +144,9 @@ public class BulkImportQuestionsCommandHandler(
 
         if (batch.Count > 0)
             await FlushBatchAsync(batch, ct);
+
+        if (imported > 0)
+            await CreateQuestionCommandHandler.InvalidateQuestionCachesAsync(cache, ct);
 
         logger.LogInformation("BulkImport: {Imported} imported, {Skipped} skipped, {Errors} errors",
             imported, skipped, errorMessages.Count);

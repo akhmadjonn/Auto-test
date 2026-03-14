@@ -52,7 +52,7 @@ public class AdminQuestionCrudIntegrationTests
             .Returns(new ImageProcessingResult(processedImage, thumbnail, "image/webp"));
 
         var createHandler = new CreateQuestionCommandHandler(
-            db, _imageProcessor, _storage, _dateTime,
+            db, _imageProcessor, _storage, _dateTime, _cache,
             Substitute.For<ILogger<CreateQuestionCommandHandler>>());
 
         var createCmd = new CreateQuestionCommand(
@@ -107,7 +107,7 @@ public class AdminQuestionCrudIntegrationTests
 
         // --- Step 3: Deactivate the question ---
         var toggleHandler = new ToggleQuestionStatusCommandHandler(
-            db, _dateTime,
+            db, _dateTime, _cache,
             Substitute.For<ILogger<ToggleQuestionStatusCommandHandler>>());
 
         var toggleResult = await toggleHandler.Handle(
@@ -172,7 +172,7 @@ public class AdminQuestionCrudIntegrationTests
             .Returns(new ImageProcessingResult(new MemoryStream(), new MemoryStream(), "image/webp"));
 
         var handler = new CreateQuestionCommandHandler(
-            db, _imageProcessor, _storage, _dateTime,
+            db, _imageProcessor, _storage, _dateTime, _cache,
             Substitute.For<ILogger<CreateQuestionCommandHandler>>());
 
         var cmd = new CreateQuestionCommand(
@@ -211,7 +211,7 @@ public class AdminQuestionCrudIntegrationTests
         await db.SaveChangesAsync();
 
         var handler = new CreateQuestionCommandHandler(
-            db, _imageProcessor, _storage, _dateTime,
+            db, _imageProcessor, _storage, _dateTime, _cache,
             Substitute.For<ILogger<CreateQuestionCommandHandler>>());
 
         var cmd = new CreateQuestionCommand(
@@ -314,7 +314,7 @@ public class AdminQuestionCrudIntegrationTests
 
         // Reactivate question
         var toggleHandler = new ToggleQuestionStatusCommandHandler(
-            db, _dateTime,
+            db, _dateTime, _cache,
             Substitute.For<ILogger<ToggleQuestionStatusCommandHandler>>());
 
         var toggleResult = await toggleHandler.Handle(
