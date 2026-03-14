@@ -3,7 +3,6 @@ using AutoTest.Application.Common.Models;
 using AutoTest.Domain.Common.Enums;
 using AutoTest.Domain.Common.ValueObjects;
 using AutoTest.Domain.Entities;
-using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -36,13 +35,6 @@ public record ExamQuestionDto(
     Guid? SelectedAnswerId = null);
 
 public record ExamAnswerOptionDto(Guid Id, LocalizedText Text, string? ImageUrl);
-
-public class StartExamCommandValidator : AbstractValidator<StartExamCommand>
-{
-    public StartExamCommandValidator()
-    {
-    }
-}
 
 public class StartExamCommandHandler(
     IApplicationDbContext db,
@@ -104,7 +96,7 @@ public class StartExamCommandHandler(
             return ApiResponse<ExamSessionDto>.Fail("TEMPLATE_NOT_FOUND", "Exam template not found.");
 
         // Select random questions per pool rules
-        var selectedQuestions = new List<Question>();
+        List<Question> selectedQuestions = [];
         foreach (var rule in template.PoolRules)
         {
             var poolQuery = db.Questions

@@ -57,7 +57,14 @@ public class GetExamSessionQueryHandler(
 
         return ApiResponse<ExamSessionDto>.Ok(new ExamSessionDto(
             session.Id,
-            session.Status == ExamStatus.InProgress ? "inProgress" : "completed",
+            session.Status switch
+            {
+                ExamStatus.InProgress => "inProgress",
+                ExamStatus.Completed => "completed",
+                ExamStatus.Expired => "expired",
+                ExamStatus.Abandoned => "abandoned",
+                _ => "completed"
+            },
             session.SessionQuestions.Count,
             passingScore,
             timeLimitMinutes,

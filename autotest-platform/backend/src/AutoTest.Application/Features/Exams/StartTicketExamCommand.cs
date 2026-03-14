@@ -107,7 +107,7 @@ public class StartTicketExamCommandHandler(
             session.Id,
             "inProgress",
             questions.Count,
-            18,
+            (int)Math.Ceiling((double)questions.Count * 80 / 100),
             TicketTimeLimitMinutes,
             expiresAt,
             "ticket",

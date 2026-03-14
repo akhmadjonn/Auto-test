@@ -21,8 +21,7 @@ public record CategoryPerformanceDto(
 
 public class GetCategoryPerformanceQueryHandler(
     IApplicationDbContext db,
-    ICurrentUser currentUser,
-    IDateTimeProvider dateTime)
+    ICurrentUser currentUser)
     : IRequestHandler<GetCategoryPerformanceQuery, ApiResponse<List<CategoryPerformanceDto>>>
 {
     public async Task<ApiResponse<List<CategoryPerformanceDto>>> Handle(
@@ -32,7 +31,6 @@ public class GetCategoryPerformanceQueryHandler(
             return ApiResponse<List<CategoryPerformanceDto>>.Fail("UNAUTHORIZED", "Not authenticated.");
 
         var userId = currentUser.UserId.Value;
-        var now = dateTime.UtcNow;
 
         // Load categories that have active questions
         var categories = await db.Categories
@@ -54,33 +52,13 @@ public class GetCategoryPerformanceQueryHandler(
             .Where(s => s.UserId == userId && categoryIds.Contains(s.CategoryId))
             .ToDictionaryAsync(s => s.CategoryId, ct);
 
-        // Load Leitner states grouped by category
-        var questionStates = await db.UserQuestionStates
+        // Count practiced questions per category
+        var practicedQuestionCountByCategory = await db.UserQuestionStates
             .AsNoTracking()
-            .Include(s => s.Question)
             .Where(s => s.UserId == userId && categoryIds.Contains(s.Question.CategoryId))
-            .Select(s => new
-            {
-                s.Question.CategoryId,
-                s.LeitnerBox,
-                s.NextReviewDate
-            })
-            .ToListAsync(ct);
-
-        // Count questions per category that user has never attempted
-        var practicedQuestionCountByCategory = questionStates
-            .GroupBy(s => s.CategoryId)
-            .ToDictionary(g => g.Key, g => g.Count());
-
-        var masteredByCategory = questionStates
-            .Where(s => s.LeitnerBox == LeitnerBox.Box5)
-            .GroupBy(s => s.CategoryId)
-            .ToDictionary(g => g.Key, g => g.Count());
-
-        var dueByCategory = questionStates
-            .Where(s => s.NextReviewDate <= now)
-            .GroupBy(s => s.CategoryId)
-            .ToDictionary(g => g.Key, g => g.Count());
+            .GroupBy(s => s.Question.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.CategoryId, g => g.Count, ct);
 
         var result = categories.Select(c =>
         {

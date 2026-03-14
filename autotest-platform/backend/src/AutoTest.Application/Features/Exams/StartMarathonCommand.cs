@@ -35,7 +35,6 @@ public class StartMarathonCommandHandler(
 
         if (existing is not null && existing.Mode == ExamMode.Marathon)
         {
-            var resumeAnswered = existing.SessionQuestions.Count(sq => sq.SelectedAnswerId.HasValue);
             return ApiResponse<ExamSessionDto>.Ok(new ExamSessionDto(
                 existing.Id, "inProgress", existing.SessionQuestions.Count, 0,
                 0, null, "marathon", null, []));
