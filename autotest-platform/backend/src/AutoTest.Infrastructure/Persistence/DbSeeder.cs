@@ -567,7 +567,7 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
         db.Users.Add(new User
         {
             Id = Guid.NewGuid(),
-            PhoneNumber = "+998901234567",
+            PhoneNumber = "998901234567",
             FirstName = "Admin",
             LastName = "Avtolider",
             Role = UserRole.Admin,
