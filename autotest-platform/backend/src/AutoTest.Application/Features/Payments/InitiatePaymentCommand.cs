@@ -16,7 +16,8 @@ public record InitiatePaymentCommand(
 public record InitiatePaymentResultDto(
     Guid SubscriptionId,
     Guid TransactionId,
-    string? ProviderTransactionId);
+    string? ProviderTransactionId,
+    string? PaymentUrl);
 
 public class InitiatePaymentCommandValidator : AbstractValidator<InitiatePaymentCommand>
 {
@@ -97,17 +98,31 @@ public class InitiatePaymentCommandHandler(
 
         // Create payment on provider side — returns provider transaction ID
         var provider = paymentFactory.GetProvider(request.Provider);
-        var providerTxnId = await provider.CreatePaymentAsync(subscriptionId, plan.PriceInTiyins, ct);
+        string providerTxnId;
+        try
+        {
+            providerTxnId = await provider.CreatePaymentAsync(subscriptionId, plan.PriceInTiyins, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Payment provider error: user={UserId} provider={Provider}", userId, request.Provider);
+            transaction.Status = PaymentStatus.Failed;
+            transaction.UpdatedAt = now;
+            await db.SaveChangesAsync(ct);
+            return ApiResponse<InitiatePaymentResultDto>.Fail("PROVIDER_ERROR", "Payment provider is unavailable. Please try again later.");
+        }
 
         transaction.ProviderTransactionId = providerTxnId;
         transaction.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
+
+        var paymentUrl = provider.GenerateCheckoutUrl(providerTxnId, plan.PriceInTiyins, subscriptionId);
 
         logger.LogInformation(
             "Payment initiated: user={UserId} plan={PlanId} sub={SubscriptionId} provider={Provider}",
             userId, request.PlanId, subscriptionId, request.Provider);
 
         return ApiResponse<InitiatePaymentResultDto>.Ok(new InitiatePaymentResultDto(
-            subscriptionId, transaction.Id, providerTxnId));
+            subscriptionId, transaction.Id, providerTxnId, paymentUrl));
     }
 }
