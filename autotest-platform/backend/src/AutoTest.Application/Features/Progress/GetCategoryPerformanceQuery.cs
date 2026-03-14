@@ -21,7 +21,8 @@ public record CategoryPerformanceDto(
 
 public class GetCategoryPerformanceQueryHandler(
     IApplicationDbContext db,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    ICacheService cacheService)
     : IRequestHandler<GetCategoryPerformanceQuery, ApiResponse<List<CategoryPerformanceDto>>>
 {
     public async Task<ApiResponse<List<CategoryPerformanceDto>>> Handle(
@@ -31,6 +32,12 @@ public class GetCategoryPerformanceQueryHandler(
             return ApiResponse<List<CategoryPerformanceDto>>.Fail("UNAUTHORIZED", "Not authenticated.");
 
         var userId = currentUser.UserId.Value;
+
+        // Redis cache — 60s TTL
+        var cacheKey = $"avtolider:catperf:{userId}";
+        var cached = await cacheService.GetAsync<List<CategoryPerformanceDto>>(cacheKey, ct);
+        if (cached is not null)
+            return ApiResponse<List<CategoryPerformanceDto>>.Ok(cached);
 
         // Load categories that have active questions
         var categories = await db.Categories
@@ -81,6 +88,8 @@ public class GetCategoryPerformanceQueryHandler(
         .OrderByDescending(c => c.TotalAttempts)
         .ThenBy(c => c.Accuracy)
         .ToList();
+
+        await cacheService.SetAsync(cacheKey, result, TimeSpan.FromSeconds(60), ct);
 
         return ApiResponse<List<CategoryPerformanceDto>>.Ok(result);
     }

@@ -35,6 +35,7 @@ public class SubmitPracticeAnswerCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     IDateTimeProvider dateTime,
+    ICacheService cacheService,
     ILogger<SubmitPracticeAnswerCommandHandler> logger)
     : IRequestHandler<SubmitPracticeAnswerCommand, ApiResponse<PracticeAnswerFeedbackDto>>
 {
@@ -114,6 +115,10 @@ public class SubmitPracticeAnswerCommandHandler(
         catStat.CorrectAttempts = (int)Math.Round(catStat.CorrectAttempts * 0.85) + (isCorrect ? 1 : 0);
 
         await db.SaveChangesAsync(ct);
+
+        // Invalidate dashboard and category performance caches
+        await cacheService.RemoveAsync($"avtolider:dashboard:{userId}", ct);
+        await cacheService.RemoveAsync($"avtolider:catperf:{userId}", ct);
 
         logger.LogDebug(
             "Practice answer: user={UserId} question={QuestionId} correct={IsCorrect} box={Box} nextReview={NextReview}",
