@@ -101,6 +101,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(s => s.ExamTemplate).WithMany().HasForeignKey(s => s.ExamTemplateId);
             e.HasIndex(s => new { s.UserId, s.Status });
             e.HasIndex(s => new { s.UserId, s.Mode });
+            e.HasIndex(s => new { s.UserId, s.Status, s.Mode, s.CompletedAt });
         });
 
         // SessionQuestion
@@ -117,6 +118,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasKey(uqs => new { uqs.UserId, uqs.QuestionId });
             e.HasOne(uqs => uqs.User).WithMany(u => u.UserQuestionStates).HasForeignKey(uqs => uqs.UserId);
             e.HasOne(uqs => uqs.Question).WithMany().HasForeignKey(uqs => uqs.QuestionId);
+            e.HasIndex(uqs => new { uqs.UserId, uqs.NextReviewDate });
+            e.HasIndex(uqs => new { uqs.UserId, uqs.LastAttemptAt });
         });
 
         // UserCategoryStat — composite key

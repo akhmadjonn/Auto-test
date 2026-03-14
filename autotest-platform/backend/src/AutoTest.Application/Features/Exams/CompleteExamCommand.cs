@@ -50,6 +50,7 @@ public class CompleteExamCommandHandler(
     ICurrentUser currentUser,
     IFileStorageService storage,
     IDateTimeProvider dateTime,
+    ICacheService cacheService,
     ILogger<CompleteExamCommandHandler> logger) : IRequestHandler<CompleteExamCommand, ApiResponse<ExamResultDto>>
 {
     // Leitner intervals in days
@@ -125,6 +126,10 @@ public class CompleteExamCommandHandler(
                     sq.TimeSpentSeconds,
                     [..optDtos]);
             }));
+
+        // Invalidate dashboard and category performance caches
+        await cacheService.RemoveAsync($"avtolider:dashboard:{userId}", ct);
+        await cacheService.RemoveAsync($"avtolider:catperf:{userId}", ct);
 
         logger.LogInformation("Session {SessionId} completed: {Correct}/{Total} ({Score}%)",
             session.Id, correctCount, total, score);

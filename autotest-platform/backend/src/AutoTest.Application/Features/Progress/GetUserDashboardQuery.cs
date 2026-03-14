@@ -31,7 +31,8 @@ public record DailyAccuracyDto(DateOnly Date, double Accuracy, int QuestionCount
 public class GetUserDashboardQueryHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
-    IDateTimeProvider dateTime)
+    IDateTimeProvider dateTime,
+    ICacheService cacheService)
     : IRequestHandler<GetUserDashboardQuery, ApiResponse<UserDashboardDto>>
 {
     public async Task<ApiResponse<UserDashboardDto>> Handle(GetUserDashboardQuery request, CancellationToken ct)
@@ -40,94 +41,110 @@ public class GetUserDashboardQueryHandler(
             return ApiResponse<UserDashboardDto>.Fail("UNAUTHORIZED", "Not authenticated.");
 
         var userId = currentUser.UserId.Value;
+
+        // Redis cache — 30s TTL
+        var cacheKey = $"avtolider:dashboard:{userId}";
+        var cached = await cacheService.GetAsync<UserDashboardDto>(cacheKey, ct);
+        if (cached is not null)
+            return ApiResponse<UserDashboardDto>.Ok(cached);
+
         var now = dateTime.UtcNow;
         var todayStart = new DateTimeOffset(now.Date, TimeSpan.Zero);
         var thirtyDaysAgo = now.AddDays(-30);
+        var ninetyDaysAgo = now.AddDays(-90);
 
-        // Sequential queries — EF Core DbContext is NOT thread-safe
-        var totalPracticed = await db.UserQuestionStates
-            .CountAsync(s => s.UserId == userId, ct);
-
-        var completedExams = await db.ExamSessions
+        // Query 1: Combine all UserQuestionStates aggregates into single query
+        var uqsStats = await db.UserQuestionStates
             .AsNoTracking()
-            .Include(s => s.ExamTemplate)
-            .Where(s => s.UserId == userId
-                && s.Status == ExamStatus.Completed
-                && s.Mode == ExamMode.Exam)
-            .OrderByDescending(s => s.CompletedAt)
-            .ToListAsync(ct);
-
-        var dueForReview = await db.UserQuestionStates
-            .CountAsync(s => s.UserId == userId && s.NextReviewDate <= now, ct);
-
-        var practicedToday = await db.UserQuestionStates
-            .CountAsync(s => s.UserId == userId && s.LastAttemptAt >= todayStart, ct);
-
-        // Daily accuracy from exam session questions (last 30 days)
-        var dailyAccuracyRaw = await db.SessionQuestions
-            .AsNoTracking()
-            .Where(sq => sq.ExamSession.UserId == userId
-                && sq.ExamSession.Status == ExamStatus.Completed
-                && sq.ExamSession.CompletedAt >= thirtyDaysAgo)
-            .Select(sq => new
+            .Where(s => s.UserId == userId)
+            .GroupBy(_ => 1)
+            .Select(g => new
             {
-                Date = sq.ExamSession.CompletedAt!.Value.Date,
-                IsCorrect = sq.IsCorrect == true
+                TotalPracticed = g.Count(),
+                DueForReview = g.Count(s => s.NextReviewDate <= now),
+                PracticedToday = g.Count(s => s.LastAttemptAt >= todayStart),
             })
-            .ToListAsync(ct);
+            .FirstOrDefaultAsync(ct);
 
-        // Streak needs exam + practice dates
-        var examDates = await db.ExamSessions
-            .AsNoTracking()
-            .Where(s => s.UserId == userId && s.Status == ExamStatus.Completed && s.CompletedAt.HasValue)
-            .Select(s => s.CompletedAt!.Value.Date)
-            .Distinct()
-            .ToListAsync(ct);
-
+        // Practice dates for streak (bounded to 90 days)
         var practiceDates = await db.UserQuestionStates
             .AsNoTracking()
-            .Where(s => s.UserId == userId && s.LastAttemptAt.HasValue)
+            .Where(s => s.UserId == userId && s.LastAttemptAt >= ninetyDaysAgo)
             .Select(s => s.LastAttemptAt!.Value.Date)
             .Distinct()
             .ToListAsync(ct);
 
-        var examsTaken = completedExams.Count;
-        var avgScore = examsTaken > 0 ? completedExams.Average(e => e.Score ?? 0) : 0.0;
-        var passRate = examsTaken > 0
-            ? (double)completedExams.Count(e => (e.Score ?? 0) >= (e.ExamTemplate?.PassingScore ?? 80))
-              / examsTaken * 100.0
-            : 0.0;
+        // Query 2: Exam aggregates — no ToList, compute in SQL
+        var examAgg = await db.ExamSessions
+            .AsNoTracking()
+            .Where(s => s.UserId == userId && s.Status == ExamStatus.Completed && s.Mode == ExamMode.Exam)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Count = g.Count(),
+                AvgScore = g.Average(s => (double)(s.Score ?? 0)),
+                PassedCount = g.Count(s => (s.Score ?? 0) >= s.ExamTemplate!.PassingScore),
+            })
+            .FirstOrDefaultAsync(ct);
 
-        var streak = CalculateStreak(examDates, practiceDates, now);
+        // Exam dates for streak (bounded to 90 days)
+        var examDates = await db.ExamSessions
+            .AsNoTracking()
+            .Where(s => s.UserId == userId && s.Status == ExamStatus.Completed
+                && s.CompletedAt.HasValue && s.CompletedAt >= ninetyDaysAgo)
+            .Select(s => s.CompletedAt!.Value.Date)
+            .Distinct()
+            .ToListAsync(ct);
 
-        var dailyAccuracy = dailyAccuracyRaw
-            .GroupBy(x => x.Date)
-            .OrderBy(g => g.Key)
-            .Select(g => new DailyAccuracyDto(
-                DateOnly.FromDateTime(g.Key),
-                g.Count() > 0 ? Math.Round((double)g.Count(x => x.IsCorrect) / g.Count() * 100, 1) : 0,
-                g.Count()))
-            .ToList();
-
-        var recentExams = completedExams
+        // Recent 10 exams — project directly, no Include
+        var recentExams = await db.ExamSessions
+            .AsNoTracking()
+            .Where(s => s.UserId == userId && s.Status == ExamStatus.Completed && s.Mode == ExamMode.Exam)
+            .OrderByDescending(s => s.CompletedAt)
             .Take(10)
             .Select(s => new RecentExamDto(
                 s.Id,
                 s.Score ?? 0,
-                (s.Score ?? 0) >= (s.ExamTemplate?.PassingScore ?? 80),
+                (s.Score ?? 0) >= s.ExamTemplate!.PassingScore,
                 s.CompletedAt ?? s.UpdatedAt ?? now))
-            .ToList();
+            .ToListAsync(ct);
 
-        return ApiResponse<UserDashboardDto>.Ok(new UserDashboardDto(
-            totalPracticed,
+        // Query 3: Daily accuracy — GroupBy in SQL
+        var dailyAccuracy = await db.SessionQuestions
+            .AsNoTracking()
+            .Where(sq => sq.ExamSession.UserId == userId
+                && sq.ExamSession.Status == ExamStatus.Completed
+                && sq.ExamSession.CompletedAt >= thirtyDaysAgo)
+            .GroupBy(sq => sq.ExamSession.CompletedAt!.Value.Date)
+            .OrderBy(g => g.Key)
+            .Select(g => new DailyAccuracyDto(
+                DateOnly.FromDateTime(g.Key),
+                Math.Round((double)g.Count(sq => sq.IsCorrect == true) / g.Count() * 100, 1),
+                g.Count()))
+            .ToListAsync(ct);
+
+        var examsTaken = examAgg?.Count ?? 0;
+        var avgScore = examAgg?.AvgScore ?? 0.0;
+        var passRate = examsTaken > 0
+            ? Math.Round((double)(examAgg!.PassedCount) / examsTaken * 100.0, 1)
+            : 0.0;
+
+        var streak = CalculateStreak(examDates, practiceDates, now);
+
+        var result = new UserDashboardDto(
+            uqsStats?.TotalPracticed ?? 0,
             examsTaken,
             Math.Round(avgScore, 1),
             streak,
-            dueForReview,
-            practicedToday,
-            Math.Round(passRate, 1),
+            uqsStats?.DueForReview ?? 0,
+            uqsStats?.PracticedToday ?? 0,
+            passRate,
             recentExams,
-            dailyAccuracy));
+            dailyAccuracy);
+
+        await cacheService.SetAsync(cacheKey, result, TimeSpan.FromSeconds(30), ct);
+
+        return ApiResponse<UserDashboardDto>.Ok(result);
     }
 
     private static int CalculateStreak(List<DateTime> examDates, List<DateTime> practiceDates, DateTimeOffset now)
@@ -143,7 +160,6 @@ public class GetUserDashboardQueryHandler(
         var streak = 0;
         var current = today;
 
-        // Check today first, then go backward
         while (activeDates.Contains(current))
         {
             streak++;
