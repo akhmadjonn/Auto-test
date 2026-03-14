@@ -101,7 +101,7 @@ public class AdminQuestionCrudIntegrationTests
 
         var questionDto = readResult.Data.Items[0];
         questionDto.Id.Should().Be(questionId);
-        questionDto.Text.Should().Be("Qizil chiroqda nima qilasiz?");
+        questionDto.Text.UzLatin.Should().Be("Qizil chiroqda nima qilasiz?");
         questionDto.ImageUrl.Should().Contain("signed=1"); // presigned URL from FakeFileStorageService
         questionDto.AnswerOptions.Should().HaveCount(3);
 

@@ -12,6 +12,9 @@ public class MinioFileStorageService(
     ILogger<MinioFileStorageService> logger) : IFileStorageService
 {
     private string Bucket => configuration["MinioSettings:BucketName"] ?? "autotest-images";
+    private Protocol S3Protocol => bool.TryParse(configuration["MinioSettings:UseSSL"], out var ssl) && ssl
+        ? Protocol.HTTPS
+        : Protocol.HTTP;
 
     public async Task<string> UploadQuestionImageAsync(Stream stream, string fileName, string category, CancellationToken ct = default)
     {
@@ -33,7 +36,8 @@ public class MinioFileStorageService(
         {
             BucketName = Bucket,
             Key = objectKey,
-            Expires = DateTime.UtcNow.AddHours(1)
+            Expires = DateTime.UtcNow.AddHours(1),
+            Protocol = S3Protocol
         };
         return await s3.GetPreSignedURLAsync(request);
     }
@@ -45,7 +49,8 @@ public class MinioFileStorageService(
         {
             BucketName = Bucket,
             Key = thumbKey,
-            Expires = DateTime.UtcNow.AddHours(1)
+            Expires = DateTime.UtcNow.AddHours(1),
+            Protocol = S3Protocol
         };
         return await s3.GetPreSignedURLAsync(request);
     }

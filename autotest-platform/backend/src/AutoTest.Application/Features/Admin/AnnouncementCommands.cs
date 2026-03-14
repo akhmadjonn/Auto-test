@@ -13,11 +13,10 @@ namespace AutoTest.Application.Features.Admin;
 // DTOs
 public record AnnouncementDto(
     Guid Id,
-    string TitleUz, string TitleUzLatin, string TitleRu,
-    string ContentUz, string ContentUzLatin, string ContentRu,
+    LocalizedText Title, LocalizedText Content,
     AnnouncementType Type, bool IsActive,
     DateTimeOffset? StartsAt, DateTimeOffset? ExpiresAt,
-    string? CreatedBy, DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt);
 
 // Admin GET all
 public record GetAnnouncementsQuery(int Page = 1, int PageSize = 20) : IRequest<ApiResponse<PaginatedList<AnnouncementDto>>>;
@@ -32,11 +31,10 @@ public class GetAnnouncementsQueryHandler(
             .OrderByDescending(a => a.CreatedAt)
             .Select(a => new AnnouncementDto(
                 a.Id,
-                a.Title.Uz, a.Title.UzLatin, a.Title.Ru,
-                a.Content.Uz, a.Content.UzLatin, a.Content.Ru,
+                a.Title, a.Content,
                 a.Type, a.IsActive,
                 a.StartsAt, a.ExpiresAt,
-                a.CreatedBy, a.CreatedAt));
+                a.CreatedAt));
 
         var result = await PaginatedList<AnnouncementDto>.CreateAsync(projected, request.Page, request.PageSize, ct);
         return ApiResponse<PaginatedList<AnnouncementDto>>.Ok(result);
@@ -92,11 +90,10 @@ public class CreateAnnouncementCommandHandler(
         logger.LogInformation("Announcement created: {Id}", announcement.Id);
         return ApiResponse<AnnouncementDto>.Ok(new AnnouncementDto(
             announcement.Id,
-            request.TitleUz, request.TitleUzLatin, request.TitleRu,
-            request.ContentUz, request.ContentUzLatin, request.ContentRu,
+            announcement.Title, announcement.Content,
             request.Type, request.IsActive,
             request.StartsAt, request.ExpiresAt,
-            announcement.CreatedBy, now));
+            now));
     }
 }
 
@@ -167,7 +164,7 @@ public class DeleteAnnouncementCommandHandler(
 public record GetActiveAnnouncementsQuery(Language Language = Language.UzLatin)
     : IRequest<ApiResponse<List<ActiveAnnouncementDto>>>;
 
-public record ActiveAnnouncementDto(Guid Id, string Title, string Content, AnnouncementType Type, DateTimeOffset? ExpiresAt);
+public record ActiveAnnouncementDto(Guid Id, LocalizedText Title, LocalizedText Content, AnnouncementType Type, bool IsActive, DateTimeOffset? StartsAt, DateTimeOffset? ExpiresAt);
 
 public class GetActiveAnnouncementsQueryHandler(
     IApplicationDbContext db,
@@ -195,9 +192,11 @@ public class GetActiveAnnouncementsQueryHandler(
 
         var dtos = announcements.Select(a => new ActiveAnnouncementDto(
             a.Id,
-            a.Title.Get(request.Language),
-            a.Content.Get(request.Language),
+            a.Title,
+            a.Content,
             a.Type,
+            a.IsActive,
+            a.StartsAt,
             a.ExpiresAt)).ToList();
 
         await cache.SetAsync(cacheKeyLang, dtos, TimeSpan.FromMinutes(5), ct);

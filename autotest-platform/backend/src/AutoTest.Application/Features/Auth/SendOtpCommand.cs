@@ -36,9 +36,24 @@ public class SendOtpCommandHandler(
             return ApiResponse.Fail("OTP_COOLDOWN", "Please wait 60 seconds before requesting another OTP.");
 
         var code = await otpService.GenerateAndStoreAsync(request.PhoneNumber, ct);
-        await smsService.SendAsync(request.PhoneNumber, $"Avtolider: your code is {code}. Valid for 5 minutes.", ct);
 
-        logger.LogInformation("OTP sent to {Phone}", request.PhoneNumber);
+        // Skip SMS for whitelisted test numbers
+        if (otpService.IsWhitelistedNumber(request.PhoneNumber))
+        {
+            logger.LogInformation("Whitelist OTP for {Phone} | Code: {Code}", request.PhoneNumber, code);
+            return ApiResponse.Ok();
+        }
+
+        try
+        {
+            await smsService.SendAsync(request.PhoneNumber, $"Avtolider: your code is {code}. Valid for 5 minutes.", ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "SMS send failed for {Phone} — OTP still valid in Redis", request.PhoneNumber);
+        }
+
+        logger.LogInformation("OTP sent to {Phone} | DEV code: {Code}", request.PhoneNumber, code);
         return ApiResponse.Ok();
     }
 }

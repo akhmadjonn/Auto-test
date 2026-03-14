@@ -1,0 +1,7 @@
+# Ignore local/temporary debug helpers
+/backend/test-api.js
+/backend/test-frontend-e2e.js
+
+# Ignore stray Windows NUL device files created accidentally
+/NUL
+/backend/nul

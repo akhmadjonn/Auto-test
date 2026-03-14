@@ -11,25 +11,19 @@ namespace AutoTest.Application.Features.Exams;
 
 public record StartMarathonCommand(
     LicenseCategory LicenseCategory = LicenseCategory.AB,
-    Language Language = Language.UzLatin) : IRequest<ApiResponse<MarathonSessionDto>>;
-
-public record MarathonSessionDto(
-    Guid SessionId,
-    int TotalQuestions,
-    int LastQuestionIndex,
-    List<ExamQuestionDto> Questions);
+    Language Language = Language.UzLatin) : IRequest<ApiResponse<ExamSessionDto>>;
 
 public class StartMarathonCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     IFileStorageService storage,
     IDateTimeProvider dateTime,
-    ILogger<StartMarathonCommandHandler> logger) : IRequestHandler<StartMarathonCommand, ApiResponse<MarathonSessionDto>>
+    ILogger<StartMarathonCommandHandler> logger) : IRequestHandler<StartMarathonCommand, ApiResponse<ExamSessionDto>>
 {
-    public async Task<ApiResponse<MarathonSessionDto>> Handle(StartMarathonCommand request, CancellationToken ct)
+    public async Task<ApiResponse<ExamSessionDto>> Handle(StartMarathonCommand request, CancellationToken ct)
     {
         if (currentUser.UserId is null)
-            return ApiResponse<MarathonSessionDto>.Fail("UNAUTHORIZED", "Not authenticated.");
+            return ApiResponse<ExamSessionDto>.Fail("UNAUTHORIZED", "Not authenticated.");
 
         var userId = currentUser.UserId.Value;
         var now = dateTime.UtcNow;
@@ -41,13 +35,13 @@ public class StartMarathonCommandHandler(
 
         if (existing is not null && existing.Mode == ExamMode.Marathon)
         {
-            var resumeLastIndex = existing.SessionQuestions.Count(sq => sq.SelectedAnswerId.HasValue);
-            return ApiResponse<MarathonSessionDto>.Ok(new MarathonSessionDto(
-                existing.Id, existing.SessionQuestions.Count, resumeLastIndex, []));
+            return ApiResponse<ExamSessionDto>.Ok(new ExamSessionDto(
+                existing.Id, "inProgress", existing.SessionQuestions.Count, 0,
+                0, null, "marathon", null, []));
         }
 
         if (existing is not null)
-            return ApiResponse<MarathonSessionDto>.Fail("ACTIVE_SESSION_EXISTS",
+            return ApiResponse<ExamSessionDto>.Fail("ACTIVE_SESSION_EXISTS",
                 "You already have an active exam session. Complete or abandon it first.");
 
         // Load ALL active questions in order
@@ -60,7 +54,7 @@ public class StartMarathonCommandHandler(
             .ToListAsync(ct);
 
         if (questions.Count == 0)
-            return ApiResponse<MarathonSessionDto>.Fail("NO_QUESTIONS", "No questions available.");
+            return ApiResponse<ExamSessionDto>.Fail("NO_QUESTIONS", "No questions available.");
 
         var session = new ExamSession
         {
@@ -69,7 +63,7 @@ public class StartMarathonCommandHandler(
             Status = ExamStatus.InProgress,
             Mode = ExamMode.Marathon,
             LicenseCategory = request.LicenseCategory,
-            ExpiresAt = null, // marathon has no timer
+            ExpiresAt = null,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -98,18 +92,19 @@ public class StartMarathonCommandHandler(
             var optDtos = await Task.WhenAll(shuffledOptions.Select(async a =>
             {
                 var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
-                return new ExamAnswerOptionDto(a.Id, a.Text.Get(request.Language), optImg);
+                return new ExamAnswerOptionDto(a.Id, a.Text, optImg);
             }));
 
             return new ExamQuestionDto(
                 sessionQuestions[idx].Id, q.Id, idx + 1,
-                q.Text.Get(request.Language), imgUrl, [..optDtos]);
+                q.Text, imgUrl, [..optDtos]);
         }));
 
         logger.LogInformation("Marathon started: session {SessionId} for user {UserId}, {Total} questions",
             session.Id, userId, questions.Count);
 
-        return ApiResponse<MarathonSessionDto>.Ok(new MarathonSessionDto(
-            session.Id, questions.Count, 0, [..questionDtos]));
+        return ApiResponse<ExamSessionDto>.Ok(new ExamSessionDto(
+            session.Id, "inProgress", questions.Count, 0,
+            0, null, "marathon", null, [..questionDtos]));
     }
 }

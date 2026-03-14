@@ -1,6 +1,7 @@
 using AutoTest.Application.Common.Interfaces;
 using AutoTest.Application.Common.Models;
 using AutoTest.Domain.Common.Enums;
+using AutoTest.Domain.Common.ValueObjects;
 using AutoTest.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -12,13 +13,13 @@ namespace AutoTest.Application.Features.Practice;
 public record SubmitPracticeAnswerCommand(
     Guid QuestionId,
     Guid SelectedAnswerId,
-    Language Language = Language.UzLatin) : IRequest<ApiResponse<PracticeAnswerFeedbackDto>>;
+    int? TimeSpentSeconds = null) : IRequest<ApiResponse<PracticeAnswerFeedbackDto>>;
 
 public record PracticeAnswerFeedbackDto(
     bool IsCorrect,
     Guid CorrectAnswerId,
-    string Explanation,
-    LeitnerBox NewLeitnerBox,
+    LocalizedText Explanation,
+    int NewLeitnerBox,
     DateTimeOffset NextReviewDate);
 
 public class SubmitPracticeAnswerCommandValidator : AbstractValidator<SubmitPracticeAnswerCommand>
@@ -121,8 +122,8 @@ public class SubmitPracticeAnswerCommandHandler(
         return ApiResponse<PracticeAnswerFeedbackDto>.Ok(new PracticeAnswerFeedbackDto(
             isCorrect,
             correctOption.Id,
-            question.Explanation.Get(request.Language),
-            state.LeitnerBox,
+            question.Explanation,
+            (int)state.LeitnerBox,
             state.NextReviewDate));
     }
 }

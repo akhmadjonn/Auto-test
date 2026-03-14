@@ -1,0 +1,3 @@
+[submodule "autotest-platform/frontend"]
+	path = autotest-platform/frontend
+	url = https://github.com/akhmadjonn/frontend.git

@@ -1,6 +1,7 @@
 using AutoTest.Application.Common.Interfaces;
 using AutoTest.Application.Common.Models;
 using AutoTest.Domain.Common.Enums;
+using AutoTest.Domain.Common.ValueObjects;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,15 +11,10 @@ public record GetSubscriptionStatusQuery(Language Language = Language.UzLatin)
     : IRequest<ApiResponse<SubscriptionStatusDto>>;
 
 public record SubscriptionStatusDto(
-    bool IsActive,
-    Guid? SubscriptionId,
-    string? PlanName,
-    long? PriceInTiyins,
-    DateTimeOffset? StartsAt,
+    string Status,
+    LocalizedText? PlanName,
     DateTimeOffset? ExpiresAt,
-    bool AutoRenew,
-    PaymentProvider? PaymentProvider,
-    int? DaysRemaining);
+    bool AutoRenew);
 
 public class GetSubscriptionStatusQueryHandler(
     IApplicationDbContext db,
@@ -44,19 +40,12 @@ public class GetSubscriptionStatusQueryHandler(
 
         if (subscription is null)
             return ApiResponse<SubscriptionStatusDto>.Ok(new SubscriptionStatusDto(
-                false, null, null, null, null, null, false, null, null));
-
-        var daysRemaining = (int)Math.Ceiling((subscription.ExpiresAt - now).TotalDays);
+                "none", null, null, false));
 
         return ApiResponse<SubscriptionStatusDto>.Ok(new SubscriptionStatusDto(
-            true,
-            subscription.Id,
-            subscription.Plan.Name.Get(request.Language),
-            subscription.Plan.PriceInTiyins,
-            subscription.StartsAt,
+            "active",
+            subscription.Plan.Name,
             subscription.ExpiresAt,
-            subscription.AutoRenew,
-            subscription.PaymentProvider,
-            daysRemaining));
+            subscription.AutoRenew));
     }
 }

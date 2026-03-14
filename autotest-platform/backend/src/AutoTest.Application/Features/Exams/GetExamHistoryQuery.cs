@@ -9,17 +9,12 @@ namespace AutoTest.Application.Features.Exams;
 public record GetExamHistoryQuery(int Page = 1, int PageSize = 20) : IRequest<ApiResponse<PaginatedList<ExamHistoryDto>>>;
 
 public record ExamHistoryDto(
-    Guid SessionId,
-    ExamMode Mode,
-    ExamStatus Status,
-    int? Score,
-    int? CorrectAnswers,
+    Guid ExamId,
+    int Score,
     int TotalQuestions,
-    bool? Passed,
-    int? TimeTakenSeconds,
-    int? TicketNumber,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset? CompletedAt);
+    bool Passed,
+    DateTimeOffset CompletedAt,
+    int TimeTakenSeconds);
 
 public class GetExamHistoryQueryHandler(
     IApplicationDbContext db,
@@ -32,8 +27,10 @@ public class GetExamHistoryQueryHandler(
 
         var query = db.ExamSessions
             .AsNoTracking()
-            .Where(s => s.UserId == currentUser.UserId)
-            .OrderByDescending(s => s.CreatedAt);
+            .Where(s => s.UserId == currentUser.UserId
+                && s.Status == ExamStatus.Completed
+                && s.CompletedAt.HasValue)
+            .OrderByDescending(s => s.CompletedAt);
 
         var total = await query.CountAsync(ct);
 
@@ -43,14 +40,9 @@ public class GetExamHistoryQueryHandler(
             .Select(s => new
             {
                 s.Id,
-                s.Mode,
-                s.Status,
                 s.Score,
-                s.CorrectAnswers,
                 TotalQuestions = s.SessionQuestions.Count,
                 s.TimeTakenSeconds,
-                s.TicketNumber,
-                s.CreatedAt,
                 s.CompletedAt,
                 PassingScore = s.ExamTemplate != null ? s.ExamTemplate.PassingScore : 80
             })
@@ -58,16 +50,11 @@ public class GetExamHistoryQueryHandler(
 
         var dtos = sessions.Select(s => new ExamHistoryDto(
             s.Id,
-            s.Mode,
-            s.Status,
-            s.Score,
-            s.CorrectAnswers,
+            s.Score ?? 0,
             s.TotalQuestions,
-            s.Score.HasValue ? s.Score >= s.PassingScore : null,
-            s.TimeTakenSeconds,
-            s.TicketNumber,
-            s.CreatedAt,
-            s.CompletedAt)).ToList();
+            (s.Score ?? 0) >= s.PassingScore,
+            s.CompletedAt!.Value,
+            s.TimeTakenSeconds ?? 0)).ToList();
 
         return ApiResponse<PaginatedList<ExamHistoryDto>>.Ok(
             new PaginatedList<ExamHistoryDto>(dtos, total, request.Page, request.PageSize));

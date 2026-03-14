@@ -1,6 +1,7 @@
 using AutoTest.Application.Common.Interfaces;
 using AutoTest.Application.Common.Models;
 using AutoTest.Domain.Common.Enums;
+using AutoTest.Domain.Common.ValueObjects;
 using AutoTest.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -13,24 +14,28 @@ public record CompleteExamCommand(Guid SessionId, Language Language = Language.U
     : IRequest<ApiResponse<ExamResultDto>>;
 
 public record ExamResultDto(
-    Guid SessionId,
+    Guid ExamId,
     int TotalQuestions,
     int CorrectAnswers,
     int Score,
+    int PassingScore,
     bool Passed,
     int? TimeTakenSeconds,
+    DateTimeOffset? CompletedAt,
     List<ExamResultQuestionDto> Questions);
 
 public record ExamResultQuestionDto(
     Guid QuestionId,
-    string Text,
+    LocalizedText Text,
     string? ImageUrl,
-    string Explanation,
+    LocalizedText? Explanation,
     Guid? SelectedAnswerId,
+    Guid? CorrectAnswerId,
     bool? IsCorrect,
-    List<ExamResultOptionDto> Options);
+    int? TimeSpentSeconds,
+    List<ExamResultOptionDto> AnswerOptions);
 
-public record ExamResultOptionDto(Guid Id, string Text, bool IsCorrect, string? ImageUrl);
+public record ExamResultOptionDto(Guid Id, LocalizedText Text, bool IsCorrect, string? ImageUrl);
 
 public class CompleteExamCommandValidator : AbstractValidator<CompleteExamCommand>
 {
@@ -86,11 +91,11 @@ public class CompleteExamCommandHandler(
         session.TimeTakenSeconds = timeTaken;
         session.UpdatedAt = now;
 
-        // Update Leitner spaced repetition states and category stats in parallel
+        // Update Leitner spaced repetition states and category stats sequentially
+        // (DbContext is not thread-safe — cannot run in parallel)
         var sessionQuestionsList = session.SessionQuestions.ToList();
-        await Task.WhenAll(
-            UpdateLeitnerStatesAsync(userId, sessionQuestionsList, now, ct),
-            UpdateCategoryStatsAsync(userId, sessionQuestionsList, ct));
+        await UpdateLeitnerStatesAsync(userId, sessionQuestionsList, now, ct);
+        await UpdateCategoryStatsAsync(userId, sessionQuestionsList, ct);
 
         await db.SaveChangesAsync(ct);
 
@@ -101,20 +106,23 @@ public class CompleteExamCommandHandler(
             {
                 var q = sq.Question;
                 var imgUrl = q.ImageUrl is not null ? await storage.GetPresignedUrlAsync(q.ImageUrl, ct) : null;
+                var correctOptionId = q.AnswerOptions.FirstOrDefault(a => a.IsCorrect)?.Id;
 
                 var optDtos = await Task.WhenAll(q.AnswerOptions.Select(async a =>
                 {
                     var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
-                    return new ExamResultOptionDto(a.Id, a.Text.Get(request.Language), a.IsCorrect, optImg);
+                    return new ExamResultOptionDto(a.Id, a.Text, a.IsCorrect, optImg);
                 }));
 
                 return new ExamResultQuestionDto(
                     q.Id,
-                    q.Text.Get(request.Language),
+                    q.Text,
                     imgUrl,
-                    q.Explanation.Get(request.Language),
+                    q.Explanation,
                     sq.SelectedAnswerId,
+                    correctOptionId,
                     sq.IsCorrect,
+                    sq.TimeSpentSeconds,
                     [..optDtos]);
             }));
 
@@ -122,8 +130,8 @@ public class CompleteExamCommandHandler(
             session.Id, correctCount, total, score);
 
         return ApiResponse<ExamResultDto>.Ok(new ExamResultDto(
-            session.Id, total, correctCount, score, score >= passingScore,
-            timeTaken, [..questionDtos]));
+            session.Id, total, correctCount, score, passingScore,
+            score >= passingScore, timeTaken, now, [..questionDtos]));
     }
 
     private async Task UpdateCategoryStatsAsync(

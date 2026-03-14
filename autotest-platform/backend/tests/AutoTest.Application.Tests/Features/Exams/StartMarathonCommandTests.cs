@@ -79,8 +79,8 @@ public class StartMarathonCommandTests
         var result = await handler.Handle(new StartMarathonCommand(), CancellationToken.None);
 
         result.Success.Should().BeTrue();
-        result.Data!.SessionId.Should().Be(existingSession.Id);
-        result.Data.LastQuestionIndex.Should().Be(3);
+        result.Data!.Id.Should().Be(existingSession.Id);
+        result.Data.Status.Should().Be("inProgress");
     }
 
     [Fact]

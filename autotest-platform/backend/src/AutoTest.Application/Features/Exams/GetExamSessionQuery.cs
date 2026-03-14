@@ -30,6 +30,14 @@ public class GetExamSessionQueryHandler(
             return ApiResponse<ExamSessionDto>.Fail("SESSION_NOT_FOUND", "Session not found.");
 
         var timeLimitMinutes = session.ExamTemplate?.TimeLimitMinutes ?? 20;
+        var passingScore = session.ExamTemplate?.PassingScore ?? 80;
+        var mode = session.Mode switch
+        {
+            ExamMode.Exam => "exam",
+            ExamMode.Ticket => "ticket",
+            ExamMode.Marathon => "marathon",
+            _ => "exam"
+        };
 
         var questionDtos = await Task.WhenAll(session.SessionQuestions
             .OrderBy(sq => sq.Order)
@@ -41,17 +49,28 @@ public class GetExamSessionQueryHandler(
                 var optDtos = await Task.WhenAll(q.AnswerOptions.Select(async a =>
                 {
                     var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
-                    return new ExamAnswerOptionDto(a.Id, a.Text.Get(request.Language), optImg);
+                    return new ExamAnswerOptionDto(a.Id, a.Text, optImg);
                 }));
 
-                return new ExamQuestionDto(sq.Id, q.Id, sq.Order, q.Text.Get(request.Language), imgUrl, [..optDtos]);
+                return new ExamQuestionDto(sq.Id, q.Id, sq.Order, q.Text, imgUrl, [..optDtos], sq.SelectedAnswerId);
             }));
 
         return ApiResponse<ExamSessionDto>.Ok(new ExamSessionDto(
             session.Id,
+            session.Status switch
+            {
+                ExamStatus.InProgress => "inProgress",
+                ExamStatus.Completed => "completed",
+                ExamStatus.Expired => "expired",
+                ExamStatus.Abandoned => "abandoned",
+                _ => "completed"
+            },
             session.SessionQuestions.Count,
+            passingScore,
             timeLimitMinutes,
             session.ExpiresAt,
+            mode,
+            session.TicketNumber,
             [..questionDtos]));
     }
 }

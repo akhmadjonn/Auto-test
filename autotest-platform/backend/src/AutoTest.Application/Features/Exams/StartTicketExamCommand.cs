@@ -90,14 +90,14 @@ public class StartTicketExamCommandHandler(
             var optDtos = await Task.WhenAll(shuffledOptions.Select(async a =>
             {
                 var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
-                return new ExamAnswerOptionDto(a.Id, a.Text.Get(request.Language), optImg);
+                return new ExamAnswerOptionDto(a.Id, a.Text, optImg);
             }));
 
             return new ExamQuestionDto(
                 sessionQuestions[idx].Id,
                 q.Id,
                 idx + 1,
-                q.Text.Get(request.Language),
+                q.Text,
                 imgUrl,
                 [..optDtos]);
         }));
@@ -105,9 +105,13 @@ public class StartTicketExamCommandHandler(
         logger.LogInformation("Ticket exam started: session {SessionId}, ticket {Ticket}", session.Id, request.TicketNumber);
         return ApiResponse<ExamSessionDto>.Ok(new ExamSessionDto(
             session.Id,
+            "inProgress",
             questions.Count,
+            (int)Math.Ceiling((double)questions.Count * 80 / 100),
             TicketTimeLimitMinutes,
             expiresAt,
+            "ticket",
+            request.TicketNumber,
             [..questionDtos]));
     }
 }

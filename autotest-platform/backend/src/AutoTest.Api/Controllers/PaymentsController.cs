@@ -10,7 +10,7 @@ using Microsoft.Extensions.Configuration;
 namespace AutoTest.Api.Controllers;
 
 [ApiController]
-[Route("api/payments")]
+[Route("api/v1/payments")]
 [EnableRateLimiting("anonymous")]
 public class PaymentsController(ISender mediator, IConfiguration configuration) : ControllerBase
 {
