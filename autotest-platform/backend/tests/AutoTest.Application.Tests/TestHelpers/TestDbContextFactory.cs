@@ -71,6 +71,9 @@ public class FakeFileStorageService : IFileStorageService
     public Task<string> GetThumbnailUrlAsync(string key, CancellationToken ct = default) =>
         Task.FromResult($"https://minio.local/{key}_thumb?signed=1");
 
+    public Task<Dictionary<string, string>> GetPresignedUrlsBatchAsync(IEnumerable<string> objectKeys, CancellationToken ct = default) =>
+        Task.FromResult(objectKeys.ToDictionary(k => k, k => $"https://minio.local/{k}?signed=1"));
+
     public Task DeleteAsync(string key, CancellationToken ct = default) => Task.CompletedTask;
     public Task DeleteManyAsync(IEnumerable<string> keys, CancellationToken ct = default) => Task.CompletedTask;
 }

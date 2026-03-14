@@ -87,22 +87,31 @@ public class GetPracticeSessionQueryHandler(
         // 60% due / 30% new / 10% weak
         var dueTarget = (int)Math.Ceiling(batchSize * 0.6);
         var newTarget = (int)Math.Ceiling(batchSize * 0.3);
-        var weakTarget = batchSize - dueTarget - newTarget;
+        var weakTarget = Math.Max(0, batchSize - dueTarget - newTarget);
 
         var selected = FillBatch(duePool, newPool, weakPool, dueTarget, newTarget, weakTarget, batchSize);
 
-        // Build response DTOs
-        var questionDtos = await Task.WhenAll(selected.Select(async q =>
+        // Batch presigned URL generation — single parallel call instead of N+1
+        var allImageKeys = new List<string>();
+        foreach (var q in selected)
+        {
+            if (q.ImageUrl is not null) allImageKeys.Add(q.ImageUrl);
+            foreach (var a in q.AnswerOptions)
+                if (a.ImageUrl is not null) allImageKeys.Add(a.ImageUrl);
+        }
+        var urlMap = await storage.GetPresignedUrlsBatchAsync(allImageKeys, ct);
+
+        var questionDtos = selected.Select(q =>
         {
             states.TryGetValue(q.Id, out var state);
-            var imgUrl = q.ImageUrl is not null ? await storage.GetPresignedUrlAsync(q.ImageUrl, ct) : null;
+            var imgUrl = q.ImageUrl is not null ? urlMap.GetValueOrDefault(q.ImageUrl) : null;
 
             var shuffledOptions = q.AnswerOptions.OrderBy(_ => Random.Shared.Next()).ToList();
-            var optDtos = await Task.WhenAll(shuffledOptions.Select(async a =>
+            var optDtos = shuffledOptions.Select(a =>
             {
-                var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
+                var optImg = a.ImageUrl is not null ? urlMap.GetValueOrDefault(a.ImageUrl) : null;
                 return new PracticeAnswerOptionDto(a.Id, a.Text, optImg);
-            }));
+            }).ToList();
 
             return new PracticeQuestionDto(
                 q.Id,
@@ -110,12 +119,12 @@ public class GetPracticeSessionQueryHandler(
                 imgUrl,
                 q.Category?.Name ?? new LocalizedText("", "", ""),
                 (int)q.Difficulty,
-                [..optDtos],
+                optDtos,
                 (int)(state?.LeitnerBox ?? LeitnerBox.Box1));
-        }));
+        }).ToList();
 
         return ApiResponse<PracticeSessionDto>.Ok(new PracticeSessionDto(
-            [..questionDtos],
+            questionDtos,
             duePool.Count));
     }
 

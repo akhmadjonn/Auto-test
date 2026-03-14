@@ -21,6 +21,7 @@ public class PermanentDeleteQuestionCommandValidator : AbstractValidator<Permane
 public class PermanentDeleteQuestionCommandHandler(
     IApplicationDbContext db,
     IFileStorageService storage,
+    ICacheService cache,
     ILogger<PermanentDeleteQuestionCommandHandler> logger) : IRequestHandler<PermanentDeleteQuestionCommand, ApiResponse>
 {
     public async Task<ApiResponse> Handle(PermanentDeleteQuestionCommand request, CancellationToken ct)
@@ -42,6 +43,7 @@ public class PermanentDeleteQuestionCommandHandler(
 
         db.Questions.Remove(question);
         await db.SaveChangesAsync(ct);
+        await CreateQuestionCommandHandler.InvalidateQuestionCachesAsync(cache, ct);
 
         if (imageKeys.Count > 0)
             await storage.DeleteManyAsync(imageKeys, ct);

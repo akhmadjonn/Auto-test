@@ -19,6 +19,7 @@ public class ToggleQuestionStatusCommandValidator : AbstractValidator<ToggleQues
 public class ToggleQuestionStatusCommandHandler(
     IApplicationDbContext db,
     IDateTimeProvider dateTime,
+    ICacheService cache,
     ILogger<ToggleQuestionStatusCommandHandler> logger) : IRequestHandler<ToggleQuestionStatusCommand, ApiResponse>
 {
     public async Task<ApiResponse> Handle(ToggleQuestionStatusCommand request, CancellationToken ct)
@@ -30,6 +31,7 @@ public class ToggleQuestionStatusCommandHandler(
         question.IsActive = request.IsActive;
         question.UpdatedAt = dateTime.UtcNow;
         await db.SaveChangesAsync(ct);
+        await CreateQuestionCommandHandler.InvalidateQuestionCachesAsync(cache, ct);
 
         logger.LogInformation("Question {Id} status set to {Status}", request.QuestionId, request.IsActive);
         return ApiResponse.Ok();

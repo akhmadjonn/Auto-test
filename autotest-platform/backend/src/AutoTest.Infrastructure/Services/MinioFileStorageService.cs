@@ -55,6 +55,25 @@ public class MinioFileStorageService(
         return await s3.GetPreSignedURLAsync(request);
     }
 
+    public async Task<Dictionary<string, string>> GetPresignedUrlsBatchAsync(IEnumerable<string> objectKeys, CancellationToken ct = default)
+    {
+        var keys = objectKeys.Where(k => k is not null).Distinct().ToList();
+        if (keys.Count == 0)
+            return new Dictionary<string, string>();
+
+        var result = new Dictionary<string, string>(keys.Count);
+        var tasks = keys.Select(async key =>
+        {
+            var url = await GetPresignedUrlAsync(key, ct);
+            return (key, url);
+        });
+
+        foreach (var (key, url) in await Task.WhenAll(tasks))
+            result[key] = url;
+
+        return result;
+    }
+
     public async Task DeleteAsync(string objectKey, CancellationToken ct = default)
     {
         await s3.DeleteObjectAsync(Bucket, objectKey, ct);

@@ -153,17 +153,27 @@ public class StartExamCommandHandler(
         db.ExamSessions.Add(session);
         await db.SaveChangesAsync(ct);
 
-        // Build response WITHOUT correct answers
-        var questionDtos = await Task.WhenAll(shuffled.Select(async (q, idx) =>
+        // Batch presigned URL generation — single parallel call instead of N+1
+        var allImageKeys = new List<string>();
+        foreach (var q in shuffled)
         {
-            var imgUrl = q.ImageUrl is not null ? await storage.GetPresignedUrlAsync(q.ImageUrl, ct) : null;
-            var shuffledOptions = q.AnswerOptions.OrderBy(_ => Random.Shared.Next()).ToList();
+            if (q.ImageUrl is not null) allImageKeys.Add(q.ImageUrl);
+            foreach (var a in q.AnswerOptions)
+                if (a.ImageUrl is not null) allImageKeys.Add(a.ImageUrl);
+        }
 
-            var optDtos = await Task.WhenAll(shuffledOptions.Select(async a =>
+        var urlMap = await storage.GetPresignedUrlsBatchAsync(allImageKeys, ct);
+
+        // Build response WITHOUT correct answers
+        var questionDtos = shuffled.Select((q, idx) =>
+        {
+            var imgUrl = q.ImageUrl is not null ? urlMap.GetValueOrDefault(q.ImageUrl) : null;
+            var shuffledOptions = q.AnswerOptions.OrderBy(_ => Random.Shared.Next()).ToList();
+            var optDtos = shuffledOptions.Select(a =>
             {
-                var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
+                var optImg = a.ImageUrl is not null ? urlMap.GetValueOrDefault(a.ImageUrl) : null;
                 return new ExamAnswerOptionDto(a.Id, a.Text, optImg);
-            }));
+            }).ToList();
 
             return new ExamQuestionDto(
                 sessionQuestions[idx].Id,
@@ -171,8 +181,8 @@ public class StartExamCommandHandler(
                 idx + 1,
                 q.Text,
                 imgUrl,
-                [..optDtos]);
-        }));
+                optDtos);
+        }).ToList();
 
         logger.LogInformation("Exam started: session {SessionId} for user {UserId}", session.Id, userId);
         return ApiResponse<ExamSessionDto>.Ok(new ExamSessionDto(
@@ -184,6 +194,6 @@ public class StartExamCommandHandler(
             expiresAt,
             "exam",
             null,
-            [..questionDtos]));
+            questionDtos));
     }
 }

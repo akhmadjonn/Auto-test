@@ -25,21 +25,31 @@ public class GetQuestionsByTicketQueryHandler(
             .OrderBy(q => q.Id)
             .ToListAsync(ct);
 
-        var dtos = await Task.WhenAll(questions.Select(async q =>
+        // Batch presigned URL generation — single parallel call instead of N+1
+        var allImageKeys = new List<string>();
+        foreach (var q in questions)
         {
-            var imageUrl = q.ImageUrl is not null ? await storage.GetPresignedUrlAsync(q.ImageUrl, ct) : null;
+            if (q.ImageUrl is not null) allImageKeys.Add(q.ImageUrl);
+            foreach (var a in q.AnswerOptions)
+                if (a.ImageUrl is not null) allImageKeys.Add(a.ImageUrl);
+        }
+        var urlMap = await storage.GetPresignedUrlsBatchAsync(allImageKeys, ct);
 
-            var options = await Task.WhenAll(q.AnswerOptions.Select(async a =>
+        var dtos = questions.Select(q =>
+        {
+            var imageUrl = q.ImageUrl is not null ? urlMap.GetValueOrDefault(q.ImageUrl) : null;
+
+            var options = q.AnswerOptions.Select(a =>
             {
-                var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
+                var optImg = a.ImageUrl is not null ? urlMap.GetValueOrDefault(a.ImageUrl) : null;
                 return new AnswerOptionDto(a.Id, a.Text, optImg);
-            }));
+            }).ToList();
 
             return new QuestionSummaryDto(q.Id, q.Text, imageUrl,
                 q.Difficulty, q.CategoryId, q.Category?.Name ?? new LocalizedText("", "", ""),
-                q.TicketNumber, [..options]);
-        }));
+                q.TicketNumber, options);
+        }).ToList();
 
-        return ApiResponse<List<QuestionSummaryDto>>.Ok([..dtos]);
+        return ApiResponse<List<QuestionSummaryDto>>.Ok(dtos);
     }
 }

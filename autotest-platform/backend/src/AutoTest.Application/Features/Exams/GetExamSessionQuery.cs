@@ -39,21 +39,31 @@ public class GetExamSessionQueryHandler(
             _ => "exam"
         };
 
-        var questionDtos = await Task.WhenAll(session.SessionQuestions
+        // Batch presigned URL generation — single parallel call instead of N+1
+        var allImageKeys = new List<string>();
+        foreach (var sq in session.SessionQuestions)
+        {
+            if (sq.Question.ImageUrl is not null) allImageKeys.Add(sq.Question.ImageUrl);
+            foreach (var a in sq.Question.AnswerOptions)
+                if (a.ImageUrl is not null) allImageKeys.Add(a.ImageUrl);
+        }
+
+        var urlMap = await storage.GetPresignedUrlsBatchAsync(allImageKeys, ct);
+
+        var questionDtos = session.SessionQuestions
             .OrderBy(sq => sq.Order)
-            .Select(async sq =>
+            .Select(sq =>
             {
                 var q = sq.Question;
-                var imgUrl = q.ImageUrl is not null ? await storage.GetPresignedUrlAsync(q.ImageUrl, ct) : null;
-
-                var optDtos = await Task.WhenAll(q.AnswerOptions.Select(async a =>
+                var imgUrl = q.ImageUrl is not null ? urlMap.GetValueOrDefault(q.ImageUrl) : null;
+                var optDtos = q.AnswerOptions.Select(a =>
                 {
-                    var optImg = a.ImageUrl is not null ? await storage.GetPresignedUrlAsync(a.ImageUrl, ct) : null;
+                    var optImg = a.ImageUrl is not null ? urlMap.GetValueOrDefault(a.ImageUrl) : null;
                     return new ExamAnswerOptionDto(a.Id, a.Text, optImg);
-                }));
+                }).ToList();
 
-                return new ExamQuestionDto(sq.Id, q.Id, sq.Order, q.Text, imgUrl, [..optDtos], sq.SelectedAnswerId);
-            }));
+                return new ExamQuestionDto(sq.Id, q.Id, sq.Order, q.Text, imgUrl, optDtos, sq.SelectedAnswerId);
+            }).ToList();
 
         return ApiResponse<ExamSessionDto>.Ok(new ExamSessionDto(
             session.Id,
@@ -71,6 +81,6 @@ public class GetExamSessionQueryHandler(
             session.ExpiresAt,
             mode,
             session.TicketNumber,
-            [..questionDtos]));
+            questionDtos));
     }
 }

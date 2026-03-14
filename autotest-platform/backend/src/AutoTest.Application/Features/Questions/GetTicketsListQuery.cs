@@ -10,10 +10,17 @@ public record GetTicketsListQuery(LicenseCategory? LicenseCategory = null) : IRe
 
 public record TicketSummaryDto(int TicketNumber, int QuestionCount);
 
-public class GetTicketsListQueryHandler(IApplicationDbContext db) : IRequestHandler<GetTicketsListQuery, ApiResponse<List<TicketSummaryDto>>>
+public class GetTicketsListQueryHandler(
+    IApplicationDbContext db,
+    ICacheService cache) : IRequestHandler<GetTicketsListQuery, ApiResponse<List<TicketSummaryDto>>>
 {
     public async Task<ApiResponse<List<TicketSummaryDto>>> Handle(GetTicketsListQuery request, CancellationToken ct)
     {
+        var cacheKey = $"avtolider:tickets:list:{request.LicenseCategory?.ToString() ?? "all"}";
+        var cached = await cache.GetAsync<List<TicketSummaryDto>>(cacheKey, ct);
+        if (cached is not null)
+            return ApiResponse<List<TicketSummaryDto>>.Ok(cached);
+
         var query = db.Questions.AsNoTracking().Where(q => q.IsActive);
 
         if (request.LicenseCategory.HasValue && request.LicenseCategory != Domain.Common.Enums.LicenseCategory.Both)
@@ -30,6 +37,7 @@ public class GetTicketsListQueryHandler(IApplicationDbContext db) : IRequestHand
             .Select(g => new TicketSummaryDto(g.TicketNumber, g.QuestionCount))
             .ToList();
 
+        await cache.SetAsync(cacheKey, tickets, TimeSpan.FromHours(1), ct);
         return ApiResponse<List<TicketSummaryDto>>.Ok(tickets);
     }
 }

@@ -57,6 +57,7 @@ public class UpdateQuestionCommandHandler(
     IImageProcessingService imageProcessor,
     IFileStorageService storage,
     IDateTimeProvider dateTime,
+    ICacheService cache,
     ILogger<UpdateQuestionCommandHandler> logger) : IRequestHandler<UpdateQuestionCommand, ApiResponse>
 {
     public async Task<ApiResponse> Handle(UpdateQuestionCommand request, CancellationToken ct)
@@ -153,6 +154,7 @@ public class UpdateQuestionCommandHandler(
         }
 
         await db.SaveChangesAsync(ct);
+        await CreateQuestionCommandHandler.InvalidateQuestionCachesAsync(cache, ct);
         logger.LogInformation("Updated question {Id}", request.QuestionId);
         return ApiResponse.Ok();
     }

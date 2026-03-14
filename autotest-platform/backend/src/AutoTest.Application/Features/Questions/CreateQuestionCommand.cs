@@ -54,6 +54,7 @@ public class CreateQuestionCommandHandler(
     IImageProcessingService imageProcessor,
     IFileStorageService storage,
     IDateTimeProvider dateTime,
+    ICacheService cache,
     ILogger<CreateQuestionCommandHandler> logger) : IRequestHandler<CreateQuestionCommand, ApiResponse<Guid>>
 {
     public async Task<ApiResponse<Guid>> Handle(CreateQuestionCommand request, CancellationToken ct)
@@ -110,8 +111,18 @@ public class CreateQuestionCommandHandler(
         question.AnswerOptions = options;
         db.Questions.Add(question);
         await db.SaveChangesAsync(ct);
+        await InvalidateQuestionCachesAsync(cache, ct);
 
         logger.LogInformation("Created question {QuestionId} in category {CategoryId}", question.Id, request.CategoryId);
         return ApiResponse<Guid>.Ok(question.Id);
+    }
+
+    public static async Task InvalidateQuestionCachesAsync(ICacheService cache, CancellationToken ct)
+    {
+        await cache.RemoveAsync("avtolider:tickets:list:all", ct);
+        await cache.RemoveAsync("avtolider:tickets:list:AB", ct);
+        await cache.RemoveAsync("avtolider:tickets:list:CD", ct);
+        await cache.RemoveAsync("avtolider:tickets:list:Both", ct);
+        await cache.RemoveAsync("avtolider:categories:tree:all", ct);
     }
 }

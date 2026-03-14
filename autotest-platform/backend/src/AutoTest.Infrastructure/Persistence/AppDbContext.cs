@@ -61,6 +61,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(q => q.ThumbnailUrl).HasMaxLength(500);
             e.HasIndex(q => new { q.CategoryId, q.Difficulty }).HasFilter("is_active = true");
             e.HasIndex(q => q.TicketNumber);
+            e.HasIndex(q => q.IsActive);
+            e.HasIndex(q => new { q.TicketNumber, q.IsActive });
             e.HasOne(q => q.Category).WithMany(c => c.Questions).HasForeignKey(q => q.CategoryId);
             e.HasMany(q => q.Tags).WithMany(t => t.Questions).UsingEntity("question_tags");
         });
@@ -110,6 +112,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(sq => sq.ExamSession).WithMany(s => s.SessionQuestions).HasForeignKey(sq => sq.ExamSessionId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(sq => sq.Question).WithMany().HasForeignKey(sq => sq.QuestionId);
             e.HasOne(sq => sq.SelectedAnswer).WithMany().HasForeignKey(sq => sq.SelectedAnswerId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(sq => new { sq.ExamSessionId, sq.Order });
         });
 
         // UserQuestionState — composite key
@@ -144,6 +147,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(s => s.User).WithMany(u => u.Subscriptions).HasForeignKey(s => s.UserId);
             e.HasOne(s => s.Plan).WithMany().HasForeignKey(s => s.PlanId);
             e.Property(s => s.CardToken).HasMaxLength(500);
+            e.HasIndex(s => new { s.UserId, s.Status, s.ExpiresAt });
         });
 
         // PaymentTransaction
@@ -154,6 +158,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(pt => pt.ProviderTransactionId).HasMaxLength(200);
             e.Property(pt => pt.Currency).HasMaxLength(10).HasDefaultValue("UZS");
             e.HasIndex(pt => new { pt.UserId, pt.Status });
+            e.HasIndex(pt => new { pt.CreatedAt, pt.Status });
+            e.HasIndex(pt => new { pt.Status, pt.Provider });
         });
 
         // OtpRequest

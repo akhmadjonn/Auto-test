@@ -25,10 +25,16 @@ public record RecentUserDto(Guid Id, string? PhoneNumber, string? FirstName, Dat
 
 public class AdminDashboardQueryHandler(
     IApplicationDbContext db,
-    IDateTimeProvider dateTime) : IRequestHandler<AdminDashboardQuery, ApiResponse<AdminDashboardDto>>
+    IDateTimeProvider dateTime,
+    ICacheService cache) : IRequestHandler<AdminDashboardQuery, ApiResponse<AdminDashboardDto>>
 {
     public async Task<ApiResponse<AdminDashboardDto>> Handle(AdminDashboardQuery request, CancellationToken ct)
     {
+        const string cacheKey = "avtolider:admin:dashboard";
+        var cached = await cache.GetAsync<AdminDashboardDto>(cacheKey, ct);
+        if (cached is not null)
+            return ApiResponse<AdminDashboardDto>.Ok(cached);
+
         var now = dateTime.UtcNow;
         var today = new DateTimeOffset(now.Date, TimeSpan.Zero);
         var weekAgo = now.AddDays(-7);
@@ -59,16 +65,14 @@ public class AdminDashboardQueryHandler(
             .Select(u => new RecentUserDto(u.Id, u.PhoneNumber, u.FirstName, u.CreatedAt))
             .ToListAsync(ct);
 
-        return ApiResponse<AdminDashboardDto>.Ok(new AdminDashboardDto(
-            totalUsers,
-            activeUsersToday,
-            totalQuestions,
-            activeQuestions,
-            totalSessions,
-            activeSubs,
-            totalRevenue,
-            newUsersWeek,
+        var dto = new AdminDashboardDto(
+            totalUsers, activeUsersToday, totalQuestions, activeQuestions,
+            totalSessions, activeSubs, totalRevenue, newUsersWeek,
             examModes.Select(e => new ExamModeBreakdownDto(e.Key, e.Count)).ToList(),
-            recentUsers));
+            recentUsers);
+
+        // Short TTL — admin dashboard shows near-real-time stats
+        await cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(2), ct);
+        return ApiResponse<AdminDashboardDto>.Ok(dto);
     }
 }

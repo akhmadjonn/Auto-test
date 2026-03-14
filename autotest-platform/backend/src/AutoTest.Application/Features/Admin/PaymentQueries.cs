@@ -89,24 +89,32 @@ public class GetRevenueReportQueryHandler(
         if (request.DateTo.HasValue)
             query = query.Where(p => p.CreatedAt <= request.DateTo.Value);
 
-        var transactions = await query.ToListAsync(ct);
+        // DB-level aggregation — no ToListAsync, no in-memory processing
+        var totalTransactions = await query.CountAsync(ct);
+        var completedQuery = query.Where(p => p.Status == PaymentStatus.Completed);
+        var completedCount = await completedQuery.CountAsync(ct);
+        var failedCount = await query.CountAsync(p => p.Status == PaymentStatus.Failed, ct);
+        var totalRevenue = await completedQuery.SumAsync(p => (long?)p.AmountInTiyins, ct) ?? 0;
+        var paymeRevenue = await completedQuery
+            .Where(p => p.Provider == PaymentProvider.Payme)
+            .SumAsync(p => (long?)p.AmountInTiyins, ct) ?? 0;
+        var clickRevenue = await completedQuery
+            .Where(p => p.Provider == PaymentProvider.Click)
+            .SumAsync(p => (long?)p.AmountInTiyins, ct) ?? 0;
 
-        var completed = transactions.Where(t => t.Status == PaymentStatus.Completed).ToList();
-        var totalRevenue = completed.Sum(t => t.AmountInTiyins);
-        var paymeRevenue = completed.Where(t => t.Provider == PaymentProvider.Payme).Sum(t => t.AmountInTiyins);
-        var clickRevenue = completed.Where(t => t.Provider == PaymentProvider.Click).Sum(t => t.AmountInTiyins);
+        // Daily breakdown via DB GroupBy — use Year/Month/Day for Npgsql compatibility
+        var dailyRaw = await completedQuery
+            .GroupBy(p => new { p.CompletedAt!.Value.Year, p.CompletedAt!.Value.Month, p.CompletedAt!.Value.Day })
+            .Select(g => new { g.Key.Year, g.Key.Month, g.Key.Day, Revenue = g.Sum(p => p.AmountInTiyins), Count = g.Count() })
+            .OrderByDescending(d => d.Year).ThenByDescending(d => d.Month).ThenByDescending(d => d.Day)
+            .ToListAsync(ct);
 
-        var daily = completed
-            .GroupBy(t => DateOnly.FromDateTime(t.CompletedAt?.DateTime ?? t.CreatedAt.DateTime))
-            .Select(g => new DailyRevenueDto(g.Key, g.Sum(t => t.AmountInTiyins), g.Count()))
-            .OrderByDescending(d => d.Date)
+        var daily = dailyRaw
+            .Select(d => new DailyRevenueDto(new DateOnly(d.Year, d.Month, d.Day), d.Revenue, d.Count))
             .ToList();
 
         return ApiResponse<RevenueReportDto>.Ok(new RevenueReportDto(
-            totalRevenue,
-            transactions.Count,
-            completed.Count,
-            transactions.Count(t => t.Status == PaymentStatus.Failed),
+            totalRevenue, totalTransactions, completedCount, failedCount,
             paymeRevenue, clickRevenue, daily));
     }
 }
