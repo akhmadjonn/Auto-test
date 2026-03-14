@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using AutoTest.Application.Common.Interfaces;
 using Microsoft.Extensions.Configuration;
@@ -31,6 +32,12 @@ public class PaymePaymentProvider(
         // For Payme: create a receipt and return its ID as the "transaction"
         var receiptResult = await CreateReceiptAsync(subscriptionId, amountInTiyins, ct);
         return receiptResult;
+    }
+
+    public string GenerateCheckoutUrl(string providerTransactionId, long amountInTiyins, Guid subscriptionId)
+    {
+        var checkoutBase = configuration["PaymeSettings:CheckoutUrl"] ?? "https://checkout.paycom.uz";
+        return $"{checkoutBase}/{providerTransactionId}";
     }
 
     public async Task<bool> VerifyPaymentAsync(string providerTransactionId, CancellationToken ct = default)
@@ -109,7 +116,7 @@ public class PaymePaymentProvider(
         var rpcResponse = JsonSerializer.Deserialize<PaymeRpcResponse<T>>(responseJson, SerializerOptions);
 
         if (rpcResponse?.Error is not null)
-            throw new PaymeException(rpcResponse.Error.Code, rpcResponse.Error.Message.Ru ?? "Payme error");
+            throw new PaymeException(rpcResponse.Error.Code, ExtractErrorMessage(rpcResponse.Error.Message));
 
         return rpcResponse!.Result;
     }
@@ -126,11 +133,16 @@ public class PaymePaymentProvider(
 
     private record PaymeError(
         [property: JsonPropertyName("code")] int Code,
-        [property: JsonPropertyName("message")] PaymeErrorMessage Message);
+        [property: JsonPropertyName("message")] JsonNode? Message);
 
-    private record PaymeErrorMessage(
-        [property: JsonPropertyName("ru")] string? Ru,
-        [property: JsonPropertyName("uz")] string? Uz);
+    // Payme error.message can be a plain string or { ru: "...", uz: "..." }
+    private static string ExtractErrorMessage(JsonNode? message)
+    {
+        if (message is null) return "Payme error";
+        if (message is JsonValue val && val.TryGetValue<string>(out var str)) return str;
+        if (message is JsonObject obj && obj["ru"]?.GetValue<string>() is { } ru) return ru;
+        return message.ToJsonString();
+    }
 
     private record PaymeReceiptCreateResponse(
         [property: JsonPropertyName("receipt")] PaymeReceiptDto? Receipt);

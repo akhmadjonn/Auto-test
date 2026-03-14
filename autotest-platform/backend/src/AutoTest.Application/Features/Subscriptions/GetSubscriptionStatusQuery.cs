@@ -14,7 +14,8 @@ public record SubscriptionStatusDto(
     string Status,
     LocalizedText? PlanName,
     DateTimeOffset? ExpiresAt,
-    bool AutoRenew);
+    bool AutoRenew,
+    Guid? SubscriptionId);
 
 public class GetSubscriptionStatusQueryHandler(
     IApplicationDbContext db,
@@ -40,12 +41,13 @@ public class GetSubscriptionStatusQueryHandler(
 
         if (subscription is null)
             return ApiResponse<SubscriptionStatusDto>.Ok(new SubscriptionStatusDto(
-                "none", null, null, false));
+                "none", null, null, false, null));
 
         return ApiResponse<SubscriptionStatusDto>.Ok(new SubscriptionStatusDto(
             "active",
             subscription.Plan.Name,
             subscription.ExpiresAt,
-            subscription.AutoRenew));
+            subscription.AutoRenew,
+            subscription.Id));
     }
 }

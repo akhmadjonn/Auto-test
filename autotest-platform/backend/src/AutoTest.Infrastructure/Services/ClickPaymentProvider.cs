@@ -35,6 +35,13 @@ public class ClickPaymentProvider(
         return result;
     }
 
+    public string GenerateCheckoutUrl(string providerTransactionId, long amountInTiyins, Guid subscriptionId)
+    {
+        var amountUzs = amountInTiyins / 100.0m;
+        var checkoutBase = configuration["ClickSettings:CheckoutUrl"] ?? "https://my.click.uz/services/pay";
+        return $"{checkoutBase}?service_id={_serviceId}&merchant_id={_merchantId}&amount={amountUzs}&transaction_param={subscriptionId}";
+    }
+
     public async Task<bool> VerifyPaymentAsync(string providerTransactionId, CancellationToken ct = default)
     {
         var client = CreateAuthenticatedClient();
