@@ -80,8 +80,7 @@ public class CreateCategoryCommandHandler(
 
     internal static async Task InvalidateCategoryCacheAsync(ICacheService cache, CancellationToken ct)
     {
-        await cache.RemoveAsync("avtolider:categories:tree:Uz", ct);
-        await cache.RemoveAsync("avtolider:categories:tree:UzLatin", ct);
-        await cache.RemoveAsync("avtolider:categories:tree:Ru", ct);
+        await cache.RemoveAsync("avtolider:categories:tree:all", ct);
+        await cache.RemoveAsync("avtolider:categories:tree:all:admin", ct);
     }
 }
