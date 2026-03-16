@@ -47,8 +47,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "Avtolider",
-            ValidAudience = builder.Configuration["JwtSettings:Audience"] ?? "Avtolider",
+            ValidIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "AutoTest",
+            ValidAudience = builder.Configuration["JwtSettings:Audience"] ?? "AutoTest",
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.Zero
         };

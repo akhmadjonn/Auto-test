@@ -17,7 +17,7 @@ public class AdminCategoriesController(IMediator mediator) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] Language language = Language.UzLatin, CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetCategoriesTreeQuery(language), ct);
+        var result = await mediator.Send(new GetCategoriesTreeQuery(language, IncludeInactive: true), ct);
         return Ok(result);
     }
 
