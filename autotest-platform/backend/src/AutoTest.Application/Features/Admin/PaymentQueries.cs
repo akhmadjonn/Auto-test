@@ -42,10 +42,16 @@ public class GetPaymentTransactionsQueryHandler(
             query = query.Where(p => p.Status == request.Status.Value);
 
         if (request.DateFrom.HasValue)
-            query = query.Where(p => p.CreatedAt >= request.DateFrom.Value);
+        {
+            var from = request.DateFrom.Value.ToUniversalTime();
+            query = query.Where(p => p.CreatedAt >= from);
+        }
 
         if (request.DateTo.HasValue)
-            query = query.Where(p => p.CreatedAt <= request.DateTo.Value);
+        {
+            var to = request.DateTo.Value.ToUniversalTime();
+            query = query.Where(p => p.CreatedAt <= to);
+        }
 
         var projected = query
             .OrderByDescending(p => p.CreatedAt)
@@ -84,10 +90,16 @@ public class GetRevenueReportQueryHandler(
         var query = db.PaymentTransactions.AsNoTracking().AsQueryable();
 
         if (request.DateFrom.HasValue)
-            query = query.Where(p => p.CreatedAt >= request.DateFrom.Value);
+        {
+            var from = request.DateFrom.Value.ToUniversalTime();
+            query = query.Where(p => p.CreatedAt >= from);
+        }
 
         if (request.DateTo.HasValue)
-            query = query.Where(p => p.CreatedAt <= request.DateTo.Value);
+        {
+            var to = request.DateTo.Value.ToUniversalTime();
+            query = query.Where(p => p.CreatedAt <= to);
+        }
 
         // DB-level aggregation — no ToListAsync, no in-memory processing
         var totalTransactions = await query.CountAsync(ct);
