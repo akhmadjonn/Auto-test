@@ -28,7 +28,7 @@ public class StartTicketExamCommandHandler(
     IDateTimeProvider dateTime,
     ILogger<StartTicketExamCommandHandler> logger) : IRequestHandler<StartTicketExamCommand, ApiResponse<ExamSessionDto>>
 {
-    private const int TicketTimeLimitMinutes = 20;
+    private const int TicketTimeLimitMinutes = 25;
 
     public async Task<ApiResponse<ExamSessionDto>> Handle(StartTicketExamCommand request, CancellationToken ct)
     {
@@ -117,7 +117,7 @@ public class StartTicketExamCommandHandler(
             session.Id,
             "inProgress",
             questions.Count,
-            (int)Math.Ceiling((double)questions.Count * 80 / 100),
+            (int)Math.Ceiling((double)questions.Count * 90 / 100),
             TicketTimeLimitMinutes,
             expiresAt,
             "ticket",

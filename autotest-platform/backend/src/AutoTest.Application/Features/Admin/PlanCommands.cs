@@ -58,6 +58,7 @@ public class CreatePlanCommandValidator : AbstractValidator<CreatePlanCommand>
 
 public class CreatePlanCommandHandler(
     IApplicationDbContext db,
+    ICacheService cache,
     IDateTimeProvider dateTime,
     ILogger<CreatePlanCommandHandler> logger) : IRequestHandler<CreatePlanCommand, ApiResponse<AdminPlanDto>>
 {
@@ -79,6 +80,8 @@ public class CreatePlanCommandHandler(
 
         db.SubscriptionPlans.Add(plan);
         await db.SaveChangesAsync(ct);
+
+        await cache.RemoveAsync("avtolider:plans:all", ct);
 
         logger.LogInformation("Plan created: {PlanId}", plan.Id);
         return ApiResponse<AdminPlanDto>.Ok(new AdminPlanDto(
@@ -108,6 +111,7 @@ public class UpdatePlanCommandValidator : AbstractValidator<UpdatePlanCommand>
 
 public class UpdatePlanCommandHandler(
     IApplicationDbContext db,
+    ICacheService cache,
     IDateTimeProvider dateTime,
     ILogger<UpdatePlanCommandHandler> logger) : IRequestHandler<UpdatePlanCommand, ApiResponse>
 {
@@ -125,6 +129,9 @@ public class UpdatePlanCommandHandler(
         plan.UpdatedAt = dateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
+
+        await cache.RemoveAsync("avtolider:plans:all", ct);
+
         logger.LogInformation("Plan updated: {PlanId}", plan.Id);
         return ApiResponse.Ok();
     }
@@ -135,6 +142,7 @@ public record TogglePlanStatusCommand(Guid Id, bool IsActive) : IRequest<ApiResp
 
 public class TogglePlanStatusCommandHandler(
     IApplicationDbContext db,
+    ICacheService cache,
     IDateTimeProvider dateTime,
     ILogger<TogglePlanStatusCommandHandler> logger) : IRequestHandler<TogglePlanStatusCommand, ApiResponse>
 {
@@ -148,6 +156,10 @@ public class TogglePlanStatusCommandHandler(
         plan.UpdatedAt = dateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
+
+        // Invalidate cached plans so user-facing list reflects the change immediately
+        await cache.RemoveAsync("avtolider:plans:all", ct);
+
         logger.LogInformation("Plan {PlanId} status set to {Status}", plan.Id, request.IsActive);
         return ApiResponse.Ok();
     }

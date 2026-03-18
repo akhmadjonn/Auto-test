@@ -44,10 +44,16 @@ public class GetAuditLogsQueryHandler(
             query = query.Where(a => a.EntityType == request.EntityType);
 
         if (request.DateFrom.HasValue)
-            query = query.Where(a => a.CreatedAt >= request.DateFrom.Value);
+        {
+            var from = request.DateFrom.Value.ToUniversalTime();
+            query = query.Where(a => a.CreatedAt >= from);
+        }
 
         if (request.DateTo.HasValue)
-            query = query.Where(a => a.CreatedAt <= request.DateTo.Value);
+        {
+            var to = request.DateTo.Value.ToUniversalTime();
+            query = query.Where(a => a.CreatedAt <= to);
+        }
 
         var ordered = query.OrderByDescending(a => a.CreatedAt);
 

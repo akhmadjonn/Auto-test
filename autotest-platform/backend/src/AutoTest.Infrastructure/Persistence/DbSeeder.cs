@@ -139,8 +139,8 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             Id = Guid.NewGuid(),
             Title = new LocalizedText("Standart imtihon", "Standart imtihon", "Стандартный экзамен"),
             TotalQuestions = 20,
-            PassingScore = 80,
-            TimeLimitMinutes = 20,
+            PassingScore = 90,
+            TimeLimitMinutes = 25,
             IsActive = true,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
