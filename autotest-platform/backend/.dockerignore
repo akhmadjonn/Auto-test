@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/.git
+**/.vs
+**/.vscode
+**/tests/
+**/tools/
+**/*.md
+**/e2e-test.js
+**/test-api.js
+**/test-frontend-e2e.js

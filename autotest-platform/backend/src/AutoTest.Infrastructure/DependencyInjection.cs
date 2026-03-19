@@ -11,7 +11,10 @@ namespace AutoTest.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        bool registerBackgroundServices = false)
     {
         // PostgreSQL
         services.AddDbContext<AppDbContext>(options =>
@@ -97,10 +100,13 @@ public static class DependencyInjection
         services.AddScoped<ClickPaymentProvider>();
         services.AddScoped<IPaymentProviderFactory, PaymentProviderFactory>();
 
-        // Background services
-        services.AddHostedService<SessionExpirationService>();
-        services.AddHostedService<SubscriptionBillingService>();
-        services.AddHostedService<EskizTokenRefreshService>();
+        // Background services — only registered in background mode
+        if (registerBackgroundServices)
+        {
+            services.AddHostedService<SessionExpirationService>();
+            services.AddHostedService<SubscriptionBillingService>();
+            services.AddHostedService<EskizTokenRefreshService>();
+        }
 
         return services;
     }

@@ -33,65 +33,9 @@ services:
     networks:
       - app-public
 
+  # --- API: web server (no background services) ---
   api:
-    image: autotest-api:latest
-    deploy:
-      replicas: 3
-      update_config:
-        parallelism: 1
-        delay: 10s
-        failure_action: rollback
-        order: start-first
-      rollback_config:
-        parallelism: 1
-        delay: 5s
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 5
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.api.rule=Host(`api.autotest.uz`)"
-        - "traefik.http.routers.api.entrypoints=websecure"
-        - "traefik.http.routers.api.tls.certresolver=letsencrypt"
-        - "traefik.http.services.api.loadbalancer.server.port=8080"
-        - "traefik.http.services.api.loadbalancer.healthcheck.path=/health"
-        - "traefik.http.services.api.loadbalancer.healthcheck.interval=10s"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=autotest;Username=autotest;Password_File=/run/secrets/db-password
-      - Redis__Configuration=redis:6379,password_file=/run/secrets/redis-password
-      - Minio__Endpoint=minio:9000
-    secrets:
-      - db-password
-      - redis-password
-      - jwt-secret
-      - eskiz-email
-      - eskiz-password
-      - payme-merchant-id
-      - payme-merchant-key
-      - click-merchant-id
-      - click-secret-key
-      - telegram-bot-token
-      - minio-access-key
-      - minio-secret-key
-    depends_on:
-      - postgres
-      - redis
-      - minio
-    networks:
-      - app-public
-      - app-internal
-
-  frontend:
-    image: autotest-frontend:latest
+    image: ${REGISTRY:-autotest}-api:${TAG:-latest}
     deploy:
       replicas: 2
       update_config:
@@ -108,7 +52,105 @@ services:
         max_attempts: 5
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.frontend.rule=Host(`autotest.uz`)"
+        - "traefik.http.routers.api.rule=Host(`${API_DOMAIN:-api.avtolider.uz}`)"
+        - "traefik.http.routers.api.entrypoints=websecure"
+        - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+        - "traefik.http.services.api.loadbalancer.server.port=8080"
+        - "traefik.http.services.api.loadbalancer.healthcheck.path=/health"
+        - "traefik.http.services.api.loadbalancer.healthcheck.interval=10s"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - ASPNETCORE_URLS=http://+:8080
+    configs:
+      - source: api-settings
+        target: /settings.json
+    secrets:
+      - source: api-secrets
+        target: /secrets.json
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - app-public
+      - app-internal
+
+  # --- Migrator: apply EF Core migrations and exit ---
+  api-migrator:
+    image: ${REGISTRY:-autotest}-api:${TAG:-latest}
+    command: ["--apply-migrations"]
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+    configs:
+      - source: api-settings
+        target: /settings.json
+    secrets:
+      - source: api-secrets
+        target: /secrets.json
+    depends_on:
+      - postgres
+    networks:
+      - app-internal
+
+  # --- Background: hosted services (session expiration, billing, token refresh) ---
+  api-background:
+    image: ${REGISTRY:-autotest}-api:${TAG:-latest}
+    command: ["--background"]
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - ASPNETCORE_URLS=http://+:8080
+    configs:
+      - source: api-settings
+        target: /settings.json
+    secrets:
+      - source: api-secrets
+        target: /secrets.json
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - app-internal
+
+  frontend:
+    image: ${REGISTRY:-autotest}-frontend:${TAG:-latest}
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_HOST:-avtolider.uz}`)"
         - "traefik.http.routers.frontend.entrypoints=websecure"
         - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
         - "traefik.http.services.frontend.loadbalancer.server.port=3000"
@@ -243,25 +285,13 @@ volumes:
   traefik-certs:
 
 secrets:
+  # App secrets — single JSON file with all credentials
+  api-secrets:
+    external: true
+  # Infrastructure secrets — individual files for PG/Redis/MinIO native _FILE support
   db-password:
     external: true
   redis-password:
-    external: true
-  jwt-secret:
-    external: true
-  eskiz-email:
-    external: true
-  eskiz-password:
-    external: true
-  payme-merchant-id:
-    external: true
-  payme-merchant-key:
-    external: true
-  click-merchant-id:
-    external: true
-  click-secret-key:
-    external: true
-  telegram-bot-token:
     external: true
   minio-access-key:
     external: true
@@ -271,3 +301,5 @@ secrets:
 configs:
   traefik-config:
     file: ./traefik/traefik.yml
+  api-settings:
+    file: ./settings/prod.json
