@@ -27,941 +27,750 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("created_by");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTimeOffset?>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
+                        .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("StartsAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("starts_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Type")
-                        .HasColumnType("integer")
-                        .HasColumnName("type");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("Id")
-                        .HasName("pk_announcements");
+                    b.HasKey("Id");
 
-                    b.HasIndex("IsActive", "StartsAt", "ExpiresAt")
-                        .HasDatabaseName("ix_announcements_is_active_starts_at_expires_at");
+                    b.HasIndex("IsActive", "StartsAt", "ExpiresAt");
 
-                    b.ToTable("announcements", "autotest");
+                    b.ToTable("Announcements", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.AnswerOption", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("image_url");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<bool>("IsCorrect")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_correct");
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("QuestionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("question_id");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("SortOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("sort_order");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("Id")
-                        .HasName("pk_answer_options");
+                    b.HasKey("Id");
 
-                    b.HasIndex("QuestionId")
-                        .HasDatabaseName("ix_answer_options_question_id");
+                    b.HasIndex("QuestionId");
 
-                    b.ToTable("answer_options", "autotest");
+                    b.ToTable("AnswerOptions", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.AuditLog", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Action")
-                        .HasColumnType("integer")
-                        .HasColumnName("action");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("EntityId")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("entity_id");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("EntityType")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("entity_type");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("IpAddress")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("ip_address");
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("NewValues")
-                        .HasColumnType("text")
-                        .HasColumnName("new_values");
+                        .HasColumnType("text");
 
                     b.Property<string>("OldValues")
-                        .HasColumnType("text")
-                        .HasColumnName("old_values");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnType("uuid");
 
-                    b.HasKey("Id")
-                        .HasName("pk_audit_logs");
+                    b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("ix_audit_logs_created_at");
+                    b.HasIndex("CreatedAt");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_audit_logs_user_id");
+                    b.HasIndex("UserId");
 
-                    b.ToTable("audit_logs", "autotest");
+                    b.ToTable("AuditLogs", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.Category", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("IconUrl")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("icon_url");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
+                        .HasColumnType("boolean");
 
                     b.Property<Guid?>("ParentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("parent_id");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("slug");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<int>("SortOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("sort_order");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("Id")
-                        .HasName("pk_categories");
+                    b.HasKey("Id");
 
-                    b.HasIndex("ParentId")
-                        .HasDatabaseName("ix_categories_parent_id");
+                    b.HasIndex("ParentId");
 
                     b.HasIndex("Slug")
-                        .IsUnique()
-                        .HasDatabaseName("ix_categories_slug");
+                        .IsUnique();
 
-                    b.ToTable("categories", "autotest");
+                    b.ToTable("Categories", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.ExamPoolRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("CategoryId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("category_id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("Difficulty")
-                        .HasColumnType("integer")
-                        .HasColumnName("difficulty");
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("ExamTemplateId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("exam_template_id");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("QuestionCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("question_count");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("Id")
-                        .HasName("pk_exam_pool_rules");
+                    b.HasKey("Id");
 
-                    b.HasIndex("CategoryId")
-                        .HasDatabaseName("ix_exam_pool_rules_category_id");
+                    b.HasIndex("CategoryId");
 
-                    b.HasIndex("ExamTemplateId")
-                        .HasDatabaseName("ix_exam_pool_rules_exam_template_id");
+                    b.HasIndex("ExamTemplateId");
 
-                    b.ToTable("exam_pool_rules", "autotest");
+                    b.ToTable("ExamPoolRules", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.ExamSession", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("completed_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("CorrectAnswers")
-                        .HasColumnType("integer")
-                        .HasColumnName("correct_answers");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("ExamTemplateId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("exam_template_id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("LicenseCategory")
-                        .HasColumnType("integer")
-                        .HasColumnName("license_category");
+                        .HasColumnType("integer");
 
                     b.Property<int>("Mode")
-                        .HasColumnType("integer")
-                        .HasColumnName("mode");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("Score")
-                        .HasColumnType("integer")
-                        .HasColumnName("score");
+                        .HasColumnType("integer");
 
                     b.Property<int>("Status")
-                        .HasColumnType("integer")
-                        .HasColumnName("status");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("TicketNumber")
-                        .HasColumnType("integer")
-                        .HasColumnName("ticket_number");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("TimeTakenSeconds")
-                        .HasColumnType("integer")
-                        .HasColumnName("time_taken_seconds");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnType("uuid");
 
-                    b.HasKey("Id")
-                        .HasName("pk_exam_sessions");
+                    b.HasKey("Id");
 
-                    b.HasIndex("ExamTemplateId")
-                        .HasDatabaseName("ix_exam_sessions_exam_template_id");
+                    b.HasIndex("ExamTemplateId");
 
-                    b.HasIndex("UserId", "Mode")
-                        .HasDatabaseName("ix_exam_sessions_user_id_mode");
+                    b.HasIndex("ExpiresAt");
 
-                    b.HasIndex("UserId", "Status")
-                        .HasDatabaseName("ix_exam_sessions_user_id_status");
+                    b.HasIndex("UserId", "Mode");
 
-                    b.ToTable("exam_sessions", "autotest");
+                    b.HasIndex("UserId", "Status");
+
+                    b.HasIndex("UserId", "Status", "Mode", "CompletedAt");
+
+                    b.ToTable("ExamSessions", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.ExamTemplate", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("PassingScore")
-                        .HasColumnType("integer")
-                        .HasColumnName("passing_score");
+                        .HasColumnType("integer");
 
                     b.Property<int>("TimeLimitMinutes")
-                        .HasColumnType("integer")
-                        .HasColumnName("time_limit_minutes");
+                        .HasColumnType("integer");
 
                     b.Property<int>("TotalQuestions")
-                        .HasColumnType("integer")
-                        .HasColumnName("total_questions");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("Id")
-                        .HasName("pk_exam_templates");
+                    b.HasKey("Id");
 
-                    b.ToTable("exam_templates", "autotest");
+                    b.ToTable("ExamTemplates", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.OtpRequest", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Attempts")
-                        .HasColumnType("integer")
-                        .HasColumnName("attempts");
+                        .HasColumnType("integer");
 
                     b.Property<string>("CodeHash")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("code_hash");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsVerified")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_verified");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("phone_number");
+                        .HasColumnType("character varying(20)");
 
-                    b.HasKey("Id")
-                        .HasName("pk_otp_requests");
+                    b.HasKey("Id");
 
-                    b.HasIndex("PhoneNumber", "IsVerified")
-                        .HasDatabaseName("ix_otp_requests_phone_number_is_verified");
+                    b.HasIndex("PhoneNumber", "IsVerified");
 
-                    b.ToTable("otp_requests", "autotest");
+                    b.ToTable("OtpRequests", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.PaymentTransaction", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<long>("AmountInTiyins")
-                        .HasColumnType("bigint")
-                        .HasColumnName("amount_in_tiyins");
+                        .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("completed_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Currency")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)")
-                        .HasDefaultValue("UZS")
-                        .HasColumnName("currency");
+                        .HasDefaultValue("UZS");
 
                     b.Property<int>("Provider")
-                        .HasColumnType("integer")
-                        .HasColumnName("provider");
+                        .HasColumnType("integer");
 
                     b.Property<string>("ProviderTransactionId")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("provider_transaction_id");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<int>("Status")
-                        .HasColumnType("integer")
-                        .HasColumnName("status");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("SubscriptionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("subscription_id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnType("uuid");
 
-                    b.HasKey("Id")
-                        .HasName("pk_payment_transactions");
+                    b.HasKey("Id");
 
-                    b.HasIndex("SubscriptionId")
-                        .HasDatabaseName("ix_payment_transactions_subscription_id");
+                    b.HasIndex("SubscriptionId");
 
-                    b.HasIndex("UserId", "Status")
-                        .HasDatabaseName("ix_payment_transactions_user_id_status");
+                    b.HasIndex("CreatedAt", "Status");
 
-                    b.ToTable("payment_transactions", "autotest");
+                    b.HasIndex("Status", "Provider");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("PaymentTransactions", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.Question", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("CategoryId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("category_id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Difficulty")
-                        .HasColumnType("integer")
-                        .HasColumnName("difficulty");
+                        .HasColumnType("integer");
 
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("image_url");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("LicenseCategory")
-                        .HasColumnType("integer")
-                        .HasColumnName("license_category");
+                        .HasColumnType("integer");
 
                     b.Property<string>("ThumbnailUrl")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("thumbnail_url");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<int>("TicketNumber")
-                        .HasColumnType("integer")
-                        .HasColumnName("ticket_number");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("Id")
-                        .HasName("pk_questions");
+                    b.HasKey("Id");
 
-                    b.HasIndex("TicketNumber")
-                        .HasDatabaseName("ix_questions_ticket_number");
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("TicketNumber");
 
                     b.HasIndex("CategoryId", "Difficulty")
-                        .HasDatabaseName("ix_questions_category_id_difficulty")
-                        .HasFilter("is_active = true");
+                        .HasFilter("\"IsActive\" = true");
 
-                    b.ToTable("questions", "autotest");
+                    b.HasIndex("TicketNumber", "IsActive");
+
+                    b.ToTable("Questions", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.SessionQuestion", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ExamSessionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("exam_session_id");
+                        .HasColumnType("uuid");
 
                     b.Property<bool?>("IsCorrect")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_correct");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("Order")
-                        .HasColumnType("integer")
-                        .HasColumnName("order");
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("QuestionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("question_id");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("SelectedAnswerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("selected_answer_id");
+                        .HasColumnType("uuid");
 
                     b.Property<int?>("TimeSpentSeconds")
-                        .HasColumnType("integer")
-                        .HasColumnName("time_spent_seconds");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("Id")
-                        .HasName("pk_session_questions");
+                    b.HasKey("Id");
 
-                    b.HasIndex("ExamSessionId")
-                        .HasDatabaseName("ix_session_questions_exam_session_id");
+                    b.HasIndex("QuestionId");
 
-                    b.HasIndex("QuestionId")
-                        .HasDatabaseName("ix_session_questions_question_id");
+                    b.HasIndex("SelectedAnswerId");
 
-                    b.HasIndex("SelectedAnswerId")
-                        .HasDatabaseName("ix_session_questions_selected_answer_id");
+                    b.HasIndex("ExamSessionId", "Order");
 
-                    b.ToTable("session_questions", "autotest");
+                    b.ToTable("SessionQuestions", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.Subscription", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("AutoRenew")
-                        .HasColumnType("boolean")
-                        .HasColumnName("auto_renew");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("CardToken")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("card_token");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("PaymentProvider")
-                        .HasColumnType("integer")
-                        .HasColumnName("payment_provider");
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("PlanId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("plan_id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("StartsAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("starts_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Status")
-                        .HasColumnType("integer")
-                        .HasColumnName("status");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnType("uuid");
 
-                    b.HasKey("Id")
-                        .HasName("pk_subscriptions");
+                    b.HasKey("Id");
 
-                    b.HasIndex("PlanId")
-                        .HasDatabaseName("ix_subscriptions_plan_id");
+                    b.HasIndex("PlanId");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_subscriptions_user_id");
+                    b.HasIndex("UserId", "Status", "ExpiresAt");
 
-                    b.ToTable("subscriptions", "autotest");
+                    b.ToTable("Subscriptions", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.SubscriptionPlan", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("DurationDays")
-                        .HasColumnType("integer")
-                        .HasColumnName("duration_days");
+                        .HasColumnType("integer");
 
                     b.Property<string>("Features")
                         .IsRequired()
                         .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)")
-                        .HasColumnName("features");
+                        .HasColumnType("character varying(4000)");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
+                        .HasColumnType("boolean");
 
                     b.Property<long>("PriceInTiyins")
-                        .HasColumnType("bigint")
-                        .HasColumnName("price_in_tiyins");
+                        .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("Id")
-                        .HasName("pk_subscription_plans");
+                    b.HasKey("Id");
 
-                    b.ToTable("subscription_plans", "autotest");
+                    b.ToTable("SubscriptionPlans", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.SystemSetting", b =>
                 {
                     b.Property<string>("Key")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("key");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("description");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UpdatedBy")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("updated_by");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("value");
+                        .HasColumnType("character varying(1000)");
 
-                    b.HasKey("Key")
-                        .HasName("pk_system_settings");
+                    b.HasKey("Key");
 
-                    b.ToTable("system_settings", "autotest");
+                    b.ToTable("SystemSettings", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.Tag", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("slug");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("Id")
-                        .HasName("pk_tags");
+                    b.HasKey("Id");
 
                     b.HasIndex("Slug")
-                        .IsUnique()
-                        .HasDatabaseName("ix_tags_slug");
+                        .IsUnique();
 
-                    b.ToTable("tags", "autotest");
+                    b.ToTable("Tags", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("AuthProvider")
-                        .HasColumnType("integer")
-                        .HasColumnName("auth_provider");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("FirstName")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("first_name");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<bool>("IsBlocked")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_blocked");
+                        .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("LastActiveAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_active_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LastName")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("last_name");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("phone_number");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<int>("PreferredLanguage")
-                        .HasColumnType("integer")
-                        .HasColumnName("preferred_language");
+                        .HasColumnType("integer");
 
                     b.Property<int>("Role")
-                        .HasColumnType("integer")
-                        .HasColumnName("role");
+                        .HasColumnType("integer");
 
                     b.Property<long?>("TelegramId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("telegram_id");
+                        .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("Id")
-                        .HasName("pk_users");
+                    b.HasKey("Id");
 
                     b.HasIndex("PhoneNumber")
                         .IsUnique()
-                        .HasDatabaseName("ix_users_phone_number")
-                        .HasFilter("phone_number IS NOT NULL");
+                        .HasFilter("\"PhoneNumber\" IS NOT NULL");
 
                     b.HasIndex("TelegramId")
                         .IsUnique()
-                        .HasDatabaseName("ix_users_telegram_id")
-                        .HasFilter("telegram_id IS NOT NULL");
+                        .HasFilter("\"TelegramId\" IS NOT NULL");
 
-                    b.ToTable("users", "autotest");
+                    b.ToTable("Users", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.UserCategoryStat", b =>
                 {
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("CategoryId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("category_id");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("CorrectAttempts")
-                        .HasColumnType("integer")
-                        .HasColumnName("correct_attempts");
+                        .HasColumnType("integer");
 
                     b.Property<int>("TotalAttempts")
-                        .HasColumnType("integer")
-                        .HasColumnName("total_attempts");
+                        .HasColumnType("integer");
 
-                    b.HasKey("UserId", "CategoryId")
-                        .HasName("pk_user_category_stats");
+                    b.HasKey("UserId", "CategoryId");
 
-                    b.HasIndex("CategoryId")
-                        .HasDatabaseName("ix_user_category_stats_category_id");
+                    b.HasIndex("CategoryId");
 
-                    b.ToTable("user_category_stats", "autotest");
+                    b.ToTable("UserCategoryStats", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.UserDevice", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DeviceId")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("device_id");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("DeviceName")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("device_name");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("FcmToken")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("fcm_token");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
+                        .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("LastActiveAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_active_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Platform")
-                        .HasColumnType("integer")
-                        .HasColumnName("platform");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnType("uuid");
 
-                    b.HasKey("Id")
-                        .HasName("pk_user_devices");
+                    b.HasKey("Id");
 
                     b.HasIndex("UserId", "DeviceId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_user_devices_user_id_device_id");
+                        .IsUnique();
 
-                    b.ToTable("user_devices", "autotest");
+                    b.ToTable("UserDevices", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.UserQuestionState", b =>
                 {
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("QuestionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("question_id");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("CorrectAttempts")
-                        .HasColumnType("integer")
-                        .HasColumnName("correct_attempts");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("LastAttemptAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_attempt_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("LeitnerBox")
-                        .HasColumnType("integer")
-                        .HasColumnName("leitner_box");
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("NextReviewDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("next_review_date");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("TotalAttempts")
-                        .HasColumnType("integer")
-                        .HasColumnName("total_attempts");
+                        .HasColumnType("integer");
 
-                    b.HasKey("UserId", "QuestionId")
-                        .HasName("pk_user_question_states");
+                    b.HasKey("UserId", "QuestionId");
 
-                    b.HasIndex("QuestionId")
-                        .HasDatabaseName("ix_user_question_states_question_id");
+                    b.HasIndex("QuestionId");
 
-                    b.ToTable("user_question_states", "autotest");
+                    b.HasIndex("UserId", "LastAttemptAt");
+
+                    b.HasIndex("UserId", "NextReviewDate");
+
+                    b.ToTable("UserQuestionStates", "autotest");
                 });
 
-            modelBuilder.Entity("question_tags", b =>
+            modelBuilder.Entity("QuestionTags", b =>
                 {
                     b.Property<Guid>("QuestionsId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("questions_id");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("TagsId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tags_id");
+                        .HasColumnType("uuid");
 
-                    b.HasKey("QuestionsId", "TagsId")
-                        .HasName("pk_question_tags");
+                    b.HasKey("QuestionsId", "TagsId");
 
-                    b.HasIndex("TagsId")
-                        .HasDatabaseName("ix_question_tags_tags_id");
+                    b.HasIndex("TagsId");
 
-                    b.ToTable("question_tags", "autotest");
+                    b.ToTable("QuestionTags", "autotest");
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.Announcement", b =>
@@ -985,13 +794,12 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("AnnouncementId");
 
-                            b1.ToTable("announcements", "autotest");
+                            b1.ToTable("Announcements", "autotest");
 
-                            b1.ToJson("content");
+                            b1.ToJson("Content");
 
                             b1.WithOwner()
-                                .HasForeignKey("AnnouncementId")
-                                .HasConstraintName("fk_announcements_announcements_id");
+                                .HasForeignKey("AnnouncementId");
                         });
 
                     b.OwnsOne("AutoTest.Domain.Common.ValueObjects.LocalizedText", "Title", b1 =>
@@ -1013,13 +821,12 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("AnnouncementId");
 
-                            b1.ToTable("announcements", "autotest");
+                            b1.ToTable("Announcements", "autotest");
 
-                            b1.ToJson("title");
+                            b1.ToJson("Title");
 
                             b1.WithOwner()
-                                .HasForeignKey("AnnouncementId")
-                                .HasConstraintName("fk_announcements_announcements_id");
+                                .HasForeignKey("AnnouncementId");
                         });
 
                     b.Navigation("Content")
@@ -1035,8 +842,7 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                         .WithMany("AnswerOptions")
                         .HasForeignKey("QuestionId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_answer_options_questions_question_id");
+                        .IsRequired();
 
                     b.OwnsOne("AutoTest.Domain.Common.ValueObjects.LocalizedText", "Text", b1 =>
                         {
@@ -1057,13 +863,12 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("AnswerOptionId");
 
-                            b1.ToTable("answer_options", "autotest");
+                            b1.ToTable("AnswerOptions", "autotest");
 
-                            b1.ToJson("text");
+                            b1.ToJson("Text");
 
                             b1.WithOwner()
-                                .HasForeignKey("AnswerOptionId")
-                                .HasConstraintName("fk_answer_options_answer_options_id");
+                                .HasForeignKey("AnswerOptionId");
                         });
 
                     b.Navigation("Question");
@@ -1077,8 +882,7 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                     b.HasOne("AutoTest.Domain.Entities.Category", "Parent")
                         .WithMany("Children")
                         .HasForeignKey("ParentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_categories_categories_parent_id");
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.OwnsOne("AutoTest.Domain.Common.ValueObjects.LocalizedText", "Description", b1 =>
                         {
@@ -1099,13 +903,12 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("CategoryId");
 
-                            b1.ToTable("categories", "autotest");
+                            b1.ToTable("Categories", "autotest");
 
-                            b1.ToJson("description");
+                            b1.ToJson("Description");
 
                             b1.WithOwner()
-                                .HasForeignKey("CategoryId")
-                                .HasConstraintName("fk_categories_categories_id");
+                                .HasForeignKey("CategoryId");
                         });
 
                     b.OwnsOne("AutoTest.Domain.Common.ValueObjects.LocalizedText", "Name", b1 =>
@@ -1125,16 +928,14 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                                 .IsRequired()
                                 .HasColumnType("text");
 
-                            b1.HasKey("CategoryId")
-                                .HasName("pk_categories");
+                            b1.HasKey("CategoryId");
 
-                            b1.ToTable("categories", "autotest");
+                            b1.ToTable("Categories", "autotest");
 
-                            b1.ToJson("name");
+                            b1.ToJson("Name");
 
                             b1.WithOwner()
-                                .HasForeignKey("CategoryId")
-                                .HasConstraintName("fk_categories_categories_category_id");
+                                .HasForeignKey("CategoryId");
                         });
 
                     b.Navigation("Description")
@@ -1152,15 +953,13 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_exam_pool_rules_categories_category_id");
+                        .IsRequired();
 
                     b.HasOne("AutoTest.Domain.Entities.ExamTemplate", "ExamTemplate")
                         .WithMany("PoolRules")
                         .HasForeignKey("ExamTemplateId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_exam_pool_rules_exam_templates_exam_template_id");
+                        .IsRequired();
 
                     b.Navigation("Category");
 
@@ -1171,15 +970,13 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                 {
                     b.HasOne("AutoTest.Domain.Entities.ExamTemplate", "ExamTemplate")
                         .WithMany()
-                        .HasForeignKey("ExamTemplateId")
-                        .HasConstraintName("fk_exam_sessions_exam_templates_exam_template_id");
+                        .HasForeignKey("ExamTemplateId");
 
                     b.HasOne("AutoTest.Domain.Entities.User", "User")
                         .WithMany("ExamSessions")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_exam_sessions_users_user_id");
+                        .IsRequired();
 
                     b.Navigation("ExamTemplate");
 
@@ -1207,13 +1004,12 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("ExamTemplateId");
 
-                            b1.ToTable("exam_templates", "autotest");
+                            b1.ToTable("ExamTemplates", "autotest");
 
-                            b1.ToJson("title");
+                            b1.ToJson("Title");
 
                             b1.WithOwner()
-                                .HasForeignKey("ExamTemplateId")
-                                .HasConstraintName("fk_exam_templates_exam_templates_id");
+                                .HasForeignKey("ExamTemplateId");
                         });
 
                     b.Navigation("Title")
@@ -1224,15 +1020,13 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                 {
                     b.HasOne("AutoTest.Domain.Entities.Subscription", "Subscription")
                         .WithMany()
-                        .HasForeignKey("SubscriptionId")
-                        .HasConstraintName("fk_payment_transactions_subscriptions_subscription_id");
+                        .HasForeignKey("SubscriptionId");
 
                     b.HasOne("AutoTest.Domain.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_payment_transactions_users_user_id");
+                        .IsRequired();
 
                     b.Navigation("Subscription");
 
@@ -1245,8 +1039,7 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                         .WithMany("Questions")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_questions_categories_category_id");
+                        .IsRequired();
 
                     b.OwnsOne("AutoTest.Domain.Common.ValueObjects.LocalizedText", "Explanation", b1 =>
                         {
@@ -1267,13 +1060,12 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("QuestionId");
 
-                            b1.ToTable("questions", "autotest");
+                            b1.ToTable("Questions", "autotest");
 
-                            b1.ToJson("explanation");
+                            b1.ToJson("Explanation");
 
                             b1.WithOwner()
-                                .HasForeignKey("QuestionId")
-                                .HasConstraintName("fk_questions_questions_id");
+                                .HasForeignKey("QuestionId");
                         });
 
                     b.OwnsOne("AutoTest.Domain.Common.ValueObjects.LocalizedText", "Text", b1 =>
@@ -1295,13 +1087,12 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("QuestionId");
 
-                            b1.ToTable("questions", "autotest");
+                            b1.ToTable("Questions", "autotest");
 
-                            b1.ToJson("text");
+                            b1.ToJson("Text");
 
                             b1.WithOwner()
-                                .HasForeignKey("QuestionId")
-                                .HasConstraintName("fk_questions_questions_id");
+                                .HasForeignKey("QuestionId");
                         });
 
                     b.Navigation("Category");
@@ -1319,21 +1110,18 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                         .WithMany("SessionQuestions")
                         .HasForeignKey("ExamSessionId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_session_questions_exam_sessions_exam_session_id");
+                        .IsRequired();
 
                     b.HasOne("AutoTest.Domain.Entities.Question", "Question")
                         .WithMany()
                         .HasForeignKey("QuestionId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_session_questions_questions_question_id");
+                        .IsRequired();
 
                     b.HasOne("AutoTest.Domain.Entities.AnswerOption", "SelectedAnswer")
                         .WithMany()
                         .HasForeignKey("SelectedAnswerId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_session_questions_answer_options_selected_answer_id");
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("ExamSession");
 
@@ -1348,15 +1136,13 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("PlanId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_subscriptions_subscription_plans_plan_id");
+                        .IsRequired();
 
                     b.HasOne("AutoTest.Domain.Entities.User", "User")
                         .WithMany("Subscriptions")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_subscriptions_users_user_id");
+                        .IsRequired();
 
                     b.Navigation("Plan");
 
@@ -1384,13 +1170,12 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("SubscriptionPlanId");
 
-                            b1.ToTable("subscription_plans", "autotest");
+                            b1.ToTable("SubscriptionPlans", "autotest");
 
-                            b1.ToJson("description");
+                            b1.ToJson("Description");
 
                             b1.WithOwner()
-                                .HasForeignKey("SubscriptionPlanId")
-                                .HasConstraintName("fk_subscription_plans_subscription_plans_id");
+                                .HasForeignKey("SubscriptionPlanId");
                         });
 
                     b.OwnsOne("AutoTest.Domain.Common.ValueObjects.LocalizedText", "Name", b1 =>
@@ -1412,13 +1197,12 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("SubscriptionPlanId");
 
-                            b1.ToTable("subscription_plans", "autotest");
+                            b1.ToTable("SubscriptionPlans", "autotest");
 
-                            b1.ToJson("name");
+                            b1.ToJson("Name");
 
                             b1.WithOwner()
-                                .HasForeignKey("SubscriptionPlanId")
-                                .HasConstraintName("fk_subscription_plans_subscription_plans_id");
+                                .HasForeignKey("SubscriptionPlanId");
                         });
 
                     b.Navigation("Description")
@@ -1449,13 +1233,12 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("TagId");
 
-                            b1.ToTable("tags", "autotest");
+                            b1.ToTable("Tags", "autotest");
 
-                            b1.ToJson("name");
+                            b1.ToJson("Name");
 
                             b1.WithOwner()
-                                .HasForeignKey("TagId")
-                                .HasConstraintName("fk_tags_tags_id");
+                                .HasForeignKey("TagId");
                         });
 
                     b.Navigation("Name")
@@ -1468,15 +1251,13 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_user_category_stats_categories_category_id");
+                        .IsRequired();
 
                     b.HasOne("AutoTest.Domain.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_user_category_stats_users_user_id");
+                        .IsRequired();
 
                     b.Navigation("Category");
 
@@ -1489,8 +1270,7 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                         .WithMany("Devices")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_user_devices_users_user_id");
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -1501,36 +1281,32 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("QuestionId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_user_question_states_questions_question_id");
+                        .IsRequired();
 
                     b.HasOne("AutoTest.Domain.Entities.User", "User")
                         .WithMany("UserQuestionStates")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_user_question_states_users_user_id");
+                        .IsRequired();
 
                     b.Navigation("Question");
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("question_tags", b =>
+            modelBuilder.Entity("QuestionTags", b =>
                 {
                     b.HasOne("AutoTest.Domain.Entities.Question", null)
                         .WithMany()
                         .HasForeignKey("QuestionsId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_question_tags_questions_questions_id");
+                        .IsRequired();
 
                     b.HasOne("AutoTest.Domain.Entities.Tag", null)
                         .WithMany()
                         .HasForeignKey("TagsId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_question_tags_tags_tags_id");
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("AutoTest.Domain.Entities.Category", b =>

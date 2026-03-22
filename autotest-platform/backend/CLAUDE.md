@@ -7,7 +7,7 @@ You own everything in backend/. MUST NOT modify frontend/ or infrastructure/. MA
 
 ## NuGet Packages
 - MediatR 12.x, FluentValidation.DependencyInjectionExtensions 11.x, Mapster 7.x
-- Npgsql.EntityFrameworkCore.PostgreSQL 8.x, EFCore.NamingConventions 8.x, StackExchange.Redis 2.x
+- Npgsql.EntityFrameworkCore.PostgreSQL 8.x, StackExchange.Redis 2.x
 - Microsoft.AspNetCore.Authentication.JwtBearer 8.x, Telegram.Bot.Extensions.LoginWidget 1.x
 - AWSSDK.S3 3.x (MinIO uses S3 protocol)
 - ClosedXML 0.104.x (Excel parsing for bulk import + export)
@@ -95,7 +95,7 @@ Admin: AdminQuestionsController, AdminCategoriesController, AdminPlansController
 UploadQuestionImageAsync, UploadAnswerOptionImageAsync, GetPresignedUrlAsync, GetThumbnailUrlAsync, DeleteAsync, DeleteManyAsync
 
 ## Database Config
-Schema: "autotest", UseSnakeCaseNamingConvention(), JSONB for LocalizedText (3 fields: uz, uz_latin, ru)
+Schema: "autotest", PascalCase table/column names via IEntityTypeConfiguration, JSONB for LocalizedText (3 fields: uz, uz_latin, ru)
 
 ## Coding Standards
 - Every handler has FluentValidation validator

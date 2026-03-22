@@ -1,37 +1,90 @@
 #!/bin/bash
 set -e
 
-REGISTRY="${REGISTRY:?REGISTRY environment variable is required}"
-TAG="${TAG:-latest}"
-STACK_NAME="autotest"
+# Usage: ./deploy.sh [--env test|prod] [--tag TAG]
+# Examples:
+#   ./deploy.sh --env test                    # Deploy to test with :latest
+#   ./deploy.sh --env prod --tag abc1234      # Deploy to prod with specific tag
+#   ./deploy.sh                               # Deploy to prod with :latest (default)
 
-echo "=== AutoTest Platform Deployment ==="
-echo "Registry: $REGISTRY"
-echo "Tag:      $TAG"
-echo "Stack:    $STACK_NAME"
+ENV="prod"
+TAG="latest"
+REGISTRY="${REGISTRY:-autotest}"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --env) ENV="$2"; shift 2;;
+        --tag) TAG="$2"; shift 2;;
+        --registry) REGISTRY="$2"; shift 2;;
+        *) echo "Unknown option: $1"; exit 1;;
+    esac
+done
+
+STACK_NAME="autotest"
+if [ "$ENV" = "test" ]; then
+    STACK_NAME="autotest-test"
+fi
+
+echo "========================================="
+echo "  AutoTest Platform Deployment"
+echo "========================================="
+echo "  Environment: $ENV"
+echo "  Registry:    $REGISTRY"
+echo "  Tag:         $TAG"
+echo "  Stack:       $STACK_NAME"
+echo "========================================="
 echo ""
 
-# Build backend image
+# Build images
 echo ">>> Building backend image..."
-docker build -t "$REGISTRY/autotest-api:$TAG" -f backend/Dockerfile backend/
+docker build -t "${REGISTRY}-api:${TAG}" -f backend/Dockerfile backend/
 
-# Build frontend image
 echo ">>> Building frontend image..."
-docker build -t "$REGISTRY/autotest-frontend:$TAG" -f frontend/Dockerfile frontend/
+docker build -t "${REGISTRY}-frontend:${TAG}" -f frontend/Dockerfile frontend/
 
-# Push images to registry
-echo ">>> Pushing images..."
-docker push "$REGISTRY/autotest-api:$TAG"
-docker push "$REGISTRY/autotest-frontend:$TAG"
+# Push if registry is remote
+if [[ "$REGISTRY" == *"/"* ]] || [[ "$REGISTRY" == *"."* ]]; then
+    echo ">>> Pushing images to registry..."
+    docker push "${REGISTRY}-api:${TAG}"
+    docker push "${REGISTRY}-frontend:${TAG}"
+fi
 
 # Deploy stack
 echo ">>> Deploying stack..."
-docker stack deploy -c infrastructure/docker-compose.yml "$STACK_NAME" --with-registry-auth
+export REGISTRY TAG
 
-# Print service status
+if [ "$ENV" = "test" ]; then
+    docker stack deploy \
+        -c infrastructure/docker-compose.yml \
+        -c infrastructure/docker-compose.test.yml \
+        "$STACK_NAME" --with-registry-auth
+else
+    docker stack deploy \
+        -c infrastructure/docker-compose.yml \
+        "$STACK_NAME" --with-registry-auth
+fi
+
+# Wait and show status
+echo ""
+echo ">>> Waiting for services to start..."
+sleep 5
+
 echo ""
 echo ">>> Stack services:"
 docker stack services "$STACK_NAME"
 
 echo ""
-echo "=== Deployment complete ==="
+echo "========================================="
+echo "  Deployment complete!"
+echo "========================================="
+
+if [ "$ENV" = "test" ]; then
+    echo "  API:      https://api-test.avtolider.uz"
+    echo "  Frontend: https://test.avtolider.uz"
+    echo "  Health:   https://api-test.avtolider.uz/health"
+    echo "  Swagger:  https://api-test.avtolider.uz/swagger"
+else
+    echo "  API:      https://api.avtolider.uz"
+    echo "  Frontend: https://avtolider.uz"
+    echo "  Health:   https://api.avtolider.uz/health"
+fi
