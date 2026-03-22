@@ -22,8 +22,7 @@ public static class DependencyInjection
                 {
                     npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
                     npgsql.MigrationsHistoryTable("__ef_migrations_history", "autotest");
-                })
-                .UseSnakeCaseNamingConvention());
+                }));
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<DbSeeder>();

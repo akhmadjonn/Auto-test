@@ -35,7 +35,7 @@ if (isMigrationMode)
                 {
                     npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
                     npgsql.MigrationsHistoryTable("__ef_migrations_history", "autotest");
-                }).UseSnakeCaseNamingConvention());
+                }));
         })
         .Build();
 

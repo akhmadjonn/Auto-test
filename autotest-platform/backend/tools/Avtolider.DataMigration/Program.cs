@@ -34,7 +34,6 @@ var dbOptions = new DbContextOptionsBuilder<AppDbContext>()
     {
         npgsql.MigrationsHistoryTable("__ef_migrations_history", "autotest");
     })
-    .UseSnakeCaseNamingConvention()
     .LogTo(_ => { }, Microsoft.Extensions.Logging.LogLevel.None) // suppress EF Core noise
     .Options;
 
