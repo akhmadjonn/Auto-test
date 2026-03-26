@@ -30,10 +30,7 @@ public class AdminExamTemplatesController(IMediator mediator) : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateExamTemplateCommand command, CancellationToken ct)
     {
-        if (id != command.Id)
-            return BadRequest(ApiResponse.Fail("ID_MISMATCH", "Route ID does not match body ID."));
-
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(command with { Id = id }, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
 }

@@ -32,6 +32,7 @@ public class InitiatePaymentCommandHandler(
     ICurrentUser currentUser,
     IPaymentProviderFactory paymentFactory,
     IDistributedLockService lockService,
+    ISystemSettingsService settings,
     IDateTimeProvider dateTime,
     ILogger<InitiatePaymentCommandHandler> logger)
     : IRequestHandler<InitiatePaymentCommand, ApiResponse<InitiatePaymentResultDto>>
@@ -41,6 +42,11 @@ public class InitiatePaymentCommandHandler(
     {
         if (currentUser.UserId is null)
             return ApiResponse<InitiatePaymentResultDto>.Fail("UNAUTHORIZED", "Not authenticated.");
+
+        var settingKey = request.Provider == PaymentProvider.Payme ? "payme_enabled" : "click_enabled";
+        if (!await settings.GetBoolAsync(settingKey, true, ct))
+            return ApiResponse<InitiatePaymentResultDto>.Fail(
+                "PROVIDER_DISABLED", "This payment method is temporarily unavailable.");
 
         var userId = currentUser.UserId.Value;
         var now = dateTime.UtcNow;
