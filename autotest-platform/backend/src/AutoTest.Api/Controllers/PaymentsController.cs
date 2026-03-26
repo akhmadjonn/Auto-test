@@ -14,6 +14,13 @@ namespace AutoTest.Api.Controllers;
 [EnableRateLimiting("anonymous")]
 public class PaymentsController(ISender mediator, IConfiguration configuration) : ControllerBase
 {
+    [HttpGet("methods")]
+    public async Task<IActionResult> GetMethods(CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetPaymentMethodsQuery(), ct);
+        return Ok(result);
+    }
+
     [HttpPost("initiate")]
     [Microsoft.AspNetCore.Authorization.Authorize]
     public async Task<IActionResult> Initiate([FromBody] InitiatePaymentCommand command, CancellationToken ct)

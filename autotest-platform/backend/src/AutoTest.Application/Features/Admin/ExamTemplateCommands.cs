@@ -162,8 +162,9 @@ public class UpdateExamTemplateCommandHandler(
         template.IsActive = request.IsActive;
         template.UpdatedAt = now;
 
-        // Replace pool rules: remove old, add new
+        // Replace pool rules: remove old, add new explicitly
         db.ExamPoolRules.RemoveRange(template.PoolRules);
+
         var newRules = request.PoolRules.Select(r => new ExamPoolRule
         {
             Id = Guid.NewGuid(),
@@ -175,7 +176,7 @@ public class UpdateExamTemplateCommandHandler(
             UpdatedAt = now
         }).ToList();
 
-        template.PoolRules = newRules;
+        db.ExamPoolRules.AddRange(newRules);
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("ExamTemplate updated: {TemplateId}", template.Id);
