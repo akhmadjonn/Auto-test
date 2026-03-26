@@ -88,7 +88,7 @@ public class BulkImportQuestionsCommandHandler(
                     Difficulty = difficulty,
                     TicketNumber = dto.TicketNumber,
                     LicenseCategory = licenseCategory,
-                    IsActive = dto.IsActive,
+                    Status = dto.IsActive ? QuestionStatus.Active : QuestionStatus.Draft,
                     CreatedAt = dateTime.UtcNow,
                     UpdatedAt = dateTime.UtcNow
                 };

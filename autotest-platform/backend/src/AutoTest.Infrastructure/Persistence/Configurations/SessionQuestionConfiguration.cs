@@ -19,7 +19,8 @@ public class SessionQuestionConfiguration : IEntityTypeConfiguration<SessionQues
 
         builder.HasOne(sq => sq.Question)
             .WithMany()
-            .HasForeignKey(sq => sq.QuestionId);
+            .HasForeignKey(sq => sq.QuestionId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(sq => sq.SelectedAnswer)
             .WithMany()
@@ -27,5 +28,9 @@ public class SessionQuestionConfiguration : IEntityTypeConfiguration<SessionQues
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasIndex(sq => new { sq.ExamSessionId, sq.Order });
+
+        // Partial index for "mistakes review" mode (Phase 2)
+        builder.HasIndex(sq => new { sq.QuestionId, sq.ExamSessionId })
+            .HasFilter("\"IsCorrect\" = false");
     }
 }

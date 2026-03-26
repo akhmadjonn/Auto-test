@@ -39,7 +39,7 @@ public class GetCategoriesTreeQueryHandler(
             query = query.Where(c => c.IsActive);
 
         var categories = await query
-            .Include(c => c.Questions.Where(q => q.IsActive))
+            .Include(c => c.Questions.Where(q => q.Status == QuestionStatus.Active))
             .OrderBy(c => c.SortOrder)
             .ToListAsync(ct);
 

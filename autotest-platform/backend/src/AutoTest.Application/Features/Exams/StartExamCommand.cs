@@ -102,7 +102,7 @@ public class StartExamCommandHandler(
             var poolQuery = db.Questions
                 .AsNoTracking()
                 .Include(q => q.AnswerOptions)
-                .Where(q => q.CategoryId == rule.CategoryId && q.IsActive);
+                .Where(q => q.CategoryId == rule.CategoryId && q.Status == QuestionStatus.Active);
 
             if (rule.Difficulty.HasValue)
                 poolQuery = poolQuery.Where(q => q.Difficulty == rule.Difficulty.Value);

@@ -148,7 +148,7 @@ public static class ImportApkCommand
                 ImageUrl = imageKey,
                 ThumbnailUrl = thumbKey,
                 LicenseCategory = LicenseCategory.AB,
-                IsActive = true,
+                Status = QuestionStatus.Active,
                 // Group into tickets: 20 questions each → ticket 1 = IDs 1-20, etc.
                 TicketNumber = (id - 1) / 20 + 1,
                 CreatedAt = DateTimeOffset.UtcNow,

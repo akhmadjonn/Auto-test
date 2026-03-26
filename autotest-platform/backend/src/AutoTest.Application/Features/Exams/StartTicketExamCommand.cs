@@ -47,7 +47,7 @@ public class StartTicketExamCommandHandler(
         var questions = await db.Questions
             .AsNoTracking()
             .Include(q => q.AnswerOptions)
-            .Where(q => q.TicketNumber == request.TicketNumber && q.IsActive)
+            .Where(q => q.TicketNumber == request.TicketNumber && q.Status == QuestionStatus.Active)
             .OrderBy(q => q.Id)
             .ToListAsync(ct);
 

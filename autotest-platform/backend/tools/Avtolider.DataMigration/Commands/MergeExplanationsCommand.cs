@@ -1,3 +1,4 @@
+using AutoTest.Domain.Common.Enums;
 using AutoTest.Domain.Common.ValueObjects;
 using Avtolider.DataMigration.Models;
 using Avtolider.DataMigration.Services;
@@ -73,7 +74,7 @@ public static class MergeExplanationsCommand
         // Find DB questions with empty explanations
         // Load all active questions client-side, then filter — avoids JSONB translation issues
         var allActive = await ctx.Db.Questions
-            .Where(q => q.IsActive)
+            .Where(q => q.Status == QuestionStatus.Active)
             .ToListAsync(ct);
         var questionsToUpdate = allActive
             .Where(q => string.IsNullOrEmpty(q.Explanation.Ru))

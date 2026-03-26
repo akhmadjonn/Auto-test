@@ -182,7 +182,7 @@ public static class ImportAvtoliderCommand
                 ImageUrl = imageKey,
                 ThumbnailUrl = thumbKey,
                 LicenseCategory = LicenseCategory.AB,
-                IsActive = q.IsActive,
+                Status = q.IsActive ? QuestionStatus.Active : QuestionStatus.Draft,
                 TicketNumber = (ticketCounter - 1) / 20 + 1,
                 CreatedAt = DateTimeOffset.UtcNow,
             };

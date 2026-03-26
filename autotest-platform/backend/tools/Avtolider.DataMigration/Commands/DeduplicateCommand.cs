@@ -1,3 +1,4 @@
+using AutoTest.Domain.Common.Enums;
 using AutoTest.Domain.Common.ValueObjects;
 using AutoTest.Domain.Entities;
 using AutoTest.Infrastructure.Persistence;
@@ -32,14 +33,14 @@ public static class DeduplicateCommand
         if (hardDelete)
             Console.WriteLine("  [HARD DELETE] Duplicates will be permanently deleted.");
         else
-            Console.WriteLine("  [SOFT DELETE] Duplicates will be marked IsActive=false.");
+            Console.WriteLine("  [SOFT DELETE] Duplicates will be marked Status=Archived.");
         Console.WriteLine();
 
         // Load all active questions with fields needed for merge decisions
         Console.WriteLine("  Loading all active questions from DB...");
         var questions = await ctx.Db.Questions
             .Include(q => q.AnswerOptions)
-            .Where(q => q.IsActive)
+            .Where(q => q.Status == QuestionStatus.Active)
             .ToListAsync(ct);
 
         Console.WriteLine($"  Loaded {questions.Count} active questions");
@@ -250,7 +251,7 @@ public static class DeduplicateCommand
                 {
                     await ctx.Db.Questions
                         .Where(q => chunk.Contains(q.Id))
-                        .ExecuteUpdateAsync(s => s.SetProperty(q => q.IsActive, false), ct);
+                        .ExecuteUpdateAsync(s => s.SetProperty(q => q.Status, QuestionStatus.Archived), ct);
                 }
                 removed += chunk.Length;
             }
@@ -278,7 +279,7 @@ public static class DeduplicateCommand
         Console.WriteLine("  Reassigning ticket numbers...");
 
         var activeQuestions = await ctx.Db.Questions
-            .Where(q => q.IsActive)
+            .Where(q => q.Status == QuestionStatus.Active)
             .OrderBy(q => q.CategoryId)
             .ThenBy(q => q.Difficulty)
             .ThenBy(q => q.Id)

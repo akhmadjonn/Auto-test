@@ -19,12 +19,12 @@ public class AdminQuestionsController(IMediator mediator) : ControllerBase
         [FromQuery] int pageSize = 20,
         [FromQuery] string? search = null,
         [FromQuery] Difficulty? difficulty = null,
-        [FromQuery] bool? isActive = null,
+        [FromQuery] QuestionStatus? status = null,
         [FromQuery] int? ticketNumber = null,
         [FromQuery] Guid? categoryId = null,
         CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetAdminQuestionsQuery(page, pageSize, search, difficulty, isActive, ticketNumber, categoryId), ct);
+        var result = await mediator.Send(new GetAdminQuestionsQuery(page, pageSize, search, difficulty, status, ticketNumber, categoryId), ct);
         return Ok(result);
     }
 
@@ -75,7 +75,7 @@ public class AdminQuestionsController(IMediator mediator) : ControllerBase
             form.TextUz, form.TextUzLatin, form.TextRu,
             form.ExplanationUz, form.ExplanationUzLatin, form.ExplanationRu,
             form.Difficulty, form.TicketNumber, form.LicenseCategory,
-            form.IsActive,
+            form.Status,
             form.QuestionImage?.OpenReadStream(),
             form.QuestionImage?.FileName,
             form.AnswerOptions?.Select((o, i) => new CreateAnswerOptionDto(
@@ -104,7 +104,7 @@ public class AdminQuestionsController(IMediator mediator) : ControllerBase
             id,
             form.TextUz, form.TextUzLatin, form.TextRu,
             form.ExplanationUz, form.ExplanationUzLatin, form.ExplanationRu,
-            form.Difficulty, form.TicketNumber, form.LicenseCategory, form.IsActive,
+            form.Difficulty, form.TicketNumber, form.LicenseCategory, form.Status,
             form.RemoveQuestionImage,
             form.NewQuestionImage?.OpenReadStream(),
             form.NewQuestionImage?.FileName,
@@ -119,7 +119,7 @@ public class AdminQuestionsController(IMediator mediator) : ControllerBase
     [HttpPatch("{id}/status")]
     public async Task<IActionResult> ToggleStatus(Guid id, [FromBody] ToggleStatusRequest req, CancellationToken ct)
     {
-        var result = await mediator.Send(new ToggleQuestionStatusCommand(id, req.IsActive), ct);
+        var result = await mediator.Send(new ToggleQuestionStatusCommand(id, req.Status), ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
 
@@ -176,7 +176,7 @@ public class CreateQuestionFormModel
     public AutoTest.Domain.Common.Enums.Difficulty Difficulty { get; set; }
     public int TicketNumber { get; set; }
     public AutoTest.Domain.Common.Enums.LicenseCategory LicenseCategory { get; set; }
-    public bool IsActive { get; set; }
+    public AutoTest.Domain.Common.Enums.QuestionStatus Status { get; set; } = AutoTest.Domain.Common.Enums.QuestionStatus.Active;
     public IFormFile? QuestionImage { get; set; }
     public List<IFormFile>? AnswerOptionImages { get; set; }
     public List<AnswerOptionFormItem>? AnswerOptions { get; set; }
@@ -193,7 +193,7 @@ public class UpdateQuestionFormModel
     public AutoTest.Domain.Common.Enums.Difficulty Difficulty { get; set; }
     public int TicketNumber { get; set; }
     public AutoTest.Domain.Common.Enums.LicenseCategory LicenseCategory { get; set; }
-    public bool IsActive { get; set; }
+    public AutoTest.Domain.Common.Enums.QuestionStatus Status { get; set; }
     public bool RemoveQuestionImage { get; set; }
     public IFormFile? NewQuestionImage { get; set; }
     public List<IFormFile>? AnswerOptionImages { get; set; }
@@ -214,4 +214,4 @@ public class UpdateAnswerOptionFormItem : AnswerOptionFormItem
     public bool RemoveImage { get; set; }
 }
 
-public record ToggleStatusRequest(bool IsActive);
+public record ToggleStatusRequest(QuestionStatus Status);

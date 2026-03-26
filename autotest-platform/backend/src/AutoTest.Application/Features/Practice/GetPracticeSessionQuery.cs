@@ -48,7 +48,7 @@ public class GetPracticeSessionQueryHandler(
             .AsNoTracking()
             .Include(q => q.AnswerOptions)
             .Include(q => q.Category)
-            .Where(q => q.IsActive);
+            .Where(q => q.Status == QuestionStatus.Active);
 
         if (request.CategoryId.HasValue)
             questionsQuery = questionsQuery.Where(q => q.CategoryId == request.CategoryId.Value);
@@ -186,7 +186,7 @@ public class GetPracticeSessionQueryHandler(
 
         var ids = await db.Questions
             .AsNoTracking()
-            .Where(q => q.IsActive
+            .Where(q => q.Status == QuestionStatus.Active
                 && weakCategoryIds.Contains(q.CategoryId)
                 && availableQuestionIds.Contains(q.Id))
             .Select(q => q.Id)

@@ -66,7 +66,7 @@ public class AdminQuestionCrudIntegrationTests
             Difficulty: Difficulty.Easy,
             TicketNumber: 1,
             LicenseCategory: LicenseCategory.AB,
-            IsActive: true,
+            Status: QuestionStatus.Active,
             QuestionImage: fakeImage,
             QuestionImageFileName: "signal.png",
             AnswerOptions:
@@ -89,7 +89,7 @@ public class AdminQuestionCrudIntegrationTests
         savedQuestion!.ImageUrl.Should().NotBeNullOrEmpty();
         savedQuestion.AnswerOptions.Should().HaveCount(3);
         savedQuestion.AnswerOptions.Count(a => a.IsCorrect).Should().Be(1);
-        savedQuestion.IsActive.Should().BeTrue();
+        savedQuestion.Status.Should().Be(QuestionStatus.Active);
 
         // --- Step 2: Read question via GetQuestionsByCategoryQuery (presigned URL) ---
         var readHandler = new GetQuestionsByCategoryQueryHandler(db, _storage);
@@ -111,13 +111,13 @@ public class AdminQuestionCrudIntegrationTests
             Substitute.For<ILogger<ToggleQuestionStatusCommandHandler>>());
 
         var toggleResult = await toggleHandler.Handle(
-            new ToggleQuestionStatusCommand(questionId, false), CancellationToken.None);
+            new ToggleQuestionStatusCommand(questionId, QuestionStatus.Archived), CancellationToken.None);
 
         toggleResult.Success.Should().BeTrue();
 
         // Verify deactivated in DB
         var deactivated = await db.Questions.FindAsync(questionId);
-        deactivated!.IsActive.Should().BeFalse();
+        deactivated!.Status.Should().Be(QuestionStatus.Archived);
 
         // --- Step 4: Verify question is excluded from category listing (active-only query) ---
         var readAfterResult = await readHandler.Handle(
@@ -179,7 +179,7 @@ public class AdminQuestionCrudIntegrationTests
             CategoryId: Guid.NewGuid(), // non-existent
             TextUz: "Q", TextUzLatin: "Q", TextRu: "Q",
             ExplanationUz: "E", ExplanationUzLatin: "E", ExplanationRu: "E",
-            Difficulty: Difficulty.Easy, TicketNumber: 1, LicenseCategory: LicenseCategory.AB, IsActive: true,
+            Difficulty: Difficulty.Easy, TicketNumber: 1, LicenseCategory: LicenseCategory.AB, Status: QuestionStatus.Active,
             QuestionImage: null, QuestionImageFileName: null,
             AnswerOptions:
             [
@@ -218,7 +218,7 @@ public class AdminQuestionCrudIntegrationTests
             CategoryId: category.Id,
             TextUz: "Savol", TextUzLatin: "Savol", TextRu: "Вопрос",
             ExplanationUz: "Izoh", ExplanationUzLatin: "Izoh", ExplanationRu: "Объяснение",
-            Difficulty: Difficulty.Medium, TicketNumber: 5, LicenseCategory: LicenseCategory.CD, IsActive: true,
+            Difficulty: Difficulty.Medium, TicketNumber: 5, LicenseCategory: LicenseCategory.CD, Status: QuestionStatus.Active,
             QuestionImage: null, QuestionImageFileName: null,
             AnswerOptions:
             [
@@ -263,7 +263,7 @@ public class AdminQuestionCrudIntegrationTests
             Difficulty = Difficulty.Easy,
             TicketNumber = 1,
             LicenseCategory = LicenseCategory.AB,
-            IsActive = false, // initially inactive
+            Status = QuestionStatus.Draft, // initially inactive
             CreatedAt = _dateTime.UtcNow
         };
         db.Questions.Add(question);
@@ -318,7 +318,7 @@ public class AdminQuestionCrudIntegrationTests
             Substitute.For<ILogger<ToggleQuestionStatusCommandHandler>>());
 
         var toggleResult = await toggleHandler.Handle(
-            new ToggleQuestionStatusCommand(question.Id, true), CancellationToken.None);
+            new ToggleQuestionStatusCommand(question.Id, QuestionStatus.Active), CancellationToken.None);
         toggleResult.Success.Should().BeTrue();
 
         // Now exam should succeed

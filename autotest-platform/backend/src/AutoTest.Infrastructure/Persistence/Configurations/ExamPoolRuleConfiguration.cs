@@ -19,6 +19,7 @@ public class ExamPoolRuleConfiguration : IEntityTypeConfiguration<ExamPoolRule>
 
         builder.HasOne(r => r.Category)
             .WithMany()
-            .HasForeignKey(r => r.CategoryId);
+            .HasForeignKey(r => r.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -21,7 +21,7 @@ public class GetTicketsListQueryHandler(
         if (cached is not null)
             return ApiResponse<List<TicketSummaryDto>>.Ok(cached);
 
-        var query = db.Questions.AsNoTracking().Where(q => q.IsActive);
+        var query = db.Questions.AsNoTracking().Where(q => q.Status == QuestionStatus.Active);
 
         if (request.LicenseCategory.HasValue && request.LicenseCategory != Domain.Common.Enums.LicenseCategory.Both)
             query = query.Where(q => q.LicenseCategory == request.LicenseCategory.Value

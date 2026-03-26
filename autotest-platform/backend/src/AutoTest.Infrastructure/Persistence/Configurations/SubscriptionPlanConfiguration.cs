@@ -15,6 +15,6 @@ public class SubscriptionPlanConfiguration : IEntityTypeConfiguration<Subscripti
         builder.OwnsOne(p => p.Name, b => b.ToJson());
         builder.OwnsOne(p => p.Description, b => b.ToJson());
 
-        builder.Property(p => p.Features).HasMaxLength(4000);
+        builder.Property(p => p.Features).HasColumnType("jsonb");
     }
 }

@@ -19,7 +19,7 @@ public class GetQuestionsByTicketQueryHandler(
     {
         var questions = await db.Questions
             .AsNoTracking()
-            .Where(q => q.TicketNumber == request.TicketNumber && q.IsActive)
+            .Where(q => q.TicketNumber == request.TicketNumber && q.Status == QuestionStatus.Active)
             .Include(q => q.AnswerOptions)
             .Include(q => q.Category)
             .OrderBy(q => q.Id)

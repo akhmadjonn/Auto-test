@@ -645,7 +645,7 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
         {
             Id = qId, CategoryId = categoryId, TicketNumber = ticket,
             Difficulty = difficulty, LicenseCategory = LicenseCategory.Both,
-            IsActive = true, Text = text, Explanation = explanation,
+            Status = QuestionStatus.Active, Text = text, Explanation = explanation,
             CreatedAt = now, UpdatedAt = now,
             AnswerOptions = answers.Select((a, i) => new AnswerOption
             {

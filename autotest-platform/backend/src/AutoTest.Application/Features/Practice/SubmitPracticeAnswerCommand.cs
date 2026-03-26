@@ -53,7 +53,7 @@ public class SubmitPracticeAnswerCommandHandler(
 
         var question = await db.Questions
             .Include(q => q.AnswerOptions)
-            .FirstOrDefaultAsync(q => q.Id == request.QuestionId && q.IsActive, ct);
+            .FirstOrDefaultAsync(q => q.Id == request.QuestionId && q.Status == QuestionStatus.Active, ct);
 
         if (question is null)
             return ApiResponse<PracticeAnswerFeedbackDto>.Fail("QUESTION_NOT_FOUND", "Question not found.");
@@ -99,6 +99,17 @@ public class SubmitPracticeAnswerCommandHandler(
             // Reset to Box1 on incorrect
             state.LeitnerBox = LeitnerBox.Box1;
             state.NextReviewDate = now.AddDays(LeitnerIntervals[0]);
+        }
+
+        // Update global question statistics
+        question.TotalAttempts++;
+        if (isCorrect)
+            question.CorrectCount++;
+        if (request.TimeSpentSeconds is > 0)
+        {
+            question.AvgTimeSec = question.AvgTimeSec.HasValue
+                ? (question.AvgTimeSec.Value * (question.TotalAttempts - 1) + request.TimeSpentSeconds.Value) / question.TotalAttempts
+                : request.TimeSpentSeconds.Value;
         }
 
         // Update category stats with 0.85 EMA decay (recent answers weighted more)

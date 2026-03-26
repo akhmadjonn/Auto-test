@@ -15,6 +15,8 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.Property(a => a.EntityType).HasMaxLength(100);
         builder.Property(a => a.EntityId).HasMaxLength(100);
         builder.Property(a => a.IpAddress).HasMaxLength(50);
+        builder.Property(a => a.OldValues).HasColumnType("jsonb");
+        builder.Property(a => a.NewValues).HasColumnType("jsonb");
 
         builder.HasIndex(a => a.UserId);
         builder.HasIndex(a => a.CreatedAt);
