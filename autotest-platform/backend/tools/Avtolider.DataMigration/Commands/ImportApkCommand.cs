@@ -64,11 +64,11 @@ public static class ImportApkCommand
         Console.WriteLine($"  Category: '{category.Name.Ru}' (id={category.Id})");
 
         // --- Load existing Russian texts for idempotency ---
-        var existingRuList = await ctx.Db.Questions
+        var existingRuRaw = await ctx.Db.Questions
             .AsNoTracking()
-            .Select(q => UzbekTransliterator.Normalize(q.Text.Ru))
+            .Select(q => q.Text.Ru)
             .ToListAsync(ct);
-        var existingRuTexts = new HashSet<string>(existingRuList);
+        var existingRuTexts = new HashSet<string>(existingRuRaw.Select(UzbekTransliterator.Normalize));
         Console.WriteLine($"  Existing questions in DB: {existingRuTexts.Count}");
         Console.WriteLine();
 
@@ -228,15 +228,17 @@ public static class ImportApkCommand
 
         if (ctx.DryRun)
         {
-            // Return a transient category for dry-run (not saved)
             return new Category
             {
                 Id = Guid.NewGuid(),
-                Name = new LocalizedText("APK savollari", "APK savollari", "Вопросы APK"),
-                Description = new LocalizedText(string.Empty, string.Empty, string.Empty),
+                Name = new LocalizedText("Таснифланмаган", "Tasniflanmagan", "Без категории"),
+                Description = new LocalizedText(
+                    "Мавзу тайинланмаган саволлар",
+                    "Mavzu tayinlanmagan savollar",
+                    "Вопросы без назначенной темы"),
                 Slug = slug,
                 IsActive = true,
-                SortOrder = 100,
+                SortOrder = 999, // last in sort order
                 CreatedAt = DateTimeOffset.UtcNow,
             };
         }
@@ -244,14 +246,14 @@ public static class ImportApkCommand
         var category = new Category
         {
             Id = Guid.NewGuid(),
-            Name = new LocalizedText(
-                ctx.DefaultApkCategoryName,
-                ctx.DefaultApkCategoryName,
-                "Вопросы APK"),
-            Description = new LocalizedText(string.Empty, string.Empty, string.Empty),
+            Name = new LocalizedText("Таснифланмаган", "Tasniflanmagan", "Без категории"),
+            Description = new LocalizedText(
+                "Мавзу тайинланмаган саволлар",
+                "Mavzu tayinlanmagan savollar",
+                "Вопросы без назначенной темы"),
             Slug = slug,
             IsActive = true,
-            SortOrder = 100,
+            SortOrder = 999,
             CreatedAt = DateTimeOffset.UtcNow,
         };
 

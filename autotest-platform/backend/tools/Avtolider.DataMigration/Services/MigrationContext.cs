@@ -27,8 +27,8 @@ public sealed class MigrationContext(
         int.TryParse(Config["MigrationSettings:BatchSize"], out var b) ? b : 50;
 
     public string DefaultApkCategorySlug =>
-        Config["MigrationSettings:DefaultApkCategorySlug"] ?? "apk-savollari";
+        Config["MigrationSettings:DefaultApkCategorySlug"] ?? "uncategorized";
 
     public string DefaultApkCategoryName =>
-        Config["MigrationSettings:DefaultApkCategoryName"] ?? "APK Savollari";
+        Config["MigrationSettings:DefaultApkCategoryName"] ?? "Uncategorized";
 }

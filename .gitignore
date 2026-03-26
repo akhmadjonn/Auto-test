@@ -1,0 +1,11 @@
+# Competitor analysis data (large APKs, dumps — local only)
+Competitor's apps/
+Our roadmap/
+
+# One-off analysis scripts and reports
+cross_match.py
+AUDIT-RESULTS.md
+CODE-AUDIT.md
+COMPETITOR-ANALYSIS-REPORT.md
+MIGRATION-PLAN.md
+SCHEMA-COMPARISON.md
