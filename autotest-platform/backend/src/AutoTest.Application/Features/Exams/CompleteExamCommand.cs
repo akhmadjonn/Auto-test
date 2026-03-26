@@ -97,6 +97,7 @@ public class CompleteExamCommandHandler(
         var sessionQuestionsList = session.SessionQuestions.ToList();
         await UpdateLeitnerStatesAsync(userId, sessionQuestionsList, now, ct);
         await UpdateCategoryStatsAsync(userId, sessionQuestionsList, ct);
+        UpdateGlobalQuestionStats(sessionQuestionsList);
 
         await db.SaveChangesAsync(ct);
 
@@ -145,6 +146,24 @@ public class CompleteExamCommandHandler(
         return ApiResponse<ExamResultDto>.Ok(new ExamResultDto(
             session.Id, total, correctCount, score, passingScore,
             score >= passingScore, timeTaken, now, questionDtos));
+    }
+
+    private static void UpdateGlobalQuestionStats(List<SessionQuestion> sessionQuestions)
+    {
+        foreach (var sq in sessionQuestions)
+        {
+            var question = sq.Question;
+            question.TotalAttempts++;
+            if (sq.IsCorrect == true)
+                question.CorrectCount++;
+
+            if (sq.TimeSpentSeconds is > 0)
+            {
+                question.AvgTimeSec = question.AvgTimeSec.HasValue
+                    ? (question.AvgTimeSec.Value * (question.TotalAttempts - 1) + sq.TimeSpentSeconds.Value) / question.TotalAttempts
+                    : sq.TimeSpentSeconds.Value;
+            }
+        }
     }
 
     private async Task UpdateCategoryStatsAsync(

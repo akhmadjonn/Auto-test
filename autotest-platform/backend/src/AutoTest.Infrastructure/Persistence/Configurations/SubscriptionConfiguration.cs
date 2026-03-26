@@ -14,13 +14,16 @@ public class SubscriptionConfiguration : IEntityTypeConfiguration<Subscription>
 
         builder.Property(s => s.CardToken).HasMaxLength(500);
 
+        // FK: RESTRICT — deleting a user must NOT wipe subscription/payment records
         builder.HasOne(s => s.User)
             .WithMany(u => u.Subscriptions)
-            .HasForeignKey(s => s.UserId);
+            .HasForeignKey(s => s.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(s => s.Plan)
             .WithMany()
-            .HasForeignKey(s => s.PlanId);
+            .HasForeignKey(s => s.PlanId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(s => new { s.UserId, s.Status, s.ExpiresAt });
     }

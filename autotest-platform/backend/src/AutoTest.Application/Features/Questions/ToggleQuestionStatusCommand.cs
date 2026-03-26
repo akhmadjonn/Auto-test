@@ -1,18 +1,20 @@
 using AutoTest.Application.Common.Interfaces;
 using AutoTest.Application.Common.Models;
+using AutoTest.Domain.Common.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AutoTest.Application.Features.Questions;
 
-public record ToggleQuestionStatusCommand(Guid QuestionId, bool IsActive) : IRequest<ApiResponse>;
+public record ToggleQuestionStatusCommand(Guid QuestionId, QuestionStatus Status) : IRequest<ApiResponse>;
 
 public class ToggleQuestionStatusCommandValidator : AbstractValidator<ToggleQuestionStatusCommand>
 {
     public ToggleQuestionStatusCommandValidator()
     {
         RuleFor(x => x.QuestionId).NotEmpty();
+        RuleFor(x => x.Status).IsInEnum();
     }
 }
 
@@ -28,12 +30,12 @@ public class ToggleQuestionStatusCommandHandler(
         if (question is null)
             return ApiResponse.Fail("QUESTION_NOT_FOUND", "Question not found.");
 
-        question.IsActive = request.IsActive;
+        question.Status = request.Status;
         question.UpdatedAt = dateTime.UtcNow;
         await db.SaveChangesAsync(ct);
         await CreateQuestionCommandHandler.InvalidateQuestionCachesAsync(cache, ct);
 
-        logger.LogInformation("Question {Id} status set to {Status}", request.QuestionId, request.IsActive);
+        logger.LogInformation("Question {Id} status set to {Status}", request.QuestionId, request.Status);
         return ApiResponse.Ok();
     }
 }

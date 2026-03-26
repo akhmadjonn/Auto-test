@@ -35,7 +35,7 @@ public class GetQuestionsByCategoryQueryHandler(
     {
         var baseQuery = db.Questions
             .AsNoTracking()
-            .Where(q => q.CategoryId == request.CategoryId && q.IsActive);
+            .Where(q => q.CategoryId == request.CategoryId && q.Status == QuestionStatus.Active);
 
         if (request.Difficulty.HasValue)
             baseQuery = baseQuery.Where(q => q.Difficulty == request.Difficulty.Value);

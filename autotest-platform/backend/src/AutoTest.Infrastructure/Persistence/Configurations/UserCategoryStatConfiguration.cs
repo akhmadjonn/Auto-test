@@ -15,10 +15,12 @@ public class UserCategoryStatConfiguration : IEntityTypeConfiguration<UserCatego
 
         builder.HasOne(ucs => ucs.User)
             .WithMany()
-            .HasForeignKey(ucs => ucs.UserId);
+            .HasForeignKey(ucs => ucs.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(ucs => ucs.Category)
             .WithMany()
-            .HasForeignKey(ucs => ucs.CategoryId);
+            .HasForeignKey(ucs => ucs.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

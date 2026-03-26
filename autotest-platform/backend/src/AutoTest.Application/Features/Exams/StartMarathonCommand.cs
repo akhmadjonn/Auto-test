@@ -48,7 +48,7 @@ public class StartMarathonCommandHandler(
         var questions = await db.Questions
             .AsNoTracking()
             .Include(q => q.AnswerOptions)
-            .Where(q => q.IsActive && (q.LicenseCategory == request.LicenseCategory || q.LicenseCategory == LicenseCategory.Both))
+            .Where(q => q.Status == QuestionStatus.Active && (q.LicenseCategory == request.LicenseCategory || q.LicenseCategory == LicenseCategory.Both))
             .OrderBy(q => q.TicketNumber)
             .ThenBy(q => q.Id)
             .ToListAsync(ct);

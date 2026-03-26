@@ -27,7 +27,7 @@ public class LeitnerBoxService(
         return await db.Questions
             .AsNoTracking()
             .Include(q => q.AnswerOptions)
-            .Where(q => q.IsActive && q.CategoryId == categoryId && dueIds.Contains(q.Id))
+            .Where(q => q.Status == QuestionStatus.Active && q.CategoryId == categoryId && dueIds.Contains(q.Id))
             .OrderBy(_ => EF.Functions.Random())
             .Take(batchSize)
             .ToListAsync(ct);
@@ -47,7 +47,7 @@ public class LeitnerBoxService(
         var questionsQuery = db.Questions
             .AsNoTracking()
             .Include(q => q.AnswerOptions)
-            .Where(q => q.IsActive && dueIds.Contains(q.Id));
+            .Where(q => q.Status == QuestionStatus.Active && dueIds.Contains(q.Id));
 
         if (categoryId.HasValue)
             questionsQuery = questionsQuery.Where(q => q.CategoryId == categoryId.Value);

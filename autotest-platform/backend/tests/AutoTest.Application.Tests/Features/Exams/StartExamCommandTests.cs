@@ -70,7 +70,7 @@ public class StartExamCommandTests
                 Difficulty = Difficulty.Easy,
                 TicketNumber = 1,
                 LicenseCategory = LicenseCategory.AB,
-                IsActive = true,
+                Status = QuestionStatus.Active,
                 CreatedAt = _dateTime.UtcNow
             };
             db.Questions.Add(q);
@@ -148,7 +148,7 @@ public class StartExamCommandTests
         // Deactivate all but 3
         var questions = db.Questions.ToList();
         for (var i = 3; i < questions.Count; i++)
-            questions[i].IsActive = false;
+            questions[i].Status = QuestionStatus.Archived;
         await db.SaveChangesAsync();
 
         var handler = CreateHandler(db);

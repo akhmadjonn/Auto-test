@@ -1,3 +1,4 @@
+using AutoTest.Domain.Common.Enums;
 using AutoTest.Infrastructure.Persistence;
 using Avtolider.DataMigration.Services;
 using Microsoft.EntityFrameworkCore;
@@ -116,7 +117,7 @@ public static class AssignCategoriesCommand
 
         // Load questions in APK category
         var questions = await ctx.Db.Questions
-            .Where(q => q.CategoryId == apkCategory.Id && q.IsActive)
+            .Where(q => q.CategoryId == apkCategory.Id && q.Status == QuestionStatus.Active)
             .ToListAsync(ct);
 
         Console.WriteLine($"  Questions in '{ctx.DefaultApkCategorySlug}': {questions.Count}");

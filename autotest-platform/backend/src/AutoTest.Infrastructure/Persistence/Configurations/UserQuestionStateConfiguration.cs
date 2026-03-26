@@ -15,11 +15,13 @@ public class UserQuestionStateConfiguration : IEntityTypeConfiguration<UserQuest
 
         builder.HasOne(uqs => uqs.User)
             .WithMany(u => u.UserQuestionStates)
-            .HasForeignKey(uqs => uqs.UserId);
+            .HasForeignKey(uqs => uqs.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(uqs => uqs.Question)
             .WithMany()
-            .HasForeignKey(uqs => uqs.QuestionId);
+            .HasForeignKey(uqs => uqs.QuestionId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(uqs => new { uqs.UserId, uqs.NextReviewDate });
         builder.HasIndex(uqs => new { uqs.UserId, uqs.LastAttemptAt });

@@ -1,12 +1,13 @@
 using AutoTest.Application.Common.Interfaces;
 using AutoTest.Application.Common.Models;
+using AutoTest.Domain.Common.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AutoTest.Application.Features.Questions;
 
-// Soft delete
+// Soft delete — sets Status to Archived
 public record DeleteQuestionCommand(Guid QuestionId) : IRequest<ApiResponse>;
 
 public class DeleteQuestionCommandValidator : AbstractValidator<DeleteQuestionCommand>
@@ -29,7 +30,7 @@ public class DeleteQuestionCommandHandler(
         if (question is null)
             return ApiResponse.Fail("QUESTION_NOT_FOUND", "Question not found.");
 
-        question.IsActive = false;
+        question.Status = QuestionStatus.Archived;
         question.UpdatedAt = dateTime.UtcNow;
         await db.SaveChangesAsync(ct);
         await CreateQuestionCommandHandler.InvalidateQuestionCachesAsync(cache, ct);

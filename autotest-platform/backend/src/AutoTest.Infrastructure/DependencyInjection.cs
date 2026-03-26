@@ -105,6 +105,7 @@ public static class DependencyInjection
             services.AddHostedService<SessionExpirationService>();
             services.AddHostedService<SubscriptionBillingService>();
             services.AddHostedService<EskizTokenRefreshService>();
+            services.AddHostedService<DataCleanupService>();
         }
 
         return services;

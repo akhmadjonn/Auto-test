@@ -43,7 +43,7 @@ public class AdminDashboardQueryHandler(
         var totalUsers = await db.Users.CountAsync(ct);
         var activeUsersToday = await db.Users.CountAsync(u => u.LastActiveAt >= today, ct);
         var totalQuestions = await db.Questions.CountAsync(ct);
-        var activeQuestions = await db.Questions.CountAsync(q => q.IsActive, ct);
+        var activeQuestions = await db.Questions.CountAsync(q => q.Status == QuestionStatus.Active, ct);
         var totalSessions = await db.ExamSessions.CountAsync(ct);
         var activeSubs = await db.Subscriptions.CountAsync(s => s.Status == SubscriptionStatus.Active && s.ExpiresAt > now, ct);
         var totalRevenue = await db.PaymentTransactions
@@ -52,8 +52,10 @@ public class AdminDashboardQueryHandler(
             .SumAsync(ct) ?? 0L;
         var newUsersWeek = await db.Users.CountAsync(u => u.CreatedAt >= weekAgo, ct);
 
+        // Exclude Abandoned sessions from mode breakdown — they inflate failure stats
         var examModes = await db.ExamSessions
             .AsNoTracking()
+            .Where(s => s.Status != ExamStatus.Abandoned)
             .GroupBy(s => s.Mode)
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync(ct);

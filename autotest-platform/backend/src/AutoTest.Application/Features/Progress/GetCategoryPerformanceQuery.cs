@@ -42,12 +42,12 @@ public class GetCategoryPerformanceQueryHandler(
         // Load categories that have active questions
         var categories = await db.Categories
             .AsNoTracking()
-            .Where(c => c.IsActive && c.Questions.Any(q => q.IsActive))
+            .Where(c => c.IsActive && c.Questions.Any(q => q.Status == QuestionStatus.Active))
             .Select(c => new
             {
                 c.Id,
                 Name = c.Name,
-                TotalQuestions = c.Questions.Count(q => q.IsActive)
+                TotalQuestions = c.Questions.Count(q => q.Status == QuestionStatus.Active)
             })
             .ToListAsync(ct);
 

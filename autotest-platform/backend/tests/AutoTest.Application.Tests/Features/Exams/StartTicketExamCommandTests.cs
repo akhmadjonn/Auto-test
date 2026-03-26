@@ -114,7 +114,7 @@ public class StartTicketExamCommandTests
                 Difficulty = Difficulty.Easy,
                 TicketNumber = ticketNumber,
                 LicenseCategory = LicenseCategory.AB,
-                IsActive = true,
+                Status = QuestionStatus.Active,
                 CreatedAt = _dateTime.UtcNow
             };
             db.Questions.Add(q);

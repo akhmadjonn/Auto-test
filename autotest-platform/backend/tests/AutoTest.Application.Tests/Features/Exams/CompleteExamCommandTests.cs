@@ -190,7 +190,7 @@ public class CompleteExamCommandTests
                 Difficulty = Difficulty.Easy,
                 TicketNumber = 1,
                 LicenseCategory = LicenseCategory.AB,
-                IsActive = true,
+                Status = QuestionStatus.Active,
                 CreatedAt = _dateTime.UtcNow
             };
             db.Questions.Add(q);

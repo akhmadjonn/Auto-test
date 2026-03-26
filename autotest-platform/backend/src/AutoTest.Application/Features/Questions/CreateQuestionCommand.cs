@@ -20,7 +20,7 @@ public record CreateQuestionCommand(
     Difficulty Difficulty,
     int TicketNumber,
     LicenseCategory LicenseCategory,
-    bool IsActive,
+    QuestionStatus Status,
     Stream? QuestionImage,
     string? QuestionImageFileName,
     List<CreateAnswerOptionDto> AnswerOptions) : IRequest<ApiResponse<Guid>>;
@@ -72,7 +72,7 @@ public class CreateQuestionCommandHandler(
             Difficulty = request.Difficulty,
             TicketNumber = request.TicketNumber,
             LicenseCategory = request.LicenseCategory,
-            IsActive = request.IsActive,
+            Status = request.Status,
             CreatedAt = dateTime.UtcNow,
             UpdatedAt = dateTime.UtcNow
         };

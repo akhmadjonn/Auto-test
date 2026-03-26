@@ -21,7 +21,7 @@ public record UpdateQuestionCommand(
     Difficulty Difficulty,
     int TicketNumber,
     LicenseCategory LicenseCategory,
-    bool IsActive,
+    QuestionStatus Status,
     bool RemoveQuestionImage,
     Stream? NewQuestionImage,
     string? NewQuestionImageFileName,
@@ -75,7 +75,7 @@ public class UpdateQuestionCommandHandler(
         question.Difficulty = request.Difficulty;
         question.TicketNumber = request.TicketNumber;
         question.LicenseCategory = request.LicenseCategory;
-        question.IsActive = request.IsActive;
+        question.Status = request.Status;
         question.UpdatedAt = dateTime.UtcNow;
 
         // Handle question image diff

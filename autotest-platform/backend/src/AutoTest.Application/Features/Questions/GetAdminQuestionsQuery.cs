@@ -13,7 +13,7 @@ public record GetAdminQuestionsQuery(
     int PageSize = 20,
     string? Search = null,
     Difficulty? Difficulty = null,
-    bool? IsActive = null,
+    QuestionStatus? Status = null,
     int? TicketNumber = null,
     Guid? CategoryId = null) : IRequest<ApiResponse<PaginatedList<AdminQuestionListDto>>>;
 
@@ -28,7 +28,7 @@ public record AdminQuestionListDto(
     Difficulty Difficulty,
     int TicketNumber,
     LicenseCategory LicenseCategory,
-    bool IsActive,
+    QuestionStatus Status,
     DateTimeOffset CreatedAt,
     List<AdminAnswerOptionDto> AnswerOptions);
 
@@ -61,8 +61,8 @@ public class GetAdminQuestionsQueryHandler(
         if (request.Difficulty.HasValue)
             query = query.Where(q => q.Difficulty == request.Difficulty.Value);
 
-        if (request.IsActive.HasValue)
-            query = query.Where(q => q.IsActive == request.IsActive.Value);
+        if (request.Status.HasValue)
+            query = query.Where(q => q.Status == request.Status.Value);
 
         if (request.TicketNumber.HasValue)
             query = query.Where(q => q.TicketNumber == request.TicketNumber.Value);
@@ -111,7 +111,7 @@ public class GetAdminQuestionsQueryHandler(
                 q.Id, q.Text, q.Explanation, imageUrl, thumbUrl,
                 q.CategoryId, q.Category?.Name ?? new LocalizedText("", "", ""),
                 q.Difficulty, q.TicketNumber, q.LicenseCategory,
-                q.IsActive, q.CreatedAt, options);
+                q.Status, q.CreatedAt, options);
         }).ToList();
 
         var paginated = new PaginatedList<AdminQuestionListDto>(dtos, total, request.Page, request.PageSize);
