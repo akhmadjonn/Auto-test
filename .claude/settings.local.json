@@ -62,7 +62,8 @@
       "Bash(dotnet build --no-restore)",
       "Bash(dotnet test --no-build --verbosity normal)",
       "Bash(docker exec autotest-postgres psql -U postgres -d autotest -c \"SELECT id, phone_number, role FROM autotest.users LIMIT 5;\")",
-      "Bash(xargs grep -l \"LeitnerBox\")"
+      "Bash(xargs grep -l \"LeitnerBox\")",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }

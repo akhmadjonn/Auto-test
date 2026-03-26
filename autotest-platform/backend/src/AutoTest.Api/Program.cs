@@ -21,12 +21,20 @@ var isBackgroundMode = cliArgs.Contains("--background");
 // --- MIGRATION MODE: apply EF Core migrations and exit ---
 if (isMigrationMode)
 {
+    var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+           ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+           ?? "Production";
+
     var host = Host.CreateDefaultBuilder(args)
         .UseSerilog((_, config) => config.WriteTo.Console())
         .ConfigureAppConfiguration((_, config) =>
         {
+            config.SetBasePath(AppContext.BaseDirectory);
+            config.AddJsonFile("appsettings.json", optional: false);
+            config.AddJsonFile($"appsettings.{env}.json", optional: true);
             config.AddJsonFile("/settings.json", optional: true, reloadOnChange: false);
             config.AddJsonFile("/secrets.json", optional: true, reloadOnChange: false);
+            config.AddEnvironmentVariables();
         })
         .ConfigureServices((context, services) =>
         {

@@ -116,11 +116,26 @@ try
             await DeduplicateCommand.ExecuteAsync(ctx, hardDelete, cts.Token);
             break;
 
+        case "merge-explanations":
+            await MergeExplanationsCommand.ExecuteAsync(ctx, cts.Token);
+            break;
+
+        case "assign-categories":
+            await AssignCategoriesCommand.ExecuteAsync(ctx, cts.Token);
+            break;
+
+        case "import-visual-assets":
+            await ImportVisualAssetsCommand.ExecuteAsync(ctx, cts.Token);
+            break;
+
         case "import-all":
-            Console.WriteLine("Running all imports in sequence...");
+            Console.WriteLine("Running full import pipeline (6 stages)...");
             await ImportApkCommand.ExecuteAsync(ctx, cts.Token);
             await ImportAvtoliderCommand.ExecuteAsync(ctx, cts.Token);
             await DeduplicateCommand.ExecuteAsync(ctx, hardDelete, cts.Token);
+            await MergeExplanationsCommand.ExecuteAsync(ctx, cts.Token);
+            await AssignCategoriesCommand.ExecuteAsync(ctx, cts.Token);
+            await ImportVisualAssetsCommand.ExecuteAsync(ctx, cts.Token);
             break;
 
         default:
@@ -156,10 +171,13 @@ static void PrintUsage()
     Console.WriteLine("    dotnet run -- <command> [options]");
     Console.WriteLine();
     Console.WriteLine("  Commands:");
-    Console.WriteLine("    import-apk         Import 700 questions from APK JSON files (uzkiril/uzlotin/rus)");
-    Console.WriteLine("    import-avtolider   Import questions from Avtolider DB JSON export");
-    Console.WriteLine("    deduplicate        Fuzzy-match and remove duplicate questions (Levenshtein <20%)");
-    Console.WriteLine("    import-all         Run all imports then deduplicate in sequence");
+    Console.WriteLine("    import-apk            Import 700 questions from APK JSON files (uzkiril/uzlotin/rus)");
+    Console.WriteLine("    import-avtolider      Import 1044 questions from Avtolider DB JSON + local images");
+    Console.WriteLine("    deduplicate           Fuzzy-match and remove duplicate questions (Levenshtein <20%)");
+    Console.WriteLine("    merge-explanations    Backfill explanations from APK into DB-only questions");
+    Console.WriteLine("    assign-categories     Reassign APK questions to proper PDD theme categories");
+    Console.WriteLine("    import-visual-assets  Upload road signs, markings, first aid images to MinIO");
+    Console.WriteLine("    import-all            Run full pipeline (all 6 stages in sequence)");
     Console.WriteLine();
     Console.WriteLine("  Options:");
     Console.WriteLine("    --dry-run          Preview what would be imported/deleted without writing");

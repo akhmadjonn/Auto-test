@@ -45,42 +45,75 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
         if (await db.Categories.AnyAsync(ct))
             return;
 
+        // 28 official PDD (YHQ) chapters + road-signs parent + CD + uncategorized
         var categories = new List<Category>
         {
-            MakeCategory("road-signs", "Йўл белгилари", "Yo'l belgilari", "Дорожные знаки", 1, null),
-            MakeCategory("road-markings", "Йўл чизиқлари", "Yo'l chiziqlari", "Дорожная разметка", 2, null),
-            MakeCategory("traffic-lights", "Светофор", "Svetofor", "Светофор", 3, null),
-            MakeCategory("traffic-rules", "Ҳаракат қоидалари", "Harakatlanish qoidalari", "Правила движения", 4, null),
-            MakeCategory("priority-rules", "Устунлик қоидалари", "Ustunlik qoidalari", "Правила приоритета", 5, null),
-            MakeCategory("speed-limits", "Тезлик чегаралари", "Tezlik chegaralari", "Скоростной режим", 6, null),
-            MakeCategory("overtaking", "Қувиб ўтиш", "Quvib o'tish", "Обгон", 7, null),
-            MakeCategory("parking", "Тўхташ ва стоянка", "To'xtash va stoyanka", "Остановка и стоянка", 8, null),
-            MakeCategory("intersections", "Чорраҳалар", "Chorrahalar", "Перекрёстки", 9, null),
-            MakeCategory("pedestrians", "Пиёдалар", "Piyodalar", "Пешеходы", 10, null),
-            MakeCategory("technical-requirements", "Техник талаблар", "Texnik talablar", "Технические требования", 11, null),
-            MakeCategory("first-aid", "Биринчи тиббий ёрдам", "Birinchi tibbiy yordam", "Первая медицинская помощь", 12, null),
-            MakeCategory("driver-responsibility", "Ҳайдовчи жавобгарлиги", "Haydovchi javobgarligi", "Ответственность водителя", 13, null),
-            MakeCategory("vehicle-maintenance", "Техник хизмат", "Texnik xizmat", "Техническое обслуживание", 14, null),
-            MakeCategory("environment", "Атроф-муҳит", "Atrof-muhit", "Окружающая среда", 15, null),
-            MakeCategory("railway-crossings", "Темир йўл кесишмалари", "Temir yo'l kesishmalari", "Железнодорожные переезды", 16, null),
-            MakeCategory("tunnels-bridges", "Тунеллар ва кўприклар", "Tunellar va ko'priklar", "Тоннели и мосты", 17, null),
-            MakeCategory("adverse-conditions", "Қийин шароитлар", "Qiyin sharoitlar", "Сложные условия", 18, null),
-            MakeCategory("towing", "Эвакуация ва буксир", "Evakuatsiya va buksir", "Эвакуация и буксировка", 19, null),
-            MakeCategory("licensing", "Ҳайдовчилик гувоҳномаси", "Haydovchilik guvohnomasi", "Водительское удостоверение", 20, null),
+            // PDD Chapter 1: Атамалар / Термины
+            MakeCategory("terms", "Атамалар", "Atamalar", "Термины", 1, null),
+            // PDD Chapter 2: Мажбуриятлар / Обязанности участников
+            MakeCategory("participant-duties", "Йўл ҳаракати қатнашчиларининг мажбуриятлари", "Yo'l harakati qatnashchilarining majburiyatlari", "Обязанности участников дорожного движения", 2, null),
+            // PDD Chapter 3: Светофор ва тартибга солувчи / Светофор и регулировщик
+            MakeCategory("traffic-lights", "Светофор ва тартибга солувчи ишоралари", "Svetofor va tartibga soluvchi ishoralari", "Сигналы светофора и регулировщика", 3, null),
+            // PDD Chapter 4: Огоҳлантирувчи ва фалокат ишоралари / Предупредительные и аварийные сигналы
+            MakeCategory("warning-signals", "Огоҳлантирувчи ва фалокат ишоралари", "Ogohlantirivchi va falokat ishoralari", "Предупредительные и аварийные сигналы", 4, null),
+            // PDD Chapter 5: Таниқлилик белгилари / Опознавательные знаки ТС
+            MakeCategory("vehicle-id-signs", "Транспорт воситаларининг таниқлилик белгилари", "Transport vositalarining taniqlilik belgilari", "Опознавательные знаки транспортных средств", 5, null),
+            // Road signs parent group (chapters 6-10)
+            MakeCategory("road-signs", "Йўл белгилари", "Yo'l belgilari", "Дорожные знаки", 6, null),
+            // PDD Chapter 6: Огоҳлантирувчи белгилар / Предупреждающие знаки
             MakeCategory("warning-signs", "Огоҳлантирувчи белгилар", "Ogohlantirivchi belgilar", "Предупреждающие знаки", 1, "road-signs"),
-            MakeCategory("priority-signs", "Устунлик белгилари", "Ustunlik belgilari", "Знаки приоритета", 2, "road-signs"),
+            // PDD Chapter 7: Имтиёз белгилари / Знаки приоритета
+            MakeCategory("priority-signs", "Имтиёз белгилари", "Imtiyoz belgilari", "Знаки приоритета", 2, "road-signs"),
+            // PDD Chapter 8: Тақиқловчи белгилар / Запрещающие знаки
             MakeCategory("prohibitory-signs", "Тақиқловчи белгилар", "Taqiqlovchi belgilar", "Запрещающие знаки", 3, "road-signs"),
-            MakeCategory("mandatory-signs", "Мажбурий белгилар", "Majburiy belgilar", "Предписывающие знаки", 4, "road-signs"),
-            MakeCategory("informational-signs", "Ахборот белгилари", "Axborot belgilari", "Информационные знаки", 5, "road-signs"),
-            MakeCategory("service-signs", "Хизмат белгилари", "Xizmat belgilari", "Знаки сервиса", 6, "road-signs"),
-            MakeCategory("additional-panels", "Қўшимча плиталар", "Qo'shimcha plitalar", "Дополнительные таблички", 7, "road-signs"),
-            MakeCategory("cd-specific", "CD тоифаси", "CD toifasi", "Категория CD", 8, null),
+            // PDD Chapter 9: Буюрувчи белгилар / Предписывающие знаки
+            MakeCategory("mandatory-signs", "Буюрувчи белгилар", "Buyuruvchi belgilar", "Предписывающие знаки", 4, "road-signs"),
+            // PDD Chapter 10: Ахборот, сервис ва қўшимча белгилар / Информационно-указательные, сервисные и доп. знаки
+            MakeCategory("informational-signs", "Ахборот, сервис ва қўшимча белгилар", "Axborot, servis va qo'shimcha belgilar", "Информационно-указательные, сервисные и доп. знаки", 5, "road-signs"),
+            // PDD Chapter 11: Йўл чизиқлари / Дорожные разметки
+            MakeCategory("road-markings", "Йўл чизиқлари", "Yo'l chiziqlari", "Дорожные разметки", 7, null),
+            // PDD Chapter 12: Ҳаракатни бошлаш ва йўналишни ўзгартириш / Начало движения и изменение направления
+            MakeCategory("starting-direction", "Ҳаракатни бошлаш ва йўналишни ўзгартириш", "Harakatni boshlash va yo'nalishni o'zgartirish", "Начало движения и изменение направления", 8, null),
+            // PDD Chapter 13: ТВ жойлашуви / Расположение ТС на проезжей части
+            MakeCategory("vehicle-positioning", "Транспорт воситаларининг жойлашуви", "Transport vositalarining joylashuvi", "Расположение транспортных средств на проезжей части", 9, null),
+            // PDD Chapter 14: Тезлик чегаралари / Скорость движения
+            MakeCategory("speed-limits", "Ҳаракатланиш тезлиги", "Harakatlanish tezligi", "Скорость движения", 10, null),
+            // PDD Chapter 15: Тўхташ ва стоянка / Остановка и стоянка
+            MakeCategory("parking", "Тўхташ ва тўхтаб туриш", "To'xtash va to'xtab turish", "Остановка и стоянка", 11, null),
+            // PDD Chapter 16: Қувиб ўтиш / Обгон
+            MakeCategory("overtaking", "Қувиб ўтиш", "Quvib o'tish", "Обгон", 12, null),
+            // PDD Chapter 17: Тенг аҳамиятли чоррахалар / Равнозначные перекрёстки
+            MakeCategory("equal-intersections", "Тенг аҳамиятли чоррахалар", "Teng ahamiyatli chorrahalar", "Равнозначные перекрёстки", 13, null),
+            // PDD Chapter 18: Тартибга солинмаган чоррахалар / Нерегулируемые перекрёстки (со знаками приоритета)
+            MakeCategory("unregulated-intersections", "Тартибга солинмаган (имтиёз белгили) чоррахалар", "Tartibga solinmagan (imtiyoz belgili) chorrahalar", "Нерегулируемые перекрёстки (со знаками приоритета)", 14, null),
+            // PDD Chapter 19: Тартибга солинган чоррахалар / Регулируемые перекрёстки (со светофором)
+            MakeCategory("regulated-intersections", "Тартибга солинган (светофорли) чоррахалар", "Tartibga solingan (svetoforli) chorrahalar", "Регулируемые перекрёстки (со светофором)", 15, null),
+            // PDD Chapter 20: Темир йўл кесишмалари / Движение через железнодорожные пути
+            MakeCategory("railway-crossings", "Темир йўл кесишмалари орқали ҳаракатланиш", "Temir yo'l kesishmalari orqali harakatlanish", "Движение через железнодорожные пути", 16, null),
+            // PDD Chapter 21: Автомагистрал / Движение по автомагистралям
+            MakeCategory("highway-driving", "Автомагистралда ҳаракатланиш", "Avtomagistralda harakatlanish", "Движение по автомагистралям", 17, null),
+            // PDD Chapter 22: Ташқи ёритиш чироқлари / Внешние световые приборы
+            MakeCategory("external-lights", "Ташқи ёритиш чироқлари", "Tashqi yoritish chiroqlari", "Внешние световые приборы", 18, null),
+            // PDD Chapter 23: Шатакка олиш / Буксировка
+            MakeCategory("towing", "Шатакка олиш", "Shatakka olish", "Буксировка механических транспортных средств", 19, null),
+            // PDD Chapter 24: Одам ташиш / Перевозка людей
+            MakeCategory("passenger-transport", "Одам ташиш", "Odam tashish", "Перевозка людей", 20, null),
+            // PDD Chapter 25: Юк ташиш / Перевозка грузов
+            MakeCategory("cargo-transport", "Юк ташиш", "Yuk tashish", "Перевозка грузов", 21, null),
+            // PDD Chapter 26: ТВ фойдаланишни тақиқловчи шартлар / Условия запрещения эксплуатации ТС
+            MakeCategory("technical-requirements", "Транспорт воситаларидан фойдаланишни тақиқловчи шартлар", "Transport vositalaridan foydalanishni taqiqlovchi shartlar", "Условия запрещения эксплуатации транспортных средств", 22, null),
+            // PDD Chapter 27: Ҳаракат хавфсизлиги асослари / Безопасность управления
+            MakeCategory("driving-safety", "Ҳаракат хавфсизлиги асослари", "Harakat xavfsizligi asoslari", "Безопасность управления автомобилем", 23, null),
+            // PDD Chapter 28: Биринчи тиббий ёрдам / Первая медицинская помощь
+            MakeCategory("first-aid", "Биринчи тиббий ёрдам кўрсатиш", "Birinchi tibbiy yordam ko'rsatish", "Первая медицинская помощь", 24, null),
+            // Extra categories
+            MakeCategory("cd-specific", "CD тоифаси", "CD toifasi", "Категория CD", 25, null),
+            MakeCategory("uncategorized", "Таснифланмаган", "Tasniflanmagan", "Без категории", 99, null),
         };
 
         var roadSignsId = categories.First(c => c.Slug == "road-signs").Id;
         foreach (var sub in categories.Where(c => c.Slug is "warning-signs" or "priority-signs"
-            or "prohibitory-signs" or "mandatory-signs" or "informational-signs"
-            or "service-signs" or "additional-panels"))
+            or "prohibitory-signs" or "mandatory-signs" or "informational-signs"))
             sub.ParentId = roadSignsId;
 
         db.Categories.AddRange(categories);
@@ -153,17 +186,17 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             return;
 
         var template = await db.ExamTemplates.FirstAsync(t => t.IsActive, ct);
-        var apkCategory = await db.Categories.FirstOrDefaultAsync(c => c.Slug == "apk-savollari", ct);
         var now = DateTimeOffset.UtcNow;
 
-        if (apkCategory is null)
+        // Pull 20 random questions from any active category for the exam
+        var anyCategory = await db.Categories.FirstOrDefaultAsync(c => c.Slug == "uncategorized", ct);
+        if (anyCategory is null)
         {
-            logger.LogWarning("Category 'apk-savollari' not found, skipping pool rules");
+            logger.LogWarning("Category 'uncategorized' not found, skipping pool rules");
             return;
         }
 
-        // Single rule: pull all 20 exam questions from APK category (542 questions available)
-        db.ExamPoolRules.Add(MakePoolRule(template.Id, apkCategory.Id, null, 20, now));
+        db.ExamPoolRules.Add(MakePoolRule(template.Id, anyCategory.Id, null, 20, now));
     }
 
     private async Task SeedQuestionsAsync(CancellationToken ct)
@@ -241,7 +274,7 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             A("Тақиқларнинг тугаши", "Taqiqlarning tugashi", "Конец запретов", false)));
 
         // ── traffic-rules: 8 questions ──
-        q.Add(Q(cats["traffic-rules"].Id, 1, Difficulty.Easy, now,
+        q.Add(Q(cats["participant-duties"].Id, 1, Difficulty.Easy, now,
             T("Ўнг томонлама ҳаракат қоидаси нимани англатади?", "O'ng tomonlama harakat qoidasi nimani anglatadi?", "Что означает правило правостороннего движения?"),
             T("Транспорт воситалари йўлнинг ўнг томонида ҳаракатланиши керак.", "Transport vositalari yo'lning o'ng tomonida harakatlanishi kerak.", "Транспортные средства должны двигаться по правой стороне дороги."),
             A("Йўлнинг ўнг томонида юриш", "Yo'lning o'ng tomonida yurish", "Движение по правой стороне", true),
@@ -249,7 +282,7 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             A("Йўлнинг ўртасида юриш", "Yo'lning o'rtasida yurish", "Движение по центру", false),
             A("Ихтиёрий томонда юриш", "Ixtiyoriy tomonda yurish", "Движение по любой стороне", false)));
 
-        q.Add(Q(cats["traffic-rules"].Id, 1, Difficulty.Medium, now,
+        q.Add(Q(cats["participant-duties"].Id, 1, Difficulty.Medium, now,
             T("Ҳайдовчи йўналиш кўрсаткичини қачон ёқиши керак?", "Haydovchi yo'nalish ko'rsatkichini qachon yoqishi kerak?", "Когда водитель должен включить указатель поворота?"),
             T("Манёвр бошланишидан олдин, бошқа транспорт воситаларини огоҳлантириш учун.", "Manevr boshlanishidan oldin, boshqa transport vositalarini ogohlantirish uchun.", "Перед началом манёвра, чтобы предупредить другие транспортные средства."),
             A("Манёврдан олдин", "Manevrdan oldin", "Перед манёвром", true),
@@ -257,7 +290,7 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             A("Манёвр тугагач", "Manevr tugagach", "После манёвра", false),
             A("Фақат кечаси", "Faqat kechasi", "Только ночью", false)));
 
-        q.Add(Q(cats["traffic-rules"].Id, 2, Difficulty.Easy, now,
+        q.Add(Q(cats["participant-duties"].Id, 2, Difficulty.Easy, now,
             T("Хавфсизлик камари тақиш мажбуриями?", "Xavfsizlik kamari taqish majburiymi?", "Обязательно ли пристёгиваться ремнём безопасности?"),
             T("Ҳа, ҳайдовчи ва барча йўловчилар хавфсизлик камарини тақиши шарт.", "Ha, haydovchi va barcha yo'lovchilar xavfsizlik kamarini taqishi shart.", "Да, водитель и все пассажиры обязаны пристёгиваться."),
             A("Ҳа, барчага мажбурий", "Ha, barchaga majburiy", "Да, обязательно для всех", true),
@@ -265,7 +298,7 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             A("Фақат шаҳарда", "Faqat shaharda", "Только в городе", false),
             A("Мажбурий эмас", "Majburiy emas", "Не обязательно", false)));
 
-        q.Add(Q(cats["traffic-rules"].Id, 2, Difficulty.Medium, now,
+        q.Add(Q(cats["participant-duties"].Id, 2, Difficulty.Medium, now,
             T("Қайси ҳолатда чап томонга буриш тақиқланади?", "Qaysi holatda chap tomonga burish taqiqlanadi?", "В каком случае запрещён поворот налево?"),
             T("Тақиқловчи белги ёки йўл чизиғи чап буришни тақиқлаган ҳолатда.", "Taqiqlovchi belgi yoki yo'l chizig'i chap burishni taqiqlagan holatda.", "При наличии запрещающего знака или разметки, запрещающей поворот налево."),
             A("Тақиқловчи белги мавжуд бўлганда", "Taqiqlovchi belgi mavjud bo'lganda", "При наличии запрещающего знака", true),
@@ -273,7 +306,7 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             A("Ёмғир пайтида", "Yomg'ir paytida", "Во время дождя", false),
             A("Ҳеч қачон тақиқланмайди", "Hech qachon taqiqlanmaydi", "Никогда не запрещается", false)));
 
-        q.Add(Q(cats["traffic-rules"].Id, 3, Difficulty.Hard, now,
+        q.Add(Q(cats["participant-duties"].Id, 3, Difficulty.Hard, now,
             T("Тезликни камайтирмасдан бурилиш нимага олиб келади?", "Tezlikni kamaytirmasdan burilish nimaga olib keladi?", "К чему приводит поворот без снижения скорости?"),
             T("Автомобил бошқарувдан чиқиши ва ағдарилиши мумкин.", "Avtomobil boshqaruvdan chiqishi va ag'darilishi mumkin.", "Автомобиль может потерять управление и опрокинуться."),
             A("Бошқарувдан чиқиш", "Boshqaruvdan chiqish", "Потеря управления", true),
@@ -281,7 +314,7 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             A("Тезроқ бурилиш", "Tezroq burilish", "Более быстрый поворот", false),
             A("Ҳеч нарса бўлмайди", "Hech narsa bo'lmaydi", "Ничего не произойдёт", false)));
 
-        q.Add(Q(cats["traffic-rules"].Id, 3, Difficulty.Medium, now,
+        q.Add(Q(cats["participant-duties"].Id, 3, Difficulty.Medium, now,
             T("Кечаси аҳоли пункти ичида қайси чироқ ёқилади?", "Kechasi aholi punkti ichida qaysi chiroq yoqiladi?", "Какой свет включается ночью в населённом пункте?"),
             T("Яқинни ёритувчи фаралар ёқилади.", "Yaqinni yorituvchi faralar yoqiladi.", "Включается ближний свет фар."),
             A("Яқинни ёритувчи фара", "Yaqinni yorituvchi fara", "Ближний свет", true),
@@ -289,7 +322,7 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             A("Туман фаралари", "Tuman faralari", "Противотуманные фары", false),
             A("Чироқлар ёқилмайди", "Chiroqlar yoqilmaydi", "Свет не включается", false)));
 
-        q.Add(Q(cats["traffic-rules"].Id, 1, Difficulty.Hard, now,
+        q.Add(Q(cats["participant-duties"].Id, 1, Difficulty.Hard, now,
             T("Икки йўлли йўлда қувиб ўтиш қачон тақиқланади?", "Ikki yo'lli yo'lda quvib o'tish qachon taqiqlanadi?", "Когда запрещён обгон на двухполосной дороге?"),
             T("Кўринмаслик, чорраҳалар олдида, тепаликларда ва тақиқловчи белги бўлганда.", "Ko'rinmaslik, chorrahalar oldida, tepaliklarda va taqiqlovchi belgi bo'lganda.", "При плохой видимости, перед перекрёстками, на подъёмах и при наличии запрещающего знака."),
             A("Кўринмаслик ва чорраҳалар олдида", "Ko'rinmaslik va chorrahalar oldida", "При плохой видимости и перед перекрёстками", true),
@@ -297,7 +330,7 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             A("Фақат ёмғирда", "Faqat yomg'irda", "Только в дождь", false),
             A("Қувиб ўтиш доимо рухсат", "Quvib o'tish doimo ruxsat", "Обгон всегда разрешён", false)));
 
-        q.Add(Q(cats["traffic-rules"].Id, 3, Difficulty.Easy, now,
+        q.Add(Q(cats["participant-duties"].Id, 3, Difficulty.Easy, now,
             T("Ҳайдовчи телефонда гаплашиши мумкинми?", "Haydovchi telefonda gaplashishi mumkinmi?", "Может ли водитель разговаривать по телефону?"),
             T("Фақат гарнитура ёки громкая связь орқали рухсат.", "Faqat garnitura yoki gromkaya svyaz orqali ruxsat.", "Разрешено только через гарнитуру или громкую связь."),
             A("Фақат гарнитура билан", "Faqat garnitura bilan", "Только с гарнитурой", true),
@@ -355,32 +388,32 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             A("Сигнал бузилган", "Signal buzilgan", "Сигнал сломан", false)));
 
         // ── priority-rules: 6 questions ──
-        q.Add(Q(cats["priority-rules"].Id, 1, Difficulty.Easy, now,
+        q.Add(Q(cats["equal-intersections"].Id, 1, Difficulty.Easy, now,
             T("Асосий йўлда ҳаракатланаётган транспортнинг устунлиги борми?", "Asosiy yo'lda harakatlanayotgan transportning ustunligi bormi?", "Имеет ли приоритет транспорт на главной дороге?"),
             T("Ҳа, асосий йўлдаги транспорт доимо устунликка эга.", "Ha, asosiy yo'ldagi transport doimo ustunlikka ega.", "Да, транспорт на главной дороге всегда имеет приоритет."),
             A("Ҳа, доимо", "Ha, doimo", "Да, всегда", true), A("Йўқ", "Yo'q", "Нет", false), A("Фақат кундузи", "Faqat kunduzi", "Только днём", false), A("Фақат шаҳарда", "Faqat shaharda", "Только в городе", false)));
 
-        q.Add(Q(cats["priority-rules"].Id, 2, Difficulty.Medium, now,
+        q.Add(Q(cats["equal-intersections"].Id, 2, Difficulty.Medium, now,
             T("Тенг аҳамиятли йўлларда ким биринчи ўтади?", "Teng ahamiyatli yo'llarda kim birinchi o'tadi?", "Кто проезжает первым на равнозначных дорогах?"),
             T("Ўнг томондан келаётган транспорт устунликка эга.", "O'ng tomondan kelayotgan transport ustunlikka ega.", "Приоритет имеет транспорт, приближающийся справа."),
             A("Ўнгдан келаётган", "O'ngdan kelayotgan", "Приближающийся справа", true), A("Чапдан келаётган", "Chapdan kelayotgan", "Приближающийся слева", false), A("Тезроқ юраётган", "Tezroq yurayotgan", "Двигающийся быстрее", false), A("Каттароқ транспорт", "Kattaroq transport", "Более крупный транспорт", false)));
 
-        q.Add(Q(cats["priority-rules"].Id, 2, Difficulty.Hard, now,
+        q.Add(Q(cats["equal-intersections"].Id, 2, Difficulty.Hard, now,
             T("Тартибга солувчи ва светофор сигнали қарама-қарши бўлса, кимга бўйсуниш керак?", "Tartibga soluvchi va svetofor signali qarama-qarshi bo'lsa, kimga bo'ysunish kerak?", "Если сигналы регулировщика и светофора противоречат, кому подчиняться?"),
             T("Тартибга солувчининг сигналларига бўйсуниш керак.", "Tartibga soluvchining signallariga bo'ysunish kerak.", "Необходимо подчиняться сигналам регулировщика."),
             A("Тартибга солувчига", "Tartibga soluvchiga", "Регулировщику", true), A("Светофорга", "Svetoforga", "Светофору", false), A("Белгиларга", "Belgilarga", "Знакам", false), A("Ўзингиз қарор қилинг", "O'zingiz qaror qiling", "Решайте сами", false)));
 
-        q.Add(Q(cats["priority-rules"].Id, 3, Difficulty.Easy, now,
+        q.Add(Q(cats["equal-intersections"].Id, 3, Difficulty.Easy, now,
             T("Тез ёрдам автомобили сиренаси билан келаётганда нима қилиш керак?", "Tez yordam avtomobili sirenasi bilan kelayotganda nima qilish kerak?", "Что делать, когда приближается скорая помощь с сиреной?"),
             T("Йўл бериш ва четга чиқиш керак.", "Yo'l berish va chetga chiqish kerak.", "Необходимо уступить дорогу и съехать в сторону."),
             A("Йўл бериш", "Yo'l berish", "Уступить дорогу", true), A("Тезлатиш", "Tezlatish", "Ускориться", false), A("Тўхтаб туриш", "To'xtab turish", "Стоять на месте", false), A("Сигнал бериш", "Signal berish", "Подать сигнал", false)));
 
-        q.Add(Q(cats["priority-rules"].Id, 3, Difficulty.Medium, now,
+        q.Add(Q(cats["equal-intersections"].Id, 3, Difficulty.Medium, now,
             T("Доира ҳаракатли чорраҳада ким устунликка эга?", "Doira harakatli chorrahada kim ustunlikka ega?", "Кто имеет приоритет на круговом перекрёстке?"),
             T("Доира ичида ҳаракатланаётган транспорт устунликка эга.", "Doira ichida harakatlanayotgan transport ustunlikka ega.", "Приоритет имеет транспорт, движущийся по кругу."),
             A("Доира ичидаги транспорт", "Doira ichidagi transport", "Транспорт на кругу", true), A("Кираётган транспорт", "Kirayotgan transport", "Въезжающий транспорт", false), A("Катта транспорт", "Katta transport", "Крупный транспорт", false), A("Чапдан келаётган", "Chapdan kelayotgan", "Приближающийся слева", false)));
 
-        q.Add(Q(cats["priority-rules"].Id, 1, Difficulty.Medium, now,
+        q.Add(Q(cats["equal-intersections"].Id, 1, Difficulty.Medium, now,
             T("Пиёда ўтиш жойида пиёдага йўл бериш мажбуриями?", "Piyoda o'tish joyida piyodaga yo'l berish majburiymi?", "Обязан ли водитель уступить пешеходу на переходе?"),
             T("Ҳа, пиёда ўтиш жойида ҳайдовчи пиёдага йўл бериши шарт.", "Ha, piyoda o'tish joyida haydovchi piyodaga yo'l berishi shart.", "Да, на пешеходном переходе водитель обязан уступить пешеходу."),
             A("Ҳа, мажбурий", "Ha, majburiy", "Да, обязан", true), A("Фақат кундузи", "Faqat kunduzi", "Только днём", false), A("Пиёда кутиши керак", "Piyoda kutishi kerak", "Пешеход должен ждать", false), A("Фақат мактаб олдида", "Faqat maktab oldida", "Только у школы", false)));
@@ -448,63 +481,63 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             A("Тоза ҳавога чиқариш", "Toza havoga chiqarish", "Вывести на свежий воздух", true), A("Сув бериш", "Suv berish", "Дать воды", false), A("Ухлатиш", "Uxlatish", "Уложить спать", false), A("Озиқ бериш", "Oziq berish", "Дать еду", false)));
 
         // ── intersections: 6 questions ──
-        q.Add(Q(cats["intersections"].Id, 1, Difficulty.Medium, now,
+        q.Add(Q(cats["regulated-intersections"].Id, 1, Difficulty.Medium, now,
             T("Тартибга солинмаган чорраҳада ким биринчи ўтади?", "Tartibga solinmagan chorrahada kim birinchi o'tadi?", "Кто проезжает первым на нерегулируемом перекрёстке?"),
             T("Ўнг томондан келаётган транспорт устунликка эга.", "O'ng tomondan kelayotgan transport ustunlikka ega.", "Приоритет у транспорта, приближающегося справа."),
             A("Ўнгдан келаётган", "O'ngdan kelayotgan", "Справа", true), A("Чапдан келаётган", "Chapdan kelayotgan", "Слева", false), A("Тезроқ юраётган", "Tezroq yurayotgan", "Быстрейший", false), A("Каттароқ", "Kattaroq", "Крупнейший", false)));
 
-        q.Add(Q(cats["intersections"].Id, 2, Difficulty.Hard, now,
+        q.Add(Q(cats["regulated-intersections"].Id, 2, Difficulty.Hard, now,
             T("Чорраҳада чап буришда кимга йўл бериш керак?", "Chorrahada chap burishda kimga yo'l berish kerak?", "Кому нужно уступить при повороте налево на перекрёстке?"),
             T("Қарши томондан тўғри ва ўнгга ҳаракатланаётган транспортга.", "Qarshi tomondan to'g'ri va o'ngga harakatlanayotgan transportga.", "Встречному транспорту, движущемуся прямо и направо."),
             A("Қарши тўғри ва ўнгга кетаётганга", "Qarshi to'g'ri va o'ngga ketayotganga", "Встречному прямо и направо", true), A("Ҳеч кимга", "Hech kimga", "Никому", false), A("Чапдан келаётганга", "Chapdan kelayotganga", "Приближающемуся слева", false), A("Пиёдаларга", "Piyodalarga", "Пешеходам", false)));
 
-        q.Add(Q(cats["intersections"].Id, 1, Difficulty.Easy, now,
+        q.Add(Q(cats["regulated-intersections"].Id, 1, Difficulty.Easy, now,
             T("Чорраҳада тўхташ чизиғи нима учун?", "Chorrahada to'xtash chizig'i nima uchun?", "Для чего стоп-линия на перекрёстке?"),
             T("Тўхташ жойини белгилайди.", "To'xtash joyini belgilaydi.", "Указывает место остановки."),
             A("Тўхташ жойини белгилайди", "To'xtash joyini belgilaydi", "Обозначает место остановки", true), A("Тезлик чегараси", "Tezlik chegarasi", "Ограничение скорости", false), A("Пиёда ўтиш жойи", "Piyoda o'tish joyi", "Пешеходный переход", false), A("Парковка жойи", "Parkovka joyi", "Место парковки", false)));
 
-        q.Add(Q(cats["intersections"].Id, 3, Difficulty.Medium, now,
+        q.Add(Q(cats["regulated-intersections"].Id, 3, Difficulty.Medium, now,
             T("Т-шаклидаги чорраҳада ким устун?", "T-shaklidagi chorrahada kim ustun?", "Кто имеет приоритет на Т-образном перекрёстке?"),
             T("Асосий йўлдаги транспорт устунликка эга.", "Asosiy yo'ldagi transport ustunlikka ega.", "Приоритет у транспорта на главной дороге."),
             A("Асосий йўлдаги транспорт", "Asosiy yo'ldagi transport", "Транспорт на главной", true), A("Ўнгдан келаётган", "O'ngdan kelayotgan", "Справа", false), A("Тезроқ юраётган", "Tezroq yurayotgan", "Быстрейший", false), A("Чапдан келаётган", "Chapdan kelayotgan", "Слева", false)));
 
-        q.Add(Q(cats["intersections"].Id, 2, Difficulty.Easy, now,
+        q.Add(Q(cats["regulated-intersections"].Id, 2, Difficulty.Easy, now,
             T("Чорраҳада трамвай устунликка эгами?", "Chorrahada tramvay ustunlikka egami?", "Имеет ли трамвай приоритет на перекрёстке?"),
             T("Тенг шароитда трамвай устунликка эга.", "Teng sharoitda tramvay ustunlikka ega.", "При равных условиях трамвай имеет приоритет."),
             A("Ҳа, тенг шароитда", "Ha, teng sharoitda", "Да, при равных условиях", true), A("Йўқ", "Yo'q", "Нет", false), A("Фақат светофорда", "Faqat svetoforda", "Только на светофоре", false), A("Фақат кечаси", "Faqat kechasi", "Только ночью", false)));
 
-        q.Add(Q(cats["intersections"].Id, 3, Difficulty.Hard, now,
+        q.Add(Q(cats["regulated-intersections"].Id, 3, Difficulty.Hard, now,
             T("Чорраҳага кирган, лекин тиқилинч туфайли ўта олмаётган ҳайдовчи нима қилиши керак?", "Chorrahaga kirgan, lekin tiqilinch tufayli o'ta olmayotgan haydovchi nima qilishi kerak?", "Что делать водителю, выехавшему на перекрёсток, но не имеющему возможности проехать из-за затора?"),
             T("Чорраҳага кирмаслик керак эди, тиқилинч бўлса.", "Chorrahaga kirmaslik kerak edi, tiqilinch bo'lsa.", "Не следовало въезжать на перекрёсток при заторе."),
             A("Чорраҳага кирмаслик керак эди", "Chorrahaga kirmaslik kerak edi", "Не следовало въезжать", true), A("Сигнал бериш", "Signal berish", "Подать сигнал", false), A("Кутиш", "Kutish", "Ждать", false), A("Орқага юриш", "Orqaga yurish", "Сдать назад", false)));
 
         // ── pedestrians: 6 questions ──
-        q.Add(Q(cats["pedestrians"].Id, 1, Difficulty.Easy, now,
+        q.Add(Q(cats["participant-duties"].Id, 1, Difficulty.Easy, now,
             T("Пиёда ўтиш жойида ҳайдовчи нима қилиши керак?", "Piyoda o'tish joyida haydovchi nima qilishi kerak?", "Что должен делать водитель на пешеходном переходе?"),
             T("Тезликни камайтириш ва пиёдаларга йўл бериш.", "Tezlikni kamaytirish va piyodalarga yo'l berish.", "Снизить скорость и уступить дорогу пешеходам."),
             A("Тезликни камайтириш ва йўл бериш", "Tezlikni kamaytirish va yo'l berish", "Снизить скорость и уступить", true), A("Сигнал бериш", "Signal berish", "Подать сигнал", false), A("Тезлатиш", "Tezlatish", "Ускориться", false), A("Тўхтамаслик", "To'xtamaslik", "Не останавливаться", false)));
 
-        q.Add(Q(cats["pedestrians"].Id, 2, Difficulty.Medium, now,
+        q.Add(Q(cats["participant-duties"].Id, 2, Difficulty.Medium, now,
             T("Кўзи ожиз пиёдага қандай муносабатда бўлиш керак?", "Ko'zi ojiz piyodaga qanday munosabatda bo'lish kerak?", "Как относиться к слепому пешеходу?"),
             T("Оқ таёқчали пиёда учраганда доимо йўл бериш мажбурий.", "Oq tayoqchali piyoda uchraganda doimo yo'l berish majburiy.", "При встрече пешехода с белой тростью обязательно уступить дорогу."),
             A("Доимо йўл бериш", "Doimo yo'l berish", "Всегда уступить", true), A("Сигнал бериш", "Signal berish", "Подать сигнал", false), A("Четлаб ўтиш", "Chetlab o'tish", "Объехать", false), A("Тўхтамаслик", "To'xtamaslik", "Не останавливаться", false)));
 
-        q.Add(Q(cats["pedestrians"].Id, 3, Difficulty.Easy, now,
+        q.Add(Q(cats["participant-duties"].Id, 3, Difficulty.Easy, now,
             T("Болалар ўтиш жойи олдида нима қилиш керак?", "Bolalar o'tish joyi oldida nima qilish kerak?", "Что делать перед детским переходом?"),
             T("Тезликни камайтириш ва болаларга йўл бериш.", "Tezlikni kamaytirish va bolalarga yo'l berish.", "Снизить скорость и уступить дорогу детям."),
             A("Тезликни камайтириш", "Tezlikni kamaytirish", "Снизить скорость", true), A("Сигнал бериш", "Signal berish", "Подать сигнал", false), A("Тез ўтиб кетиш", "Tez o'tib ketish", "Быстро проехать", false), A("Тўхтамаслик", "To'xtamaslik", "Не останавливаться", false)));
 
-        q.Add(Q(cats["pedestrians"].Id, 1, Difficulty.Medium, now,
+        q.Add(Q(cats["participant-duties"].Id, 1, Difficulty.Medium, now,
             T("Пиёда ўтиш жойида қувиб ўтиш мумкинми?", "Piyoda o'tish joyida quvib o'tish mumkinmi?", "Разрешён ли обгон на пешеходном переходе?"),
             T("Йўқ, пиёда ўтиш жойида қувиб ўтиш тақиқланади.", "Yo'q, piyoda o'tish joyida quvib o'tish taqiqlanadi.", "Нет, обгон на пешеходном переходе запрещён."),
             A("Тақиқланади", "Taqiqlanadi", "Запрещён", true), A("Рухсат", "Ruxsat", "Разрешён", false), A("Фақат кечаси", "Faqat kechasi", "Только ночью", false), A("Секин бўлса рухсат", "Sekin bo'lsa ruxsat", "Разрешён при низкой скорости", false)));
 
-        q.Add(Q(cats["pedestrians"].Id, 2, Difficulty.Hard, now,
+        q.Add(Q(cats["participant-duties"].Id, 2, Difficulty.Hard, now,
             T("Пиёдалар йўлнинг қайси томонида юриши керак?", "Piyodalar yo'lning qaysi tomonida yurishi kerak?", "По какой стороне дороги должны идти пешеходы?"),
             T("Транспортга қарши — чап томонда юриш тавсия этилади.", "Transportga qarshi — chap tomonda yurish tavsiya etiladi.", "Навстречу транспорту — рекомендуется идти по левой стороне."),
             A("Транспортга қарши", "Transportga qarshi", "Навстречу транспорту", true), A("Транспорт билан бир томонда", "Transport bilan bir tomonda", "По ходу транспорта", false), A("Йўл ўртасида", "Yo'l o'rtasida", "По центру дороги", false), A("Ихтиёрий", "Ixtiyoriy", "Произвольно", false)));
 
-        q.Add(Q(cats["pedestrians"].Id, 3, Difficulty.Medium, now,
+        q.Add(Q(cats["participant-duties"].Id, 3, Difficulty.Medium, now,
             T("Тунда пиёда нима тақиши керак?", "Tunda piyoda nima taqishi kerak?", "Что должен носить пешеход ночью?"),
             T("Акс эттирувчи элементлар ёки ёруғ кийим тақиш тавсия этилади.", "Aks ettiruvchi elementlar yoki yorug' kiyim taqish tavsiya etiladi.", "Рекомендуется носить светоотражающие элементы или яркую одежду."),
             A("Акс эттирувчи элементлар", "Aks ettiruvchi elementlar", "Светоотражающие элементы", true), A("Қора кийим", "Qora kiyim", "Тёмная одежда", false), A("Фонарь", "Fonar'", "Фонарь", false), A("Ҳеч нарса", "Hech narsa", "Ничего", false)));

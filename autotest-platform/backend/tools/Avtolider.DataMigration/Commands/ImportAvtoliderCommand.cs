@@ -17,7 +17,7 @@ namespace Avtolider.DataMigration.Commands;
 ///   options.json   — [{id, quiz_id, text_uz, text_ru, is_correct}]
 ///
 /// UzLatin is auto-generated via UzbekTransliterator if empty.
-/// image_url (external URL) is logged but not downloaded — skipped for safety.
+/// Local images from data/avtolider/img/ are uploaded to MinIO (downloaded by prepare_data.py).
 /// </summary>
 public static class ImportAvtoliderCommand
 {
@@ -31,6 +31,7 @@ public static class ImportAvtoliderCommand
         Console.WriteLine();
         Console.WriteLine("╔══════════════════════════════════════╗");
         Console.WriteLine("║  IMPORT AVTOLIDER (1044 questions)   ║");
+        Console.WriteLine("║  + local image upload                ║");
         Console.WriteLine("╚══════════════════════════════════════╝");
         if (ctx.DryRun)
             Console.WriteLine("  [DRY RUN] No data will be written.");
@@ -67,17 +68,26 @@ public static class ImportAvtoliderCommand
         Console.WriteLine($"  Categories processed: {categoryMap.Count}");
 
         // --- Load existing Russian texts for idempotency ---
-        var existingRuList = await ctx.Db.Questions
+        var existingRuRaw = await ctx.Db.Questions
             .AsNoTracking()
-            .Select(q => UzbekTransliterator.Normalize(q.Text.Ru))
+            .Select(q => q.Text.Ru)
             .ToListAsync(ct);
-        var existingRuTexts = new HashSet<string>(existingRuList);
+        var existingRuTexts = new HashSet<string>(existingRuRaw.Select(UzbekTransliterator.Normalize));
         Console.WriteLine($"  Existing questions in DB: {existingRuTexts.Count}");
+        Console.WriteLine();
+
+        // Build local image map for downloaded images
+        var imgDir = Path.Combine(avtoliderDir, "img");
+        var localImageMap = BuildLocalImageMap(imgDir);
+        Console.WriteLine($"  Local images found: {localImageMap.Count}");
+
+        if (!ctx.DryRun && localImageMap.Count > 0)
+            await ctx.ImageSvc.EnsureBucketAsync(ct);
         Console.WriteLine();
 
         var pendingRuTexts = new HashSet<string>(existingRuTexts);
         var batch = new List<Question>(ctx.BatchSize);
-        int localImported = 0, localSkipped = 0, localExternalImages = 0;
+        int localImported = 0, localSkipped = 0, localImages = 0, localExternalImages = 0;
         int ticketCounter = 1; // global sequential ticket assignment for Avtolider
 
         foreach (var q in questions.OrderBy(q => q.Id))
@@ -129,11 +139,29 @@ public static class ImportAvtoliderCommand
                 ? string.Empty
                 : UzbekTransliterator.ToLatin(uzText);
 
-            // External image_url: we log and skip (cannot safely download arbitrary URLs)
+            // Try to upload local image (downloaded by prepare_data.py)
+            string? imageKey = null, thumbKey = null;
             if (!string.IsNullOrEmpty(q.ImageUrl))
             {
-                localExternalImages++;
-                Console.WriteLine($"  [INFO] Q ID={q.Id} has external image_url (skipped): {q.ImageUrl}");
+                if (localImageMap.TryGetValue(q.Id.ToString(), out var localImgPath))
+                {
+                    if (!ctx.DryRun)
+                    {
+                        var result = await ctx.ImageSvc.UploadAsync(localImgPath, category.Slug, ct);
+                        if (result is not null)
+                        {
+                            (imageKey, thumbKey) = result.Value;
+                            localImages++;
+                            ctx.Stats.RecordImageUploaded();
+                        }
+                    }
+                    else
+                        localImages++;
+                }
+                else
+                {
+                    localExternalImages++;
+                }
             }
 
             // Difficulty from option count
@@ -151,8 +179,8 @@ public static class ImportAvtoliderCommand
                 Explanation = new LocalizedText(string.Empty, string.Empty, string.Empty),
                 Difficulty = difficulty,
                 CategoryId = category.Id,
-                ImageUrl = null,  // external URL not downloaded
-                ThumbnailUrl = null,
+                ImageUrl = imageKey,
+                ThumbnailUrl = thumbKey,
                 LicenseCategory = LicenseCategory.AB,
                 IsActive = q.IsActive,
                 TicketNumber = (ticketCounter - 1) / 20 + 1,
@@ -190,7 +218,7 @@ public static class ImportAvtoliderCommand
             {
                 var saved = await SaveBatchAsync(ctx.Db, batch, ctx.DryRun, ct);
                 localImported += saved;
-                Console.WriteLine($"  Progress: {localImported} imported, {localSkipped} skipped...");
+                Console.WriteLine($"  Progress: {localImported} imported, {localSkipped} skipped, {localImages} images...");
                 batch.Clear();
             }
         }
@@ -206,10 +234,44 @@ public static class ImportAvtoliderCommand
         ctx.Stats.RecordSkipped(localSkipped);
 
         Console.WriteLine();
-        Console.WriteLine($"  Avtolider import done: {localImported} imported, {localSkipped} skipped");
+        Console.WriteLine($"  Avtolider import done: {localImported} imported, {localSkipped} skipped, {localImages} images uploaded");
         if (localExternalImages > 0)
-            Console.WriteLine($"  [INFO] {localExternalImages} external image URLs encountered (not downloaded)");
+            Console.WriteLine($"  [INFO] {localExternalImages} questions had no local image (download missing or URL-only)");
     }
+
+    // Explicit mapping: Avtolider theme_id → DbSeeder category slug
+    // These must match the slugs in DbSeeder.SeedCategoriesAsync exactly
+    private static readonly Dictionary<int, string> ThemeToSlugMap = new()
+    {
+        [2]  = "terms",                      // _1_  Термины
+        [3]  = "participant-duties",         // _2_  Обязанности участников
+        [4]  = "traffic-lights",             // _3_  Светофор и регулировщик
+        [5]  = "warning-signals",            // _4_  Предупредительные и аварийные сигналы
+        [26] = "vehicle-id-signs",           // _5_  Опознавательные знаки ТС
+        [20] = "warning-signs",              // _6_  Предупреждающие знаки
+        [29] = "priority-signs",             // _7_  Знаки приоритета
+        [21] = "prohibitory-signs",          // _8_  Запрещающие знаки
+        [22] = "mandatory-signs",            // _9_  Предписывающие знаки
+        [23] = "informational-signs",        // _10_ Информационно-указательные, сервисные и доп. знаки
+        [24] = "road-markings",              // _11_ Дорожные разметки
+        [6]  = "starting-direction",         // _12_ Начало движения и изменение направления
+        [7]  = "vehicle-positioning",        // _13_ Расположение ТС на проезжей части
+        [8]  = "speed-limits",               // _14_ Скорость движения
+        [10] = "parking",                    // _15_ Остановка и стоянка
+        [9]  = "overtaking",                 // _16_ Обгон
+        [11] = "equal-intersections",        // _17_ Равнозначные перекрёстки
+        [13] = "unregulated-intersections",  // _18_ Нерегулируемые перекрёстки (со знаками приоритета)
+        [12] = "regulated-intersections",    // _19_ Регулируемые перекрёстки (со светофором)
+        [14] = "railway-crossings",          // _20_ Движение через железнодорожные пути
+        [15] = "highway-driving",            // _21_ Движение по автомагистралям
+        [16] = "external-lights",            // _22_ Внешние световые приборы
+        [17] = "towing",                     // _23_ Буксировка
+        [18] = "passenger-transport",        // _24_ Перевозка людей
+        [19] = "cargo-transport",            // _25_ Перевозка грузов
+        [25] = "technical-requirements",     // _26_ Условия запрещения эксплуатации ТС
+        [27] = "driving-safety",             // _27_ Безопасность управления
+        [28] = "first-aid",                  // _28_ Первая медицинская помощь
+    };
 
     private static async Task<Dictionary<int, Category>> ImportThemesAsync(
         AppDbContext db,
@@ -219,59 +281,25 @@ public static class ImportAvtoliderCommand
     {
         var result = new Dictionary<int, Category>();
 
-        // Load existing slugs to detect conflicts
-        var existingSlugList = await db.Categories
+        // Load all seeded categories by slug for O(1) lookup
+        var categoriesBySlug = await db.Categories
             .AsNoTracking()
-            .Select(c => c.Slug)
-            .ToListAsync(ct);
-        var existingSlugs = new HashSet<string>(existingSlugList);
+            .ToDictionaryAsync(c => c.Slug, ct);
 
-        int sortOrder = 200; // start after APK categories
         foreach (var theme in themes)
         {
-            var baseSlug = SlugifyUz(theme.NameRu ?? theme.NameUz ?? string.Empty, $"theme-{theme.Id}");
-            var slug = baseSlug;
-
-            // Make unique if collision
-            int suffix = 2;
-            while (existingSlugs.Contains(slug))
-                slug = $"{baseSlug}-{suffix++}";
-
-            // Check if already exists by slug (from previous run)
-            var existing = await db.Categories
-                .FirstOrDefaultAsync(c => c.Slug == slug, ct);
-
-            if (existing is not null)
+            if (!ThemeToSlugMap.TryGetValue(theme.Id, out var slug))
             {
-                result[theme.Id] = existing;
+                Console.WriteLine($"  [WARN] No slug mapping for theme_id={theme.Id} '{theme.NameRu}', skipping");
                 continue;
             }
 
-            var uzName = theme.NameUz?.Trim() ?? string.Empty;
-            var ruName = theme.NameRu?.Trim() ?? string.Empty;
-            var uzLatinName = string.IsNullOrEmpty(uzName)
-                ? string.Empty
-                : UzbekTransliterator.ToLatin(uzName);
-
-            var category = new Category
+            if (!categoriesBySlug.TryGetValue(slug, out var category))
             {
-                Id = Guid.NewGuid(),
-                Name = new LocalizedText(uzName, uzLatinName, ruName),
-                Description = new LocalizedText(string.Empty, string.Empty, string.Empty),
-                Slug = slug,
-                IsActive = true,
-                SortOrder = sortOrder++,
-                CreatedAt = DateTimeOffset.UtcNow,
-            };
-
-            if (!ctx.DryRun)
-            {
-                db.Categories.Add(category);
-                await db.SaveChangesAsync(ct);
-                db.ChangeTracker.Clear();
+                Console.WriteLine($"  [ERROR] Category slug '{slug}' not found in DB. Ensure DbSeeder has run. Theme: {theme.NameRu}");
+                continue;
             }
 
-            existingSlugs.Add(slug);
             result[theme.Id] = category;
         }
 
@@ -320,6 +348,24 @@ public static class ImportAvtoliderCommand
             }
             return saved;
         }
+    }
+
+    // Builds a lookup: question ID (string) → first matching local file path
+    // Supports multiple extensions (prepare_data.py saves as .jpg, .png, or .webp)
+    private static Dictionary<string, string> BuildLocalImageMap(string imgDirectory)
+    {
+        if (!Directory.Exists(imgDirectory))
+            return [];
+
+        return Directory.GetFiles(imgDirectory)
+            .Where(f => f.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                     || f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+                     || f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
+                     || f.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
+            .GroupBy(f => Path.GetFileNameWithoutExtension(f))
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(f => f).First());
     }
 
     // Simple slug: lowercase, replace spaces with hyphens, remove non-alphanumeric

@@ -1,0 +1,6 @@
+# Migration data files (large images, not committed)
+data/avtolider/img/
+data/avtolider/failed_images.txt
+data/avtolider/telegra_urls.json
+data/avtolider/telegra_missing.json
+data/visual_assets/
