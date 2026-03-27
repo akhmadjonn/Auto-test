@@ -27,6 +27,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Announcement> Announcements => Set<Announcement>();
     public DbSet<UserDevice> UserDevices => Set<UserDevice>();
 
+    // Phase 2 — Reference content
+    public DbSet<TrafficFine> TrafficFines => Set<TrafficFine>();
+    public DbSet<HazardLabel> HazardLabels => Set<HazardLabel>();
+    public DbSet<FirstAidProcedure> FirstAidProcedures => Set<FirstAidProcedure>();
+    public DbSet<FirstAidStep> FirstAidSteps => Set<FirstAidStep>();
+    public DbSet<GlossaryCategory> GlossaryCategories => Set<GlossaryCategory>();
+    public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("autotest");

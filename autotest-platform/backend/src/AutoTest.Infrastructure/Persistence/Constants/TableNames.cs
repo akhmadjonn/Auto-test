@@ -22,4 +22,12 @@ public static class TableNames
     public const string SystemSettings = nameof(SystemSettings);
     public const string Announcements = nameof(Announcements);
     public const string UserDevices = nameof(UserDevices);
+
+    // Phase 2 — Reference content
+    public const string TrafficFines = nameof(TrafficFines);
+    public const string HazardLabels = nameof(HazardLabels);
+    public const string FirstAidProcedures = nameof(FirstAidProcedures);
+    public const string FirstAidSteps = nameof(FirstAidSteps);
+    public const string GlossaryCategories = nameof(GlossaryCategories);
+    public const string GlossaryTerms = nameof(GlossaryTerms);
 }
