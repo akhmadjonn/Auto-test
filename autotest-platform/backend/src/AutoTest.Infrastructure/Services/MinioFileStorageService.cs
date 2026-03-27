@@ -101,6 +101,13 @@ public class MinioFileStorageService(
         await s3.DeleteObjectsAsync(request, ct);
     }
 
+    public async Task<string> UploadContentImageAsync(Stream stream, string folder, string fileName, CancellationToken ct = default)
+    {
+        var key = $"{folder}/{fileName}";
+        await UploadAsync(stream, key, "image/webp", ct);
+        return key;
+    }
+
     public async Task EnsureBucketExistsAsync(CancellationToken ct = default)
     {
         try

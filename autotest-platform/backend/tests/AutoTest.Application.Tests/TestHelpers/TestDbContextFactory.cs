@@ -76,6 +76,9 @@ public class FakeFileStorageService : IFileStorageService
 
     public Task DeleteAsync(string key, CancellationToken ct = default) => Task.CompletedTask;
     public Task DeleteManyAsync(IEnumerable<string> keys, CancellationToken ct = default) => Task.CompletedTask;
+
+    public Task<string> UploadContentImageAsync(Stream stream, string folder, string fileName, CancellationToken ct = default) =>
+        Task.FromResult($"{folder}/{fileName}");
 }
 
 public class FakeDistributedLockService : IDistributedLockService

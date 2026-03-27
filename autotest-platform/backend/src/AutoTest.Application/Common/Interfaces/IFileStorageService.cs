@@ -9,4 +9,5 @@ public interface IFileStorageService
     Task<Dictionary<string, string>> GetPresignedUrlsBatchAsync(IEnumerable<string> objectKeys, CancellationToken ct = default);
     Task DeleteAsync(string objectKey, CancellationToken ct = default);
     Task DeleteManyAsync(IEnumerable<string> objectKeys, CancellationToken ct = default);
+    Task<string> UploadContentImageAsync(Stream stream, string folder, string fileName, CancellationToken ct = default);
 }

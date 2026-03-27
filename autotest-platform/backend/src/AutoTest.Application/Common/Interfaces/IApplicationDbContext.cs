@@ -25,5 +25,13 @@ public interface IApplicationDbContext
     DbSet<Announcement> Announcements { get; }
     DbSet<UserDevice> UserDevices { get; }
 
+    // Phase 2 — Reference content
+    DbSet<TrafficFine> TrafficFines { get; }
+    DbSet<HazardLabel> HazardLabels { get; }
+    DbSet<FirstAidProcedure> FirstAidProcedures { get; }
+    DbSet<FirstAidStep> FirstAidSteps { get; }
+    DbSet<GlossaryCategory> GlossaryCategories { get; }
+    DbSet<GlossaryTerm> GlossaryTerms { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
