@@ -23,6 +23,12 @@ public static class TableNames
     public const string Announcements = nameof(Announcements);
     public const string UserDevices = nameof(UserDevices);
 
+    // Phase 2 — Engagement
+    public const string UserDailyStats = nameof(UserDailyStats);
+    public const string UserFavoriteQuestions = nameof(UserFavoriteQuestions);
+    public const string UserSettings = nameof(UserSettings);
+    public const string LeaderboardSnapshots = nameof(LeaderboardSnapshots);
+
     // Phase 2 — Reference content
     public const string TrafficFines = nameof(TrafficFines);
     public const string HazardLabels = nameof(HazardLabels);

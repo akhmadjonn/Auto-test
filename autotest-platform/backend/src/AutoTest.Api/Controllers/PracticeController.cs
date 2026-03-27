@@ -34,6 +34,26 @@ public class PracticeController(ISender mediator) : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpGet("review")]
+    public async Task<IActionResult> GetReviewQuestions(
+        [FromQuery] int limit = 20,
+        [FromQuery] Language language = Language.UzLatin,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetQuestionsForReviewQuery(limit, language), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("hard")]
+    public async Task<IActionResult> GetHardQuestions(
+        [FromQuery] int limit = 20,
+        [FromQuery] Language language = Language.UzLatin,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetHardQuestionsQuery(limit, language), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("answer")]
     public async Task<IActionResult> SubmitAnswer(
         [FromBody] SubmitPracticeAnswerCommand command,

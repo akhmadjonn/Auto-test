@@ -51,6 +51,7 @@ public class CompleteExamCommandHandler(
     IFileStorageService storage,
     IDateTimeProvider dateTime,
     ICacheService cacheService,
+    IXpService xpService,
     ILogger<CompleteExamCommandHandler> logger) : IRequestHandler<CompleteExamCommand, ApiResponse<ExamResultDto>>
 {
     // Leitner intervals in days
@@ -135,6 +136,24 @@ public class CompleteExamCommandHandler(
                 sq.TimeSpentSeconds,
                 optDtos);
         }).ToList();
+
+        // Award XP for exam completion
+        await xpService.AwardXpAsync(userId, Common.Constants.XpRewards.ExamCompleted, "exam_completed", ct);
+        if (score >= passingScore)
+            await xpService.AwardXpAsync(userId, Common.Constants.XpRewards.ExamPassed, "exam_passed", ct);
+        if (correctCount == total && total > 0)
+            await xpService.AwardXpAsync(userId, Common.Constants.XpRewards.PerfectExam, "perfect_exam", ct);
+
+        // Update daily stats exam count — check local change tracker first (XpService may have Add'd it)
+        var today = DateOnly.FromDateTime(dateTime.UtcNow.UtcDateTime);
+        var dailyStat = db.UserDailyStats.Local
+            .FirstOrDefault(s => s.UserId == userId && s.StatDate == today)
+            ?? await db.UserDailyStats
+                .FirstOrDefaultAsync(s => s.UserId == userId && s.StatDate == today, ct);
+        if (dailyStat is not null)
+            dailyStat.ExamsCompleted++;
+
+        await db.SaveChangesAsync(ct);
 
         // Invalidate dashboard and category performance caches
         await cacheService.RemoveAsync($"avtolider:dashboard:{userId}", ct);

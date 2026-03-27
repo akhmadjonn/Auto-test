@@ -25,6 +25,12 @@ public interface IApplicationDbContext
     DbSet<Announcement> Announcements { get; }
     DbSet<UserDevice> UserDevices { get; }
 
+    // Phase 2 — Engagement
+    DbSet<UserDailyStats> UserDailyStats { get; }
+    DbSet<UserFavoriteQuestion> UserFavoriteQuestions { get; }
+    DbSet<UserSetting> UserSettings { get; }
+    DbSet<LeaderboardSnapshot> LeaderboardSnapshots { get; }
+
     // Phase 2 — Reference content
     DbSet<TrafficFine> TrafficFines { get; }
     DbSet<HazardLabel> HazardLabels { get; }

@@ -27,4 +27,5 @@ public class Question : BaseAuditableEntity
     public Category Category { get; set; } = null!;
     public ICollection<AnswerOption> AnswerOptions { get; set; } = [];
     public ICollection<Tag> Tags { get; set; } = [];
+    public ICollection<UserFavoriteQuestion> FavoritedBy { get; set; } = [];
 }

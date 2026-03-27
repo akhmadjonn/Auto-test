@@ -18,9 +18,10 @@ public class CompleteExamCommandTests
     private readonly ILogger<CompleteExamCommandHandler> _logger = Substitute.For<ILogger<CompleteExamCommandHandler>>();
 
     private readonly FakeCacheService _cache = new();
+    private readonly IXpService _xpService = Substitute.For<IXpService>();
 
     private CompleteExamCommandHandler CreateHandler(IApplicationDbContext db) =>
-        new(db, _currentUser, _storage, _dateTime, _cache, _logger);
+        new(db, _currentUser, _storage, _dateTime, _cache, _xpService, _logger);
 
     [Fact]
     public async Task Handle_AllCorrect_Returns100PercentScore()

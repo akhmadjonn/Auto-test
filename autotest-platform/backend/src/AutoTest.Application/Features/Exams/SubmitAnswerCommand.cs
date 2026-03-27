@@ -28,6 +28,7 @@ public class SubmitAnswerCommandHandler(
     ICurrentUser currentUser,
     IDistributedLockService lockService,
     IDateTimeProvider dateTime,
+    IXpService xpService,
     ILogger<SubmitAnswerCommandHandler> logger) : IRequestHandler<SubmitAnswerCommand, ApiResponse>
 {
     public async Task<ApiResponse> Handle(SubmitAnswerCommand request, CancellationToken ct)
@@ -90,6 +91,23 @@ public class SubmitAnswerCommandHandler(
             logger.LogDebug("Marathon progress: {Count} answered in session {SessionId}", answeredCount, request.SessionId);
 
         await db.SaveChangesAsync(ct);
+
+        // Award XP based on answer correctness and exam mode
+        var xpAmount = answer.IsCorrect
+            ? session.Mode switch
+            {
+                Domain.Common.Enums.ExamMode.HardMode => Common.Constants.XpRewards.HardModeCorrect,
+                Domain.Common.Enums.ExamMode.SpeedChallenge => Common.Constants.XpRewards.SpeedChallengeCorrect,
+                Domain.Common.Enums.ExamMode.Review => Common.Constants.XpRewards.ReviewCorrect,
+                _ => Common.Constants.XpRewards.CorrectAnswer
+            }
+            : Common.Constants.XpRewards.IncorrectAnswer;
+
+        await xpService.AwardXpAsync(currentUser.UserId.Value, xpAmount, "exam_answer", ct);
+        await xpService.RecordAnswerAsync(currentUser.UserId.Value, answer.IsCorrect, request.TimeSpentSeconds, ct);
+        await xpService.UpdateStreakAsync(currentUser.UserId.Value, ct);
+        await db.SaveChangesAsync(ct);
+
         return ApiResponse.Ok();
     }
 }

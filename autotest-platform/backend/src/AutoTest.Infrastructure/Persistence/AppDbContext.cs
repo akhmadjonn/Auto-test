@@ -27,6 +27,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Announcement> Announcements => Set<Announcement>();
     public DbSet<UserDevice> UserDevices => Set<UserDevice>();
 
+    // Phase 2 — Engagement
+    public DbSet<UserDailyStats> UserDailyStats => Set<UserDailyStats>();
+    public DbSet<UserFavoriteQuestion> UserFavoriteQuestions => Set<UserFavoriteQuestion>();
+    public DbSet<UserSetting> UserSettings => Set<UserSetting>();
+    public DbSet<LeaderboardSnapshot> LeaderboardSnapshots => Set<LeaderboardSnapshot>();
+
     // Phase 2 — Reference content
     public DbSet<TrafficFine> TrafficFines => Set<TrafficFine>();
     public DbSet<HazardLabel> HazardLabels => Set<HazardLabel>();
