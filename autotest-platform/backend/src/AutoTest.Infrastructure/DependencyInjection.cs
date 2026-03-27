@@ -81,6 +81,13 @@ public static class DependencyInjection
         // Practice / Spaced Repetition
         services.AddScoped<IPracticeService, LeitnerBoxService>();
 
+        // Engagement / XP
+        services.AddScoped<IXpService, XpService>();
+
+        // Telegram notifications
+        services.AddHttpClient("Telegram");
+        services.AddSingleton<ITelegramNotificationService, TelegramNotificationService>();
+
         // Transliteration
         services.AddSingleton<ITransliterationService, UzbekTransliterator>();
 
@@ -106,6 +113,8 @@ public static class DependencyInjection
             services.AddHostedService<SubscriptionBillingService>();
             services.AddHostedService<EskizTokenRefreshService>();
             services.AddHostedService<DataCleanupService>();
+            services.AddHostedService<LeaderboardSnapshotService>();
+            services.AddHostedService<StudyReminderService>();
         }
 
         return services;

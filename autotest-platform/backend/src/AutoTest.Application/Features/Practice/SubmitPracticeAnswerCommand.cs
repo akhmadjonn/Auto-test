@@ -36,6 +36,7 @@ public class SubmitPracticeAnswerCommandHandler(
     ICurrentUser currentUser,
     IDateTimeProvider dateTime,
     ICacheService cacheService,
+    IXpService xpService,
     ILogger<SubmitPracticeAnswerCommandHandler> logger)
     : IRequestHandler<SubmitPracticeAnswerCommand, ApiResponse<PracticeAnswerFeedbackDto>>
 {
@@ -125,6 +126,15 @@ public class SubmitPracticeAnswerCommandHandler(
         catStat.TotalAttempts = (int)Math.Round(catStat.TotalAttempts * 0.85) + 1;
         catStat.CorrectAttempts = (int)Math.Round(catStat.CorrectAttempts * 0.85) + (isCorrect ? 1 : 0);
 
+        await db.SaveChangesAsync(ct);
+
+        // Award XP
+        var xpAmount = isCorrect
+            ? Common.Constants.XpRewards.CorrectAnswer
+            : Common.Constants.XpRewards.IncorrectAnswer;
+        await xpService.AwardXpAsync(userId, xpAmount, "practice_answer", ct);
+        await xpService.RecordAnswerAsync(userId, isCorrect, request.TimeSpentSeconds, ct);
+        await xpService.UpdateStreakAsync(userId, ct);
         await db.SaveChangesAsync(ct);
 
         // Invalidate dashboard and category performance caches

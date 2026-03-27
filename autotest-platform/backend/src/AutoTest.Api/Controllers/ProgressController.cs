@@ -22,6 +22,15 @@ public class ProgressController(ISender mediator) : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpGet("detailed")]
+    public async Task<IActionResult> GetDetailedProgress(
+        [FromQuery] Language language = Language.UzLatin,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetDetailedProgressQuery(language), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("categories")]
     public async Task<IActionResult> GetCategoryPerformance(
         [FromQuery] Language language = Language.UzLatin,
