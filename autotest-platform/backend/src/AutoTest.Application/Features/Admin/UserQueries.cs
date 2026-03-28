@@ -19,7 +19,8 @@ public record GetUsersListQuery(
 public record UserListItemDto(
     Guid Id, string? PhoneNumber, string? FirstName, string? LastName,
     UserRole Role, AuthProvider AuthProvider, bool IsBlocked,
-    DateTimeOffset? LastActiveAt, DateTimeOffset CreatedAt);
+    DateTimeOffset? LastActiveAt, DateTimeOffset CreatedAt,
+    bool HasPremium);
 
 public class GetUsersListQueryHandler(
     IApplicationDbContext db) : IRequestHandler<GetUsersListQuery, ApiResponse<PaginatedList<UserListItemDto>>>
@@ -43,12 +44,14 @@ public class GetUsersListQueryHandler(
         if (request.IsBlocked.HasValue)
             query = query.Where(u => u.IsBlocked == request.IsBlocked.Value);
 
+        var now = DateTimeOffset.UtcNow;
         var projected = query
             .OrderByDescending(u => u.CreatedAt)
             .Select(u => new UserListItemDto(
                 u.Id, u.PhoneNumber, u.FirstName, u.LastName,
                 u.Role, u.AuthProvider, u.IsBlocked,
-                u.LastActiveAt, u.CreatedAt));
+                u.LastActiveAt, u.CreatedAt,
+                u.Subscriptions.Any(s => s.Status == SubscriptionStatus.Active && s.ExpiresAt > now)));
 
         var result = await PaginatedList<UserListItemDto>.CreateAsync(projected, request.Page, request.PageSize, ct);
         return ApiResponse<PaginatedList<UserListItemDto>>.Ok(result);
@@ -63,9 +66,15 @@ public record UserDetailDto(
     UserRole Role, AuthProvider AuthProvider, Language PreferredLanguage,
     long? TelegramId, bool IsBlocked, DateTimeOffset? LastActiveAt, DateTimeOffset CreatedAt,
     int TotalExams, int CompletedExams, int AverageScore,
-    SubscriptionInfoDto? ActiveSubscription);
+    SubscriptionInfoDto? ActiveSubscription,
+    bool IsManualPremium,
+    List<SubscriptionHistoryItemDto> SubscriptionHistory);
 
-public record SubscriptionInfoDto(Guid PlanId, string PlanName, SubscriptionStatus Status, DateTimeOffset ExpiresAt);
+public record SubscriptionInfoDto(Guid PlanId, string PlanName, SubscriptionStatus Status, DateTimeOffset ExpiresAt, PaymentProvider? Provider);
+
+public record SubscriptionHistoryItemDto(
+    string PlanName, DateTimeOffset StartsAt, DateTimeOffset ExpiresAt,
+    SubscriptionStatus Status, PaymentProvider? Provider);
 
 public class GetUserDetailQueryValidator : AbstractValidator<GetUserDetailQuery>
 {
@@ -107,15 +116,26 @@ public class GetUserDetailQueryHandler(
             .FirstOrDefaultAsync(ct);
 
         var subDto = activeSub is not null
-            ? new SubscriptionInfoDto(activeSub.PlanId, activeSub.Plan.Name.UzLatin, activeSub.Status, activeSub.ExpiresAt)
+            ? new SubscriptionInfoDto(activeSub.PlanId, activeSub.Plan.Name.UzLatin, activeSub.Status, activeSub.ExpiresAt, activeSub.PaymentProvider)
             : null;
+
+        var isManualPremium = activeSub?.PaymentProvider == PaymentProvider.Manual;
+
+        var subscriptionHistory = await db.Subscriptions
+            .AsNoTracking()
+            .Include(s => s.Plan)
+            .Where(s => s.UserId == request.UserId)
+            .OrderByDescending(s => s.CreatedAt)
+            .Select(s => new SubscriptionHistoryItemDto(
+                s.Plan.Name.UzLatin, s.StartsAt, s.ExpiresAt, s.Status, s.PaymentProvider))
+            .ToListAsync(ct);
 
         return ApiResponse<UserDetailDto>.Ok(new UserDetailDto(
             user.Id, user.PhoneNumber, user.FirstName, user.LastName,
             user.Role, user.AuthProvider, user.PreferredLanguage,
             user.TelegramId, user.IsBlocked, user.LastActiveAt, user.CreatedAt,
             examStats?.Total ?? 0, examStats?.Completed ?? 0, (int)(examStats?.AvgScore ?? 0),
-            subDto));
+            subDto, isManualPremium, subscriptionHistory));
     }
 }
 

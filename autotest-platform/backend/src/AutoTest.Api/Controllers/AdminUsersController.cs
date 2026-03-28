@@ -46,7 +46,22 @@ public class AdminUsersController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new ToggleUserBlockCommand(id, req.IsBlocked), ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
+
+    [HttpPost("{id}/premium")]
+    public async Task<IActionResult> GrantPremium(Guid id, [FromBody] GrantPremiumRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GrantPremiumCommand(id, req.PlanId, req.DurationDays, req.Note), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("{id}/premium")]
+    public async Task<IActionResult> RevokePremium(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new RevokePremiumCommand(id), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 }
 
 public record UpdateRoleRequest(UserRole Role);
 public record ToggleBlockRequest(bool IsBlocked);
+public record GrantPremiumRequest(Guid PlanId, int? DurationDays, string? Note);
