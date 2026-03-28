@@ -58,36 +58,36 @@ public class GetFinesQueryHandler(
         if (request.MaxPenalty.HasValue)
             query = query.Where(f => f.PenaltyAmountTiyins <= request.MaxPenalty.Value);
 
-        var projected = query
+        var ordered = query
             .OrderBy(f => f.SortOrder)
-            .ThenBy(f => f.ArticleNumber)
-            .Select(f => new FineDto(
+            .ThenBy(f => f.ArticleNumber);
+
+        var totalCount = await ordered.CountAsync(ct);
+        var entities = await ordered
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToListAsync(ct);
+
+        var items = new List<FineDto>();
+        foreach (var f in entities)
+        {
+            string? presignedUrl = f.ImageUrl is not null
+                ? await storage.GetPresignedUrlAsync(f.ImageUrl, ct)
+                : null;
+
+            items.Add(new FineDto(
                 f.Id,
                 f.ArticleNumber,
                 f.ViolationDescription,
                 f.AdditionalNotes,
                 f.PenaltyAmountTiyins,
                 f.PenaltyMaxTiyins,
-                f.ImageUrl,
+                presignedUrl,
                 f.SortOrder,
                 f.IsActive));
-
-        var result = await PaginatedList<FineDto>.CreateAsync(projected, request.Page, request.PageSize, ct);
-
-        // resolve presigned URLs for items with images
-        var itemsWithPresigned = new List<FineDto>();
-        foreach (var item in result.Items)
-        {
-            if (item.ImageUrl is not null)
-            {
-                var presigned = await storage.GetPresignedUrlAsync(item.ImageUrl, ct);
-                itemsWithPresigned.Add(item with { ImageUrl = presigned });
-            }
-            else
-                itemsWithPresigned.Add(item);
         }
 
-        var final = new PaginatedList<FineDto>(itemsWithPresigned, result.Meta.TotalCount, result.Meta.Page, result.Meta.PageSize);
+        var final = new PaginatedList<FineDto>(items, totalCount, request.Page, request.PageSize);
 
         await cache.SetAsync(cacheKey, final, TimeSpan.FromHours(1), ct);
         logger.LogDebug("Fines list loaded from DB, cached for 1h");

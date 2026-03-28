@@ -39,15 +39,18 @@ public class GetGlossaryTermByIdQueryHandler(
         if (term is null)
             return ApiResponse<GlossaryTermDetailDto>.Fail("TERM_NOT_FOUND", "Glossary term not found.");
 
-        var relatedQuestions = term.RelatedQuestionIds.Length > 0
-            ? await db.Questions
+        var relatedQuestions = new List<RelatedQuestionDto>();
+        if (term.RelatedQuestionIds.Length > 0)
+        {
+            var questions = await db.Questions
                 .AsNoTracking()
                 .Where(q => term.RelatedQuestionIds.Contains(q.Id))
-                .Select(q => new RelatedQuestionDto(
-                    q.Id,
-                    q.Text.UzLatin.Length > 100 ? q.Text.UzLatin.Substring(0, 100) : q.Text.UzLatin))
-                .ToListAsync(ct)
-            : [];
+                .ToListAsync(ct);
+
+            relatedQuestions = questions.Select(q => new RelatedQuestionDto(
+                q.Id,
+                q.Text.UzLatin.Length > 100 ? q.Text.UzLatin[..100] : q.Text.UzLatin)).ToList();
+        }
 
         var dto = new GlossaryTermDetailDto(
             term.Id,

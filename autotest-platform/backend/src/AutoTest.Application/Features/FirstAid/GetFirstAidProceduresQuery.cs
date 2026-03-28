@@ -31,19 +31,20 @@ public class GetFirstAidProceduresQueryHandler(
         if (cached is not null)
             return ApiResponse<List<FirstAidProcedureListDto>>.Ok(cached);
 
-        var procedures = await db.FirstAidProcedures
+        var entities = await db.FirstAidProcedures
             .AsNoTracking()
             .Include(p => p.Steps)
             .OrderBy(p => p.SortOrder)
-            .Select(p => new FirstAidProcedureListDto(
-                p.Id,
-                p.Slug,
-                p.Name,
-                p.Summary,
-                p.IconUrl,
-                p.SortOrder,
-                p.Steps.Count))
             .ToListAsync(ct);
+
+        var procedures = entities.Select(p => new FirstAidProcedureListDto(
+            p.Id,
+            p.Slug,
+            p.Name,
+            p.Summary,
+            p.IconUrl,
+            p.SortOrder,
+            p.Steps.Count)).ToList();
 
         await cache.SetAsync(CacheKey, procedures, TimeSpan.FromHours(24), ct);
         logger.LogDebug("First aid procedures loaded from DB, cached for 24h");

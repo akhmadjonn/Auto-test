@@ -38,18 +38,25 @@ public class GetGlossaryTermsQueryHandler(
         if (category is null)
             return ApiResponse<PaginatedList<GlossaryTermDto>>.Fail("CATEGORY_NOT_FOUND", $"Glossary category with slug '{request.CategorySlug}' not found.");
 
-        var query = db.GlossaryTerms
+        var ordered = db.GlossaryTerms
             .AsNoTracking()
             .Where(t => t.GlossaryCategoryId == category.Id)
-            .OrderBy(t => t.SortOrder)
-            .Select(t => new GlossaryTermDto(
-                t.Id,
-                t.Term,
-                t.Definition,
-                t.SortOrder,
-                t.RelatedQuestionIds));
+            .OrderBy(t => t.SortOrder);
 
-        var result = await PaginatedList<GlossaryTermDto>.CreateAsync(query, request.Page, request.PageSize, ct);
+        var totalCount = await ordered.CountAsync(ct);
+        var entities = await ordered
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToListAsync(ct);
+
+        var items = entities.Select(t => new GlossaryTermDto(
+            t.Id,
+            t.Term,
+            t.Definition,
+            t.SortOrder,
+            t.RelatedQuestionIds)).ToList();
+
+        var result = new PaginatedList<GlossaryTermDto>(items, totalCount, request.Page, request.PageSize);
         return ApiResponse<PaginatedList<GlossaryTermDto>>.Ok(result);
     }
 }
