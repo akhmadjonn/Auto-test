@@ -4,9 +4,10 @@ using System.Text.Json;
 namespace Avtolider.DataMigration.Commands;
 
 /// <summary>
-/// Imports visual assets (road signs, markings, hazard labels, first aid images) into MinIO.
+/// Imports visual assets (road signs, markings, hazard labels, first aid, color vision) into MinIO.
 /// These are extracted from Avto Test PRO APK and organized in data/visual_assets/.
 /// Outputs a JSON manifest mapping original filenames → MinIO keys.
+/// Color vision plates are uploaded with exact key names (not GUID-renamed).
 /// </summary>
 public static class ImportVisualAssetsCommand
 {
@@ -35,7 +36,7 @@ public static class ImportVisualAssetsCommand
         var manifest = new Dictionary<string, string>();
         int totalUploaded = 0;
 
-        // Process each asset category
+        // Process each asset category (GUID-renamed uploads)
         var categories = new[]
         {
             ("signs/axborot", "visual/signs/axborot"),
@@ -96,6 +97,47 @@ public static class ImportVisualAssetsCommand
             Console.WriteLine($"  {dirRelative}: {uploaded}/{files.Count} uploaded");
         }
 
+        // Color vision plates — uploaded with exact key names (not GUID-renamed)
+        // Backend expects keys: color-vision/plate-01.webp through plate-12.webp
+        var colorVisionDir = Path.Combine(assetsDir, "color_vision");
+        if (Directory.Exists(colorVisionDir))
+        {
+            var plateFiles = Directory.GetFiles(colorVisionDir)
+                .Where(f => IsImageFile(f) && Path.GetFileNameWithoutExtension(f).StartsWith("plate-"))
+                .OrderBy(f => f)
+                .ToList();
+
+            if (plateFiles.Count > 0)
+            {
+                int uploaded = 0;
+                foreach (var file in plateFiles)
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    var plateName = Path.GetFileNameWithoutExtension(file);
+                    var exactKey = $"color-vision/{plateName}.webp";
+
+                    if (!ctx.DryRun)
+                    {
+                        var success = await ctx.ImageSvc.UploadExactKeyAsync(file, exactKey, ct);
+                        if (success)
+                        {
+                            manifest[$"color_vision/{Path.GetFileName(file)}"] = exactKey;
+                            uploaded++;
+                            ctx.Stats.RecordImageUploaded();
+                        }
+                    }
+                    else
+                        uploaded++;
+                }
+
+                totalUploaded += uploaded;
+                Console.WriteLine($"  color_vision: {uploaded}/{plateFiles.Count} uploaded (exact keys)");
+            }
+        }
+        else
+            Console.WriteLine("  [SKIP] color_vision: directory not found");
+
         // Save manifest
         if (manifest.Count > 0)
         {
@@ -116,5 +158,6 @@ public static class ImportVisualAssetsCommand
         path.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
         || path.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
         || path.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
-        || path.EndsWith(".webp", StringComparison.OrdinalIgnoreCase);
+        || path.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)
+        || path.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
 }

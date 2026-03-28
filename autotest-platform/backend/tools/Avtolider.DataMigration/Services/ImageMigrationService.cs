@@ -87,6 +87,44 @@ public sealed class ImageMigrationService(IAmazonS3 s3, string bucket)
     }
 
     /// <summary>
+    /// Uploads a file to MinIO with an exact key (no GUID renaming, no thumbnail).
+    /// Used for color vision plates where backend expects exact key names.
+    /// </summary>
+    public async Task<bool> UploadExactKeyAsync(string localFilePath, string exactKey, CancellationToken ct = default)
+    {
+        if (!File.Exists(localFilePath))
+        {
+            Console.WriteLine($"  [WARN] Image file not found: {localFilePath}");
+            return false;
+        }
+
+        try
+        {
+            await using var fileStream = File.OpenRead(localFilePath);
+            using var image = await Image.LoadAsync(fileStream, ct);
+
+            if (image.Width > MaxDimension || image.Height > MaxDimension)
+                image.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Size = new Size(MaxDimension, MaxDimension),
+                    Mode = ResizeMode.Max
+                }));
+
+            using var stream = new MemoryStream();
+            await image.SaveAsync(stream, new WebpEncoder { Quality = 85 }, ct);
+            stream.Position = 0;
+
+            await UploadToS3Async(exactKey, stream, "image/webp", ct);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  [WARN] Exact-key upload failed for '{localFilePath}': {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Ensures the target bucket exists; creates it if not.
     /// Call once before starting any uploads.
     /// </summary>
