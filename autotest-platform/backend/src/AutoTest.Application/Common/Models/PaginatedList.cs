@@ -1,11 +1,19 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace AutoTest.Application.Common.Models;
 
 public class PaginatedList<T>
 {
-    public List<T> Items { get; }
-    public PaginationMeta Meta { get; }
+    public List<T> Items { get; set; }
+    public PaginationMeta Meta { get; set; }
+
+    [JsonConstructor]
+    public PaginatedList(List<T> items, PaginationMeta meta)
+    {
+        Items = items;
+        Meta = meta;
+    }
 
     public PaginatedList(List<T> items, int totalCount, int page, int pageSize)
     {

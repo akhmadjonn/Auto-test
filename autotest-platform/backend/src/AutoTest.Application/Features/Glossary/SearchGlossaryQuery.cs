@@ -25,7 +25,7 @@ public class SearchGlossaryQueryHandler(
     {
         var search = request.Query.ToLower();
 
-        var query = db.GlossaryTerms
+        var ordered = db.GlossaryTerms
             .AsNoTracking()
             .Where(t =>
                 t.Term.Uz.ToLower().Contains(search) ||
@@ -34,15 +34,22 @@ public class SearchGlossaryQueryHandler(
                 t.Definition.Uz.ToLower().Contains(search) ||
                 t.Definition.UzLatin.ToLower().Contains(search) ||
                 t.Definition.Ru.ToLower().Contains(search))
-            .OrderBy(t => t.SortOrder)
-            .Select(t => new GlossaryTermDto(
-                t.Id,
-                t.Term,
-                t.Definition,
-                t.SortOrder,
-                t.RelatedQuestionIds));
+            .OrderBy(t => t.SortOrder);
 
-        var result = await PaginatedList<GlossaryTermDto>.CreateAsync(query, request.Page, request.PageSize, ct);
+        var totalCount = await ordered.CountAsync(ct);
+        var entities = await ordered
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToListAsync(ct);
+
+        var items = entities.Select(t => new GlossaryTermDto(
+            t.Id,
+            t.Term,
+            t.Definition,
+            t.SortOrder,
+            t.RelatedQuestionIds)).ToList();
+
+        var result = new PaginatedList<GlossaryTermDto>(items, totalCount, request.Page, request.PageSize);
         return ApiResponse<PaginatedList<GlossaryTermDto>>.Ok(result);
     }
 }

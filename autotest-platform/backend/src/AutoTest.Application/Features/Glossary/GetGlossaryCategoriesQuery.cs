@@ -30,17 +30,19 @@ public class GetGlossaryCategoriesQueryHandler(
         if (cached is not null)
             return ApiResponse<List<GlossaryCategoryDto>>.Ok(cached);
 
-        var categories = await db.GlossaryCategories
+        var entities = await db.GlossaryCategories
             .AsNoTracking()
+            .Include(c => c.Terms)
             .OrderBy(c => c.SortOrder)
-            .Select(c => new GlossaryCategoryDto(
-                c.Id,
-                c.Slug,
-                c.Name,
-                c.Icon,
-                c.SortOrder,
-                c.Terms.Count))
             .ToListAsync(ct);
+
+        var categories = entities.Select(c => new GlossaryCategoryDto(
+            c.Id,
+            c.Slug,
+            c.Name,
+            c.Icon,
+            c.SortOrder,
+            c.Terms.Count)).ToList();
 
         await cache.SetAsync(CacheKey, categories, TimeSpan.FromHours(6), ct);
         logger.LogDebug("Glossary categories loaded from DB, cached for 6h");
