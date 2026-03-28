@@ -27,6 +27,14 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
 
         await db.SaveChangesAsync(ct);
 
+        // Phase 2 content seeding
+        await SeedTrafficFinesAsync(ct);
+        await SeedHazardLabelsAsync(ct);
+        await SeedFirstAidProceduresAsync(ct);
+        await SeedGlossaryCategoriesAndTermsAsync(ct);
+
+        await db.SaveChangesAsync(ct);
+
         await SyncSettingsToRedisAsync(ct);
 
         logger.LogInformation("Database seeding completed");
@@ -611,6 +619,348 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             UpdatedAt = DateTimeOffset.UtcNow
         });
     }
+
+    // ── Phase 2 Content Seeding ──
+
+    private async Task SeedTrafficFinesAsync(CancellationToken ct)
+    {
+        if (await db.TrafficFines.AnyAsync(ct))
+            return;
+
+        var now = DateTimeOffset.UtcNow;
+        var fines = new List<TrafficFine>
+        {
+            Fine("12.1", T("Тезликни 20-40 км/с ошириш", "Tezlikni 20-40 km/s oshirish", "Превышение скорости на 20-40 км/ч"), 300_000_00, null, 1, now),
+            Fine("12.2", T("Тезликни 40-60 км/с ошириш", "Tezlikni 40-60 km/s oshirish", "Превышение скорости на 40-60 км/ч"), 600_000_00, null, 2, now),
+            Fine("12.3", T("Тезликни 60 км/с дан ортиқ ошириш", "Tezlikni 60 km/s dan ortiq oshirish", "Превышение скорости более чем на 60 км/ч"), 1_000_000_00, null, 3, now),
+            Fine("13.1", T("Қизил чироқда ўтиш", "Qizil chiroqda o'tish", "Проезд на красный сигнал светофора"), 600_000_00, null, 4, now),
+            Fine("14.1", T("Хавфсизлик камарини тақмаслик", "Xavfsizlik kamarini taqmaslik", "Неиспользование ремня безопасности"), 150_000_00, null, 5, now),
+            Fine("14.2", T("Мотоциклда дубулға киймаслик", "Mototsiklda dubulg'a kiymaslik", "Управление мотоциклом без шлема"), 150_000_00, null, 6, now),
+            Fine("15.1", T("Ҳайдовчилик гувоҳномасиз бошқариш", "Haydovchilik guvohnomasiz boshqarish", "Управление ТС без водительского удостоверения"), 1_500_000_00, null, 7, now),
+            Fine("15.2", T("Маст ҳолда бошқариш", "Mast holda boshqarish", "Управление ТС в нетрезвом состоянии"), 3_000_000_00, null, 8, now),
+            Fine("16.1", T("Пиёдалар ўтиш жойида тўхтамаслик", "Piyodalar o'tish joyida to'xtamaslik", "Не уступил дорогу пешеходу на переходе"), 400_000_00, null, 9, now),
+            Fine("16.2", T("Тўхташ тақиқланган жойда тўхташ", "To'xtash taqiqlangan joyda to'xtash", "Остановка в запрещённом месте"), 200_000_00, null, 10, now),
+            Fine("17.1", T("Қарши йўналишда ҳаракатланиш", "Qarshi yo'nalishda harakatlanish", "Движение по встречной полосе"), 800_000_00, null, 11, now),
+            Fine("17.2", T("Тротуарда ҳаракатланиш", "Trotuarda harakatlanish", "Движение по тротуару"), 300_000_00, null, 12, now),
+            Fine("18.1", T("Қўл телефонида гапириб бошқариш", "Qo'l telefonida gapirib boshqarish", "Разговор по телефону во время управления ТС"), 300_000_00, null, 13, now),
+            Fine("18.2", T("Ойнасига пардоз ёпиштирилган автомобилни бошқариш", "Oynasiga pardoz yopishtirilgan avtomobilni boshqarish", "Управление ТС с тонированными стёклами"), 300_000_00, null, 14, now),
+            Fine("19.1", T("Давлат рақам белгисиз ҳаракатланиш", "Davlat raqam belgisiz harakatlanish", "Управление ТС без госномеров"), 500_000_00, null, 15, now),
+            Fine("19.2", T("Йўл ҳаракати қоидаларини бузиб ўтиш натижасида авария содир этиш", "Yo'l harakati qoidalarini buzib o'tish natijasida avariya sodir etish", "ДТП с причинением материального ущерба"), 1_000_000_00, 3_000_000_00, 16, now),
+            Fine("20.1", T("Суғурта полисисиз бошқариш", "Sug'urta polisisiz boshqarish", "Управление ТС без страхового полиса"), 300_000_00, null, 17, now),
+            Fine("20.2", T("Техник кўрикдан ўтмаган автомобилни бошқариш", "Texnik ko'rikdan o'tmagan avtomobilni boshqarish", "Управление ТС без прохождения техосмотра"), 300_000_00, null, 18, now),
+            Fine("21.1", T("Белгиланмаган жойда йўлни кесиб ўтиш (пиёда)", "Belgilanmagan joyda yo'lni kesib o'tish (piyoda)", "Переход дороги в неустановленном месте (пешеход)"), 50_000_00, null, 19, now),
+            Fine("21.2", T("Тоқтаб қолган транспорт ёнидан ўтишда эҳтиёт бўлмаслик", "Toqtab qolgan transport yonidan o'tishda ehtiyot bo'lmaslik", "Нарушение правил обгона"), 600_000_00, null, 20, now),
+        };
+
+        db.TrafficFines.AddRange(fines);
+        logger.LogInformation("Seeded {Count} traffic fines", fines.Count);
+    }
+
+    private async Task SeedHazardLabelsAsync(CancellationToken ct)
+    {
+        if (await db.HazardLabels.AnyAsync(ct))
+            return;
+
+        var now = DateTimeOffset.UtcNow;
+        var labels = new List<HazardLabel>
+        {
+            Hazard("explosive", "GHS01", T("Портловчи моддалар", "Portlovchi moddalar", "Взрывчатые вещества"),
+                T("Портлаш хавфи мавжуд бўлган моддалар ва аралашмалар", "Portlash xavfi mavjud bo'lgan moddalar va aralashmalar", "Вещества и смеси, представляющие опасность взрыва"), 1, now),
+            Hazard("flammable-gas", "GHS02", T("Ёнувчи газлар", "Yonuvchi gazlar", "Воспламеняющиеся газы"),
+                T("Ҳаво билан аралашганда ёнувчи аралашма ҳосил қиладиган газлар", "Havo bilan aralashganda yonuvchi aralashma hosil qiladigan gazlar", "Газы, образующие воспламеняющиеся смеси с воздухом"), 2, now),
+            Hazard("flammable-aerosol", "GHS02a", T("Ёнувчи аэрозоллар", "Yonuvchi aerozollar", "Воспламеняющиеся аэрозоли"),
+                T("Ёнувчи компонентлари бор аэрозоль идишлар", "Yonuvchi komponentlari bor aerozol idishlar", "Аэрозольные упаковки с воспламеняющимися компонентами"), 3, now),
+            Hazard("oxidizing-gas", "GHS03", T("Оксидловчи газлар", "Oksidlovchi gazlar", "Окисляющие газы"),
+                T("Бошқа моддаларнинг ёнишига сабаб бўладиган газлар", "Boshqa moddalarning yonishiga sabab bo'ladigan gazlar", "Газы, способствующие горению других веществ"), 4, now),
+            Hazard("gas-under-pressure", "GHS04", T("Босим остидаги газлар", "Bosim ostidagi gazlar", "Газы под давлением"),
+                T("Юқори босим остида сақланаётган газлар", "Yuqori bosim ostida saqlanayotgan gazlar", "Газы, хранящиеся под высоким давлением"), 5, now),
+            Hazard("flammable-liquid", "GHS02b", T("Ёнувчи суюқликлар", "Yonuvchi suyuqliklar", "Воспламеняющиеся жидкости"),
+                T("Паст ёниш нуқтасига эга бўлган суюқликлар", "Past yonish nuqtasiga ega bo'lgan suyuqliklar", "Жидкости с низкой температурой вспышки"), 6, now),
+            Hazard("flammable-solid", "GHS02c", T("Ёнувчи қаттиқ моддалар", "Yonuvchi qattiq moddalar", "Воспламеняющиеся твёрдые вещества"),
+                T("Ишқаланиш ёки қисқа муддатли тутантиришдан ёнадиган қаттиқ моддалар", "Ishqalanish yoki qisqa muddatli tutantirishdan yonadigan qattiq moddalar", "Твёрдые вещества, воспламеняющиеся от трения или кратковременного воздействия огня"), 7, now),
+            Hazard("self-reactive", "GHS01a", T("Ўз-ўзидан реакцияга кирадиган", "O'z-o'zidan reaksiyaga kiradigan", "Самореактивные вещества"),
+                T("Термик ностабил бўлган ва ташқи ёниш манбаисиз парчаланиши мумкин", "Termik nostabil bo'lgan va tashqi yonish manba'isiz parchalanishi mumkin", "Термически нестабильные вещества, способные к разложению без внешнего источника огня"), 8, now),
+            Hazard("pyrophoric", "GHS02d", T("Пирофорик моддалар", "Piroforik moddalar", "Пирофорные вещества"),
+                T("Ҳаво билан алоқада ўз-ўзидан ёнадиган моддалар", "Havo bilan aloqada o'z-o'zidan yonadigan moddalar", "Вещества, самовоспламеняющиеся при контакте с воздухом"), 9, now),
+            Hazard("self-heating", "GHS02e", T("Ўз-ўзидан қизийдиган", "O'z-o'zidan qiziydigan", "Самонагревающиеся вещества"),
+                T("Ташқи энергия манбаисиз ўз-ўзидан қизиб кетадиган моддалар", "Tashqi energiya manba'isiz o'z-o'zidan qizib ketadigan moddalar", "Вещества, способные самонагреваться без внешнего источника энергии"), 10, now),
+            Hazard("water-reactive", "GHS02f", T("Сув билан реакцияга кирадиган", "Suv bilan reaksiyaga kiradigan", "Реагирующие с водой"),
+                T("Сув билан алоқада ёнувчи газ ажратадиган моддалар", "Suv bilan aloqada yonuvchi gaz ajratadigan moddalar", "Вещества, выделяющие воспламеняющиеся газы при контакте с водой"), 11, now),
+            Hazard("oxidizer", "GHS03a", T("Оксидловчи моддалар", "Oksidlovchi moddalar", "Окислители"),
+                T("Бошқа моддаларнинг ёнишини тезлаштирадиган моддалар", "Boshqa moddalarning yonishini tezlashtiradigan moddalar", "Вещества, способствующие воспламенению или усиливающие горение"), 12, now),
+            Hazard("organic-peroxide", "GHS01b", T("Органик пероксидлар", "Organik peroksidlar", "Органические пероксиды"),
+                T("Ёниш ва портлаш хавфи бор органик моддалар", "Yonish va portlash xavfi bor organik moddalar", "Органические вещества с опасностью возгорания и взрыва"), 13, now),
+            Hazard("toxic", "GHS06", T("Заҳарли моддалар", "Zaharli moddalar", "Токсичные вещества"),
+                T("Кам миқдорда ҳам инсон саломатлигига жиддий хавф туғдирадиган моддалар", "Kam miqdorda ham inson salomatligiga jiddiy xavf tug'diradigan moddalar", "Вещества, представляющие серьёзную опасность для здоровья даже в малых дозах"), 14, now),
+            Hazard("irritant", "GHS07", T("Зарарли моддалар", "Zararli moddalar", "Вредные вещества"),
+                T("Тери ва кўзни таъсирлантирувчи моддалар", "Teri va ko'zni ta'sirlantiruuvchi moddalar", "Вещества, раздражающие кожу и глаза"), 15, now),
+            Hazard("corrosive", "GHS05", T("Емирувчи моддалар", "Yemiruvchi moddalar", "Коррозионные вещества"),
+                T("Тери, кўз ва металларни емирадиган моддалар", "Teri, ko'z va metallarni yemiradigan moddalar", "Вещества, разрушающие кожу, глаза и металлы"), 16, now),
+            Hazard("health-hazard", "GHS08", T("Соғлиққа хавфли", "Sog'liqqa xavfli", "Опасность для здоровья"),
+                T("Узоқ муддатли таъсирда саратон ёки бошқа оғир касалликларга олиб келадиган моддалар", "Uzoq muddatli ta'sirda saraton yoki boshqa og'ir kasalliklarga olib keladigan moddalar", "Вещества, вызывающие рак или другие тяжёлые заболевания при длительном воздействии"), 17, now),
+            Hazard("environmental-hazard", "GHS09", T("Атроф-муҳитга хавфли", "Atrof-muhitga xavfli", "Опасность для окружающей среды"),
+                T("Сув организмларига заҳарли бўлган моддалар", "Suv organizmlariga zaharli bo'lgan moddalar", "Вещества, токсичные для водных организмов"), 18, now),
+        };
+
+        db.HazardLabels.AddRange(labels);
+        logger.LogInformation("Seeded {Count} hazard labels", labels.Count);
+    }
+
+    private async Task SeedFirstAidProceduresAsync(CancellationToken ct)
+    {
+        if (await db.FirstAidProcedures.AnyAsync(ct))
+            return;
+
+        var now = DateTimeOffset.UtcNow;
+
+        var cpr = MakeProcedure("cpr", T("Юрак-ўпка реанимацияси", "Yurak-o'pka reanimatsiyasi", "Сердечно-лёгочная реанимация"),
+            T("Нафас олиш ва юрак уриши тўхтаганда қўлланиладиган усул", "Nafas olish va yurak urishi to'xtaganda qo'llaniladigan usul", "Метод, применяемый при остановке дыхания и сердцебиения"), 1, now,
+            [
+                Step(T("Хавфсизликни текшириш", "Xavfsizlikni tekshirish", "Проверка безопасности"),
+                    T("Жабрланувчи ётган жой хавфсиз эканлигига ишонч ҳосил қилинг", "Jabrlanuvchi yotgan joy xavfsiz ekanligiga ishonch hosil qiling", "Убедитесь, что место, где лежит пострадавший, безопасно"), 1),
+                Step(T("Ҳушини текшириш", "Hushini tekshirish", "Проверка сознания"),
+                    T("Жабрланувчининг елкасига секин уриб чақиринг", "Jabrlanuvchining yelkasiga sekin urib chaqiring", "Аккуратно потрясите пострадавшего за плечо и позовите"), 2),
+                Step(T("Тез ёрдамни чақириш", "Tez yordamni chaqirish", "Вызов скорой помощи"),
+                    T("103 рақамига қўнғироқ қилинг", "103 raqamiga qo'ng'iroq qiling", "Позвоните по номеру 103"), 3),
+                Step(T("Кўкрак бўшлиғига босиш", "Ko'krak bo'shlig'iga bosish", "Компрессии грудной клетки"),
+                    T("Кўкрак суягининг пастки учидан 2 бармоқ юқорига 30 марта босинг", "Ko'krak suyagining pastki uchidan 2 barmoq yuqoriga 30 marta bosing", "Нажимайте на грудину на 2 пальца выше нижнего края — 30 нажатий"), 4),
+                Step(T("Сунъий нафас", "Sun'iy nafas", "Искусственное дыхание"),
+                    T("Бошни орқага ташлаб 2 марта оғизга нафас беринг", "Boshni orqaga tashlab 2 marta og'izga nafas bering", "Запрокиньте голову назад и сделайте 2 вдоха рот в рот"), 5),
+                Step(T("Давом эттириш", "Davom ettirish", "Продолжение"),
+                    T("30:2 нисбатда тез ёрдам келгунча давом эттиринг", "30:2 nisbatda tez yordam kelguncha davom ettiring", "Продолжайте в соотношении 30:2 до приезда скорой помощи"), 6),
+            ]);
+
+        var wound = MakeProcedure("wound-treatment", T("Яраларни даволаш", "Yaralarni davolash", "Обработка ран"),
+            T("Ташқи жароҳатларни дастлабки даволаш усуллари", "Tashqi jarohatlarni dastlabki davolash usullari", "Методы первичной обработки наружных ран"), 2, now,
+            [
+                Step(T("Қўлларни ювиш", "Qo'llarni yuvish", "Мытьё рук"),
+                    T("Ярани даволашдан олдин қўлларингизни совунлаб ювинг", "Yarani davolashdan oldin qo'llaringizni sovunlab yuving", "Перед обработкой раны тщательно вымойте руки с мылом"), 1),
+                Step(T("Қон оқишини тўхтатиш", "Qon oqishini to'xtatish", "Остановка кровотечения"),
+                    T("Тоза мато билан ярага босиб ушланг", "Toza mato bilan yaraga bosib ushlang", "Прижмите рану чистой тканью"), 2),
+                Step(T("Ярани ювиш", "Yarani yuvish", "Промывание раны"),
+                    T("Ярани оқар сув остида ювинг", "Yarani oqar suv ostida yuving", "Промойте рану под проточной водой"), 3),
+                Step(T("Антисептик суриш", "Antiseptik surish", "Обработка антисептиком"),
+                    T("Яра атрофига антисептик суринг", "Yara atrofiga antiseptik suring", "Обработайте кожу вокруг раны антисептиком"), 4),
+                Step(T("Боғлам қўйиш", "Bog'lam qo'yish", "Наложение повязки"),
+                    T("Тоза боғлам билан ярани боғланг", "Toza bog'lam bilan yarani bog'lang", "Наложите на рану чистую повязку"), 5),
+            ]);
+
+        var fracture = MakeProcedure("fracture-care", T("Синиш ҳолатлари", "Sinish holatlari", "Помощь при переломах"),
+            T("Суяк синишида биринчи ёрдам кўрсатиш", "Suyak sinishida birinchi yordam ko'rsatish", "Первая помощь при переломах костей"), 3, now,
+            [
+                Step(T("Жабрланувчини тинчлантириш", "Jabrlanuvchini tinchlantirish", "Успокоить пострадавшего"),
+                    T("Жабрланувчини ҳаракатлантирманг ва тинчлантиринг", "Jabrlanuvchini harakatlantirmang va tinchlantiring", "Не перемещайте пострадавшего и успокойте его"), 1),
+                Step(T("Шина қўйиш", "Shina qo'yish", "Наложение шины"),
+                    T("Синган жойни қўшни бўғимлар билан бирга шинага маҳкамланг", "Singan joyni qo'shni bo'g'imlar bilan birga shinaga mahkamlang", "Зафиксируйте место перелома шиной вместе с соседними суставами"), 2),
+                Step(T("Совуқ қўйиш", "Sovuq qo'yish", "Приложение холода"),
+                    T("Шишишни камайтириш учун муз қўйинг", "Shishishni kamaytirish uchun muz qo'ying", "Приложите лёд для уменьшения отёка"), 3),
+                Step(T("Оғриқ қолдирувчи бериш", "Og'riq qoldiruvchi berish", "Обезболивание"),
+                    T("Имконият бўлса оғриқ қолдирувчи дори беринг", "Imkoniyat bo'lsa og'riq qoldiruvchi dori bering", "При возможности дайте обезболивающее"), 4),
+                Step(T("Касалхонага етказиш", "Kasalxonaga yetkazish", "Доставка в больницу"),
+                    T("Тез ёрдамни чақиринг ёки касалхонага олиб боринг", "Tez yordamni chaqiring yoki kasalxonaga olib boring", "Вызовите скорую или доставьте в больницу"), 5),
+            ]);
+
+        var burns = MakeProcedure("burns", T("Куйиш ҳолатлари", "Kuyish holatlari", "Помощь при ожогах"),
+            T("Куйиш жароҳатларида биринчи ёрдам", "Kuyish jarohatlarida birinchi yordam", "Первая помощь при ожогах"), 4, now,
+            [
+                Step(T("Куйиш манбаидан узоқлаштириш", "Kuyish manba'idan uzoqlashtirish", "Удаление от источника ожога"),
+                    T("Жабрланувчини иссиқлик манбаидан узоқлаштиринг", "Jabrlanuvchini issiqlik manba'idan uzoqlashtiring", "Удалите пострадавшего от источника тепла"), 1),
+                Step(T("Совуқ сув билан совутиш", "Sovuq suv bilan sovutish", "Охлаждение водой"),
+                    T("Куйган жойни 10-20 дақиқа совуқ сув остида ушланг", "Kuygan joyni 10-20 daqiqa sovuq suv ostida ushlang", "Держите обожжённое место под прохладной водой 10-20 минут"), 2),
+                Step(T("Кийимларни эҳтиёт қилиб олиш", "Kiyimlarni ehtiyot qilib olish", "Аккуратное снятие одежды"),
+                    T("Ёпишмаган кийимларни эҳтиёт билан олинг", "Yopishmagan kiyimlarni ehtiyot bilan oling", "Аккуратно снимите одежду, если она не прилипла"), 3),
+                Step(T("Стерил боғлам қўйиш", "Steril bog'lam qo'yish", "Стерильная повязка"),
+                    T("Куйган жойга стерил боғлам қўйинг", "Kuygan joyga steril bog'lam qo'ying", "Наложите стерильную повязку на ожог"), 4),
+            ]);
+
+        var bleeding = MakeProcedure("severe-bleeding", T("Кучли қон кетиш", "Kuchli qon ketish", "Сильное кровотечение"),
+            T("Кучли қон кетишни тўхтатиш усуллари", "Kuchli qon ketishni to'xtatish usullari", "Методы остановки сильного кровотечения"), 5, now,
+            [
+                Step(T("Тўғридан-тўғри босим", "To'g'ridan-to'g'ri bosim", "Прямое давление"),
+                    T("Тоза мато билан ярага маҳкам босинг", "Toza mato bilan yaraga mahkam bosing", "Крепко прижмите к ране чистую ткань"), 1),
+                Step(T("Оёқ/қўлни кўтариш", "Oyoq/qo'lni ko'tarish", "Поднятие конечности"),
+                    T("Жароҳатланган оёқ/қўлни юрак сатҳидан юқори кўтаринг", "Jarohatulangan oyoq/qo'lni yurak sathidan yuqori ko'taring", "Поднимите повреждённую конечность выше уровня сердца"), 2),
+                Step(T("Жгут қўйиш", "Jgut qo'yish", "Наложение жгута"),
+                    T("Агар қон тўхтамаса, жгутни жароҳатдан юқорига қўйинг", "Agar qon to'xtamasa, jgutni jarohatdan yuqoriga qo'ying", "Если кровотечение не останавливается, наложите жгут выше раны"), 3),
+                Step(T("Жгут вақтини ёзиш", "Jgut vaqtini yozish", "Запись времени жгута"),
+                    T("Жгут қўйилган вақтни ёзиб қўйинг", "Jgut qo'yilgan vaqtni yozib qo'ying", "Запишите время наложения жгута"), 4),
+                Step(T("Тез ёрдамни кутиш", "Tez yordamni kutish", "Ожидание скорой"),
+                    T("Жабрланувчини иссиқ тутинг ва тез ёрдамни кутинг", "Jabrlanuvchini issiq tuting va tez yordamni kuting", "Согрейте пострадавшего и ждите скорую помощь"), 5),
+            ]);
+
+        var choking = MakeProcedure("choking", T("Бўғилиш", "Bo'g'ilish", "Удушье"),
+            T("Нафас йўллари тўсилганда биринчи ёрдам", "Nafas yo'llari to'silganda birinchi yordam", "Первая помощь при закупорке дыхательных путей"), 6, now,
+            [
+                Step(T("5 марта орқадан уриш", "5 marta orqadan urish", "5 ударов по спине"),
+                    T("Жабрланувчининг орқасидан кафт билан кураклар орасига 5 марта уринг", "Jabrlanuvchining orqasidan kaft bilan kuraklar orasiga 5 marta uring", "Нанесите 5 ударов ладонью между лопатками пострадавшего"), 1),
+                Step(T("5 марта Геймлих усули", "5 marta Geymlih usuli", "5 приёмов Геймлиха"),
+                    T("Орқадан қучоқлаб, мушт билан ошқозон соҳасига 5 марта босинг", "Orqadan quchoqlab, musht bilan oshqozon sohasiga 5 marta bosing", "Обхватите сзади и сделайте 5 толчков кулаком в область живота"), 2),
+                Step(T("Навбатлашиб давом эттириш", "Navbatlashib davom ettirish", "Чередование"),
+                    T("Чет тана чиққунча 5 уриш ва 5 босишни навбатлаштиринг", "Chet tana chiqquncha 5 urish va 5 bosishni navbatlashtiring", "Чередуйте 5 ударов по спине и 5 толчков в живот до извлечения инородного тела"), 3),
+                Step(T("Ҳушини йўқотса", "Hushini yo'qotsa", "Потеря сознания"),
+                    T("Агар ҳушини йўқотса, юрак-ўпка реанимациясини бошланг", "Agar hushini yo'qotsa, yurak-o'pka reanimatsiyasini boshlang", "Если пострадавший потерял сознание, начните сердечно-лёгочную реанимацию"), 4),
+            ]);
+
+        var shock = MakeProcedure("shock", T("Шок ҳолати", "Shok holati", "Шоковое состояние"),
+            T("Шок белгилари ва биринчи ёрдам", "Shok belgilari va birinchi yordam", "Признаки шока и первая помощь"), 7, now,
+            [
+                Step(T("Чалқанча ёткизиш", "Chalqancha yotqizish", "Уложить на спину"),
+                    T("Жабрланувчини чалқанча ёткизинг", "Jabrlanuvchini chalqancha yotqizing", "Уложите пострадавшего на спину"), 1),
+                Step(T("Оёқларини кўтариш", "Oyoqlarini ko'tarish", "Поднять ноги"),
+                    T("Оёқларини 20-30 см кўтаринг", "Oyoqlarini 20-30 sm ko'taring", "Поднимите ноги на 20-30 см"), 2),
+                Step(T("Кийимларни бўшатиш", "Kiyimlarni bo'shatish", "Ослабить одежду"),
+                    T("Тор кийимларни бўшатинг", "Tor kiyimlarni bo'shating", "Ослабьте тесную одежду"), 3),
+                Step(T("Иссиқ тутиш", "Issiq tutish", "Согреть"),
+                    T("Кўрпа ёки кийим билан ёпинг", "Ko'rpa yoki kiyim bilan yoping", "Укройте одеялом или одеждой"), 4),
+                Step(T("Тез ёрдамни кутиш", "Tez yordamni kutish", "Ожидание скорой"),
+                    T("103 га қўнғироқ қилинг ва тез ёрдамни кутинг", "103 ga qo'ng'iroq qiling va tez yordamni kuting", "Позвоните 103 и дождитесь скорой помощи"), 5),
+            ]);
+
+        var poisoning = MakeProcedure("poisoning", T("Заҳарланиш", "Zaharlanish", "Отравление"),
+            T("Заҳарланишда биринчи ёрдам кўрсатиш", "Zaharlanishda birinchi yordam ko'rsatish", "Первая помощь при отравлении"), 8, now,
+            [
+                Step(T("Заҳар манбаини аниқлаш", "Zahar manba'ini aniqlash", "Определение источника яда"),
+                    T("Нимадан заҳарланганини аниқланг", "Nimadan zaharlanganini aniqlang", "Определите источник отравления"), 1),
+                Step(T("Тез ёрдамни чақириш", "Tez yordamni chaqirish", "Вызов скорой"),
+                    T("103 га қўнғироқ қилинг ва заҳар турини айтинг", "103 ga qo'ng'iroq qiling va zahar turini ayting", "Позвоните 103 и сообщите тип яда"), 2),
+                Step(T("Қусдирмаслик", "Qusdirmaslik", "Не вызывать рвоту"),
+                    T("Кислота ёки ишқор ичган бўлса асло қусдирманг", "Kislota yoki ishqor ichgan bo'lsa aslo qusdirmang", "Никогда не вызывайте рвоту при отравлении кислотой или щёлочью"), 3),
+                Step(T("Нафас олишни таъминлаш", "Nafas olishni ta'minlash", "Обеспечение дыхания"),
+                    T("Ёнига ёткизинг ва нафас олишини кузатинг", "Yoniga yotqizing va nafas olishini kuzating", "Уложите набок и следите за дыханием"), 4),
+            ]);
+
+        db.FirstAidProcedures.AddRange([cpr, wound, fracture, burns, bleeding, choking, shock, poisoning]);
+        logger.LogInformation("Seeded {Count} first aid procedures", 8);
+    }
+
+    private async Task SeedGlossaryCategoriesAndTermsAsync(CancellationToken ct)
+    {
+        if (await db.GlossaryCategories.AnyAsync(ct))
+            return;
+
+        var now = DateTimeOffset.UtcNow;
+
+        // Category 1: Road Signs
+        var signsId = Guid.NewGuid();
+        var signs = new GlossaryCategory { Id = signsId, Slug = "road-signs", Name = T("Йўл белгилари", "Yo'l belgilari", "Дорожные знаки"), Icon = "SignpostBig", SortOrder = 1, CreatedAt = now, UpdatedAt = now, Terms = new List<GlossaryTerm>
+        {
+            GTerm(signsId, T("Огоҳлантирувчи белги", "Ogohlantirivchi belgi", "Предупреждающий знак"), T("Хавфли участка ёки шарт-шароит ҳақида огоҳлантирадиган учбурчак шаклидаги белги", "Xavfli uchastkа yoki shart-sharoit haqida ogohlantiradigan uchburchak shaklidagi belgi", "Знак треугольной формы, предупреждающий об опасном участке или условиях"), 1, now),
+            GTerm(signsId, T("Тақиқловчи белги", "Taqiqlovchi belgi", "Запрещающий знак"), T("Маълум ҳаракатларни тақиқлайдиган думалоқ қизил рамкали белги", "Ma'lum harakatlarni taqiqlаydigan dumaloq qizil ramkali belgi", "Круглый знак с красной каймой, запрещающий определённые действия"), 2, now),
+            GTerm(signsId, T("Буюрувчи белги", "Buyuruvchi belgi", "Предписывающий знак"), T("Маълум ҳаракатларни бажаришни буюрадиган кўк думалоқ белги", "Ma'lum harakatlarni bajarishni buyuradigan ko'k dumaloq belgi", "Круглый знак синего цвета, предписывающий определённые действия"), 3, now),
+            GTerm(signsId, T("Имтиёз белгиси", "Imtiyoz belgisi", "Знак приоритета"), T("Чоррахаларда ўтиш тартибини белгилайдиган белги", "Chorrahаlarda o'tish tartibini belgilаydigan belgi", "Знак, определяющий порядок проезда перекрёстков"), 4, now),
+            GTerm(signsId, T("Ахборот белгиси", "Axborot belgisi", "Информационный знак"), T("Йўл шароити ва йўналишлар ҳақида маълумот берувчи белги", "Yo'l sharoiti va yo'nalishlar haqida ma'lumot beruvchi belgi", "Знак, информирующий о дорожных условиях и направлениях"), 5, now),
+            GTerm(signsId, T("Хизмат белгиси", "Xizmat belgisi", "Знак сервиса"), T("Яқин атрофдаги хизмат кўрсатиш жойлари ҳақида маълумот берувчи белги", "Yaqin atrofdagi xizmat ko'rsatish joylari haqida ma'lumot beruvchi belgi", "Знак, информирующий о расположении объектов сервиса"), 6, now),
+            GTerm(signsId, T("Қўшимча белги", "Qo'shimcha belgi", "Табличка"), T("Асосий белгига қўшимча маълумот берувчи кичик тўртбурчак белги", "Asosiy belgiga qo'shimcha ma'lumot beruvchi kichik to'rtburchak belgi", "Маленькая прямоугольная табличка, дополняющая основной знак"), 7, now),
+        }};
+
+        // Category 2: Traffic Rules
+        var rulesId = Guid.NewGuid();
+        var rules = new GlossaryCategory { Id = rulesId, Slug = "traffic-rules", Name = T("Йўл ҳаракати қоидалари", "Yo'l harakati qoidalari", "Правила дорожного движения"), Icon = "BookOpen", SortOrder = 2, CreatedAt = now, UpdatedAt = now, Terms = new List<GlossaryTerm>
+        {
+            GTerm(rulesId, T("Чоррахa", "Chorraha", "Перекрёсток"), T("Икки ёки ундан ортиқ йўлнинг бир сатҳда кесишган жойи", "Ikki yoki undan ortiq yo'lning bir sathda kesishgan joyi", "Место пересечения двух или более дорог на одном уровне"), 1, now),
+            GTerm(rulesId, T("Ҳаракат қатнашчиси", "Harakat qatnashchisi", "Участник дорожного движения"), T("Йўлда ҳаракатда иштирок этаётган шахс", "Yo'lda harakatda ishtirok etayotgan shaxs", "Лицо, участвующее в дорожном движении"), 2, now),
+            GTerm(rulesId, T("Пиёда", "Piyoda", "Пешеход"), T("Транспорт воситасидан ташқарида йўлда юраётган шахс", "Transport vositasidan tashqarida yo'lda yurayotgan shaxs", "Лицо, находящееся на дороге вне транспортного средства"), 3, now),
+            GTerm(rulesId, T("Ҳайдовчи", "Haydovchi", "Водитель"), T("Транспорт воситасини бошқараётган шахс", "Transport vositasini boshqarayotgan shaxs", "Лицо, управляющее транспортным средством"), 4, now),
+            GTerm(rulesId, T("Тезлик чегараси", "Tezlik chegarasi", "Ограничение скорости"), T("Маълум йўл участкасида рухсат этилган максимал тезлик", "Ma'lum yo'l uchаstkasida ruxsat etilgan maksimal tezlik", "Максимальная разрешённая скорость на определённом участке дороги"), 5, now),
+            GTerm(rulesId, T("Қувиб ўтиш", "Quvib o'tish", "Обгон"), T("Олдиндаги транспортни қарши йўлга чиқиб ўтиш", "Oldindagi transportni qarshi yo'lga chiqib o'tish", "Опережение транспортного средства с выездом на встречную полосу"), 6, now),
+            GTerm(rulesId, T("Тўхтаб туриш", "To'xtab turish", "Стоянка"), T("5 дақиқадан ортиқ вақтга транспортни тўхтатиш", "5 daqiqadan ortiq vaqtga transportni to'xtatish", "Прекращение движения транспортного средства более чем на 5 минут"), 7, now),
+            GTerm(rulesId, T("Тўхташ", "To'xtash", "Остановка"), T("5 дақиқагача вақтга транспортни тўхтатиш", "5 daqiqagacha vaqtga transportni to'xtatish", "Прекращение движения транспортного средства на срок до 5 минут"), 8, now),
+        }};
+
+        // Category 3: Vehicles
+        var vehiclesId = Guid.NewGuid();
+        var vehicles = new GlossaryCategory { Id = vehiclesId, Slug = "vehicles", Name = T("Транспорт воситалари", "Transport vositalari", "Транспортные средства"), Icon = "Car", SortOrder = 3, CreatedAt = now, UpdatedAt = now, Terms = new List<GlossaryTerm>
+        {
+            GTerm(vehiclesId, T("Механик транспорт воситаси", "Mexanik transport vositasi", "Механическое транспортное средство"), T("Двигатель ёрдамида ҳаракатланадиган транспорт воситаси", "Dvigatel yordamida harakatlanadigan transport vositasi", "Транспортное средство, приводимое в движение двигателем"), 1, now),
+            GTerm(vehiclesId, T("Мотоцикл", "Mototsikl", "Мотоцикл"), T("Икки ғилдиракли механик транспорт воситаси", "Ikki g'ildirakli mexanik transport vositasi", "Двухколёсное механическое транспортное средство"), 2, now),
+            GTerm(vehiclesId, T("Велосипед", "Velosiped", "Велосипед"), T("Мускул кучи билан ҳаракатланадиган икки ғилдиракли транспорт", "Muskul kuchi bilan harakatlanadigan ikki g'ildirakli transport", "Двухколёсное транспортное средство, приводимое в движение мускульной силой"), 3, now),
+            GTerm(vehiclesId, T("Автобус", "Avtobus", "Автобус"), T("8 дан ортиқ йўловчи ўриндиқли транспорт воситаси", "8 dan ortiq yo'lovchi o'rindiqli transport vositasi", "Транспортное средство с количеством пассажирских мест более 8"), 4, now),
+            GTerm(vehiclesId, T("Юк автомобили", "Yuk avtomobili", "Грузовой автомобиль"), T("Юк ташиш учун мўлжалланган транспорт воситаси", "Yuk tashish uchun mo'ljallangan transport vositasi", "Транспортное средство, предназначенное для перевозки грузов"), 5, now),
+        }};
+
+        // Category 4: Road Types
+        var roadsId = Guid.NewGuid();
+        var roads = new GlossaryCategory { Id = roadsId, Slug = "road-types", Name = T("Йўл турлари", "Yo'l turlari", "Типы дорог"), Icon = "Route", SortOrder = 4, CreatedAt = now, UpdatedAt = now, Terms = new List<GlossaryTerm>
+        {
+            GTerm(roadsId, T("Автомагистрал", "Avtomagistral", "Автомагистраль"), T("Қарши йўналишдаги оқимлар ажратилган юқори тезликли йўл", "Qarshi yo'nalishdagi oqimlar ajratilgan yuqori tezlikli yo'l", "Скоростная дорога с разделёнными встречными потоками"), 1, now),
+            GTerm(roadsId, T("Аҳоли пункти", "Aholi punkti", "Населённый пункт"), T("Номи кўрсатилган белги билан белгиланган ҳудуд", "Nomi ko'rsatilgan belgi bilan belgilangan hudud", "Территория, обозначенная знаком с названием"), 2, now),
+            GTerm(roadsId, T("Пиёдалар ўтиш жойи", "Piyodalar o'tish joyi", "Пешеходный переход"), T("Пиёдаларнинг йўлни кесиб ўтиши учун ажратилган жой", "Piyodalarning yo'lni kesib o'tishi uchun ajratilgan joy", "Место, предназначенное для перехода пешеходов через дорогу"), 3, now),
+            GTerm(roadsId, T("Темир йўл кесишмаси", "Temir yo'l kesishmasi", "Железнодорожный переезд"), T("Автомобил йўли ва темир йўлнинг кесишган жойи", "Avtomobil yo'li va temir yo'lning kesishgan joyi", "Место пересечения автомобильной и железной дороги"), 4, now),
+        }};
+
+        // Category 5: Safety
+        var safetyId = Guid.NewGuid();
+        var safety = new GlossaryCategory { Id = safetyId, Slug = "safety", Name = T("Хавфсизлик", "Xavfsizlik", "Безопасность"), Icon = "ShieldCheck", SortOrder = 5, CreatedAt = now, UpdatedAt = now, Terms = new List<GlossaryTerm>
+        {
+            GTerm(safetyId, T("Хавфсизлик камари", "Xavfsizlik kamari", "Ремень безопасности"), T("Ҳайдовчи ва йўловчиларни ҳимоя қиладиган камар", "Haydovchi va yo'lovchilarni himoya qiladigan kamar", "Ремень, защищающий водителя и пассажиров при столкновении"), 1, now),
+            GTerm(safetyId, T("Ёритиш чироқлари", "Yoritish chiroqlari", "Световые приборы"), T("Транспорт воситасининг ташқи ёритиш ускуналари", "Transport vositasining tashqi yoritish uskunalari", "Внешние осветительные приборы транспортного средства"), 2, now),
+            GTerm(safetyId, T("Тормоз тизими", "Tormoz tizimi", "Тормозная система"), T("Транспортни секинлаштириш ва тўхтатиш учун ишлатиладиган тизим", "Transportni sekinlashtirish va to'xtatish uchun ishlatiladigan tizim", "Система для замедления и остановки транспортного средства"), 3, now),
+            GTerm(safetyId, T("Хавфли юк", "Xavfli yuk", "Опасный груз"), T("Портлаш, заҳарланиш ёки ёнғин хавфи бор юк", "Portlash, zaharlanish yoki yong'in xavfi bor yuk", "Груз, представляющий опасность взрыва, отравления или пожара"), 4, now),
+            GTerm(safetyId, T("Фалокат белгиси", "Falokat belgisi", "Аварийный знак"), T("Мажбурий тўхташда кўрсатиладиган учбурчак белги", "Majburiy to'xtashda ko'rsatiladigan uchburchak belgi", "Треугольный знак, выставляемый при вынужденной остановке"), 5, now),
+        }};
+
+        // Category 6: Medical Aid
+        var medicalId = Guid.NewGuid();
+        var medical = new GlossaryCategory { Id = medicalId, Slug = "medical-aid", Name = T("Тиббий ёрдам", "Tibbiy yordam", "Медицинская помощь"), Icon = "Heart", SortOrder = 6, CreatedAt = now, UpdatedAt = now, Terms = new List<GlossaryTerm>
+        {
+            GTerm(medicalId, T("Биринчи тиббий ёрдам", "Birinchi tibbiy yordam", "Первая медицинская помощь"), T("Шикастланган шахсга дастлабки тиббий ёрдам кўрсатиш", "Shikastlangan shaxsga dastlabki tibbiy yordam ko'rsatish", "Оказание первичной медицинской помощи пострадавшему"), 1, now),
+            GTerm(medicalId, T("Юрак-ўпка реанимацияси", "Yurak-o'pka reanimatsiyasi", "Сердечно-лёгочная реанимация"), T("Юрак уриши ва нафас олиш тўхтаганда бажариладиган жараён", "Yurak urishi va nafas olish to'xtaganda bajariladigan jarayon", "Процедура, выполняемая при остановке сердцебиения и дыхания"), 2, now),
+            GTerm(medicalId, T("Жгут", "Jgut", "Жгут"), T("Қон кетишни тўхтатиш учун маҳкамланадиган тасма", "Qon ketishni to'xtatish uchun mahkamlаnadigan tasma", "Лента для остановки кровотечения путём пережатия сосуда"), 3, now),
+            GTerm(medicalId, T("Шок", "Shok", "Шок"), T("Қон айланиш бузилиши натижасида юзага келадиган хавфли ҳолат", "Qon aylanishi buzilishi natijasida yuzaga keladigan xavfli holat", "Опасное состояние, вызванное нарушением кровообращения"), 4, now),
+        }};
+
+        db.GlossaryCategories.AddRange([signs, rules, vehicles, roads, safety, medical]);
+        logger.LogInformation("Seeded 6 glossary categories with terms");
+    }
+
+    // ── Phase 2 Content Helpers ──
+
+    private static TrafficFine Fine(string article, LocalizedText violation, long penaltyTiyins, long? maxPenaltyTiyins, int sort, DateTimeOffset now) =>
+        new()
+        {
+            Id = Guid.NewGuid(), ArticleNumber = article,
+            ViolationDescription = violation, PenaltyAmountTiyins = penaltyTiyins,
+            PenaltyMaxTiyins = maxPenaltyTiyins, SortOrder = sort, IsActive = true,
+            CreatedAt = now, UpdatedAt = now
+        };
+
+    private static HazardLabel Hazard(string slug, string hazardClass, LocalizedText name, LocalizedText description, int sort, DateTimeOffset now) =>
+        new()
+        {
+            Id = Guid.NewGuid(), Slug = slug, HazardClass = hazardClass,
+            Name = name, Description = description, ImageUrl = string.Empty,
+            SortOrder = sort, CreatedAt = now, UpdatedAt = now
+        };
+
+    private static (LocalizedText Title, LocalizedText Description, int Order) Step(LocalizedText title, LocalizedText description, int order) =>
+        (title, description, order);
+
+    private static FirstAidProcedure MakeProcedure(string slug, LocalizedText name, LocalizedText summary, int sort, DateTimeOffset now,
+        (LocalizedText Title, LocalizedText Description, int Order)[] steps)
+    {
+        var procId = Guid.NewGuid();
+        return new FirstAidProcedure
+        {
+            Id = procId, Slug = slug, Name = name, Summary = summary,
+            IconUrl = string.Empty, SortOrder = sort,
+            CreatedAt = now, UpdatedAt = now,
+            Steps = steps.Select(s => new FirstAidStep
+            {
+                Id = Guid.NewGuid(), FirstAidProcedureId = procId,
+                Title = s.Title, Description = s.Description,
+                StepOrder = s.Order, CreatedAt = now, UpdatedAt = now
+            }).ToList()
+        };
+    }
+
+    private static GlossaryTerm GTerm(Guid categoryId, LocalizedText term, LocalizedText definition, int sort, DateTimeOffset now) =>
+        new()
+        {
+            Id = Guid.NewGuid(), GlossaryCategoryId = categoryId,
+            Term = term, Definition = definition,
+            SortOrder = sort, RelatedQuestionIds = [],
+            CreatedAt = now, UpdatedAt = now
+        };
 
     // ── Helpers ──
 
