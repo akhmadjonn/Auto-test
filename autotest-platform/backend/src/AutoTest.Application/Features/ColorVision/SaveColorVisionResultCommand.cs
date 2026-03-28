@@ -2,6 +2,7 @@ using AutoTest.Application.Common.Interfaces;
 using AutoTest.Application.Common.Models;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace AutoTest.Application.Features.ColorVision;
 
@@ -27,19 +28,24 @@ public class SaveColorVisionResultCommandValidator : AbstractValidator<SaveColor
 }
 
 public class SaveColorVisionResultCommandHandler(
+    IApplicationDbContext db,
     ICurrentUser currentUser,
     ICacheService cache,
     IDateTimeProvider dateTime) : IRequestHandler<SaveColorVisionResultCommand, ApiResponse<ColorVisionResultDto>>
 {
     private const int PassingThreshold = 10;
-    private const int TotalPlates = 12;
 
     public async Task<ApiResponse<ColorVisionResultDto>> Handle(SaveColorVisionResultCommand request, CancellationToken ct)
     {
         if (currentUser.UserId is null)
             return ApiResponse<ColorVisionResultDto>.Fail("UNAUTHORIZED", "Not authenticated.");
 
-        var plateMap = ColorVisionPlates.All.ToDictionary(p => p.PlateId);
+        var activePlates = await db.ColorVisionPlates
+            .AsNoTracking()
+            .Where(p => p.IsActive)
+            .ToListAsync(ct);
+
+        var plateMap = activePlates.ToDictionary(p => $"plate-{p.PlateNumber:D2}");
         var score = 0;
 
         foreach (var answer in request.Answers)
@@ -53,11 +59,12 @@ public class SaveColorVisionResultCommandHandler(
                 score++;
         }
 
+        var total = activePlates.Count;
         var passed = score >= PassingThreshold;
-        var result = new ColorVisionResultDto(passed, score, TotalPlates);
+        var result = new ColorVisionResultDto(passed, score, total);
 
         var cacheKey = $"avtolider:color-vision:result:{currentUser.UserId}";
-        var cacheValue = new ColorVisionCacheEntry(passed, score, TotalPlates, dateTime.UtcNow);
+        var cacheValue = new ColorVisionCacheEntry(passed, score, total, dateTime.UtcNow);
         await cache.SetAsync(cacheKey, cacheValue, TimeSpan.FromDays(30), ct);
 
         return ApiResponse<ColorVisionResultDto>.Ok(result);

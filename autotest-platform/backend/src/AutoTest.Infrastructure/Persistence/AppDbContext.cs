@@ -40,6 +40,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<FirstAidStep> FirstAidSteps => Set<FirstAidStep>();
     public DbSet<GlossaryCategory> GlossaryCategories => Set<GlossaryCategory>();
     public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
+    public DbSet<ColorVisionPlate> ColorVisionPlates => Set<ColorVisionPlate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

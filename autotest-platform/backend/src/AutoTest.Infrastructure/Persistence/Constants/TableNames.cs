@@ -36,4 +36,5 @@ public static class TableNames
     public const string FirstAidSteps = nameof(FirstAidSteps);
     public const string GlossaryCategories = nameof(GlossaryCategories);
     public const string GlossaryTerms = nameof(GlossaryTerms);
+    public const string ColorVisionPlates = nameof(ColorVisionPlates);
 }
