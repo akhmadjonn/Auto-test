@@ -32,6 +32,7 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
         await SeedHazardLabelsAsync(ct);
         await SeedFirstAidProceduresAsync(ct);
         await SeedGlossaryCategoriesAndTermsAsync(ct);
+        await SeedColorVisionPlatesAsync(ct);
 
         await db.SaveChangesAsync(ct);
 
@@ -913,7 +914,41 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
         logger.LogInformation("Seeded 6 glossary categories with terms");
     }
 
+    private async Task SeedColorVisionPlatesAsync(CancellationToken ct)
+    {
+        if (await db.ColorVisionPlates.AnyAsync(ct))
+            return;
+
+        var now = DateTimeOffset.UtcNow;
+        var plates = new List<ColorVisionPlate>
+        {
+            CVPlate(1, "color-vision/plate-01.webp", "12", null, 1, now),
+            CVPlate(2, "color-vision/plate-02.webp", "8", null, 2, now),
+            CVPlate(3, "color-vision/plate-03.webp", "29", null, 3, now),
+            CVPlate(4, "color-vision/plate-04.webp", "5", null, 4, now),
+            CVPlate(5, "color-vision/plate-05.webp", "3", null, 5, now),
+            CVPlate(6, "color-vision/plate-06.webp", "15", null, 6, now),
+            CVPlate(7, "color-vision/plate-07.webp", "74", null, 7, now),
+            CVPlate(8, "color-vision/plate-08.webp", "6", null, 8, now),
+            CVPlate(9, "color-vision/plate-09.webp", "45", null, 9, now),
+            CVPlate(10, "color-vision/plate-10.webp", "5", null, 10, now),
+            CVPlate(11, "color-vision/plate-11.webp", "7", null, 11, now),
+            CVPlate(12, "color-vision/plate-12.webp", "16", null, 12, now),
+        };
+
+        db.ColorVisionPlates.AddRange(plates);
+        logger.LogInformation("Seeded {Count} color vision plates", plates.Count);
+    }
+
     // ── Phase 2 Content Helpers ──
+
+    private static ColorVisionPlate CVPlate(int plateNumber, string imageUrl, string expectedAnswer, string? alternateAnswer, int sortOrder, DateTimeOffset now) =>
+        new()
+        {
+            Id = Guid.NewGuid(), PlateNumber = plateNumber, ImageUrl = imageUrl,
+            ExpectedAnswer = expectedAnswer, AlternateAnswer = alternateAnswer,
+            IsActive = true, SortOrder = sortOrder, CreatedAt = now, UpdatedAt = now
+        };
 
     private static TrafficFine Fine(string article, LocalizedText violation, long penaltyTiyins, long? maxPenaltyTiyins, int sort, DateTimeOffset now) =>
         new()

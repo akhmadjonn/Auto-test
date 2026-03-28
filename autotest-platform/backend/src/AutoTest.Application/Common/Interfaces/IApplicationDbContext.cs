@@ -38,6 +38,7 @@ public interface IApplicationDbContext
     DbSet<FirstAidStep> FirstAidSteps { get; }
     DbSet<GlossaryCategory> GlossaryCategories { get; }
     DbSet<GlossaryTerm> GlossaryTerms { get; }
+    DbSet<ColorVisionPlate> ColorVisionPlates { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
