@@ -22,6 +22,7 @@ public record UserDashboardDto(
 
 public record RecentExamDto(
     Guid ExamId,
+    string Mode,
     int Score,
     bool Passed,
     DateTimeOffset CompletedAt);
@@ -96,18 +97,40 @@ public class GetUserDashboardQueryHandler(
             .Distinct()
             .ToListAsync(ct);
 
-        // Recent 10 exams — project directly, no Include
-        var recentExams = await db.ExamSessions
+        // Recent 10 exams — all modes, project directly
+        var recentRaw = await db.ExamSessions
             .AsNoTracking()
-            .Where(s => s.UserId == userId && s.Status == ExamStatus.Completed && s.Mode == ExamMode.Exam)
+            .Where(s => s.UserId == userId && s.Status == ExamStatus.Completed && s.CompletedAt.HasValue)
             .OrderByDescending(s => s.CompletedAt)
             .Take(10)
-            .Select(s => new RecentExamDto(
+            .Select(s => new
+            {
                 s.Id,
-                s.Score ?? 0,
-                (s.Score ?? 0) >= s.ExamTemplate!.PassingScore,
-                s.CompletedAt ?? s.UpdatedAt ?? now))
+                s.Mode,
+                s.Score,
+                PassingScore = s.ExamTemplate != null ? s.ExamTemplate.PassingScore : 80,
+                s.CompletedAt,
+                s.UpdatedAt
+            })
             .ToListAsync(ct);
+
+        var recentExams = recentRaw.Select(s =>
+        {
+            var mode = s.Mode switch
+            {
+                ExamMode.Exam => "exam",
+                ExamMode.Ticket => "ticket",
+                ExamMode.Marathon => "marathon",
+                ExamMode.SpeedChallenge => "speedChallenge",
+                _ => "exam"
+            };
+            return new RecentExamDto(
+                s.Id,
+                mode,
+                s.Score ?? 0,
+                (s.Score ?? 0) >= s.PassingScore,
+                s.CompletedAt ?? s.UpdatedAt ?? now);
+        }).ToList();
 
         // Query 3: Daily accuracy — GroupBy in SQL
         var dailyAccuracy = await db.SessionQuestions

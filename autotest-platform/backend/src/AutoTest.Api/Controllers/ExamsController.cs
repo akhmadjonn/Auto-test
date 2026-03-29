@@ -85,9 +85,9 @@ public class ExamsController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet("history")]
-    public async Task<IActionResult> GetHistory([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    public async Task<IActionResult> GetHistory([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? mode = null, CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetExamHistoryQuery(page, pageSize), ct);
+        var result = await mediator.Send(new GetExamHistoryQuery(page, pageSize, mode), ct);
         return Ok(result);
     }
 }
