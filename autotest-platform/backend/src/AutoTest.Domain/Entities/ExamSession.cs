@@ -12,6 +12,7 @@ public class ExamSession : BaseAuditableEntity
     public int? CorrectAnswers { get; set; }
     public int? TimeTakenSeconds { get; set; }
     public DateTimeOffset? ExpiresAt { get; set; }
+    public int? TimeLimitPerQuestionSeconds { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
     public LicenseCategory LicenseCategory { get; set; }
     public int? TicketNumber { get; set; }

@@ -17,11 +17,13 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
         await SeedSystemSettingsAsync(ct);
         await SeedSubscriptionPlansAsync(ct);
         await SeedExamTemplateAsync(ct);
+        await SeedSpeedChallengeTemplateAsync(ct);
 
         // Persist categories + template so pool rules and questions can query them
         await db.SaveChangesAsync(ct);
 
         await SeedExamPoolRulesAsync(ct);
+        await SeedSpeedChallengePoolRulesAsync(ct);
         await SeedQuestionsAsync(ct);
         await SeedAdminUserAsync(ct);
 
@@ -202,6 +204,45 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
         if (anyCategory is null)
         {
             logger.LogWarning("Category 'uncategorized' not found, skipping pool rules");
+            return;
+        }
+
+        db.ExamPoolRules.Add(MakePoolRule(template.Id, anyCategory.Id, null, 20, now));
+    }
+
+    private async Task SeedSpeedChallengeTemplateAsync(CancellationToken ct)
+    {
+        if (await db.ExamTemplates.AnyAsync(t => t.TimeLimitPerQuestionSeconds.HasValue, ct))
+            return;
+
+        db.ExamTemplates.Add(new ExamTemplate
+        {
+            Id = Guid.NewGuid(),
+            Title = new LocalizedText("Tezlik sinovi", "Tezlik sinovi", "Скоростной тест"),
+            TotalQuestions = 20,
+            PassingScore = 90,
+            TimeLimitMinutes = 5,
+            TimeLimitPerQuestionSeconds = 15,
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+    }
+
+    private async Task SeedSpeedChallengePoolRulesAsync(CancellationToken ct)
+    {
+        var template = await db.ExamTemplates
+            .Include(t => t.PoolRules)
+            .FirstOrDefaultAsync(t => t.TimeLimitPerQuestionSeconds.HasValue && t.IsActive, ct);
+
+        if (template is null || template.PoolRules.Count > 0)
+            return;
+
+        var now = DateTimeOffset.UtcNow;
+        var anyCategory = await db.Categories.FirstOrDefaultAsync(c => c.Slug == "uncategorized", ct);
+        if (anyCategory is null)
+        {
+            logger.LogWarning("Category 'uncategorized' not found, skipping speed challenge pool rules");
             return;
         }
 

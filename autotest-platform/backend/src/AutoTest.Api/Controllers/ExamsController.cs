@@ -34,6 +34,13 @@ public class ExamsController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPost("start-speed-challenge")]
+    public async Task<IActionResult> StartSpeedChallenge([FromBody] StartSpeedChallengeCommand command, CancellationToken ct)
+    {
+        var result = await mediator.Send(command, ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("{sessionId}/answer")]
     public async Task<IActionResult> SubmitAnswer(Guid sessionId, [FromBody] SubmitAnswerRequest req, CancellationToken ct)
     {

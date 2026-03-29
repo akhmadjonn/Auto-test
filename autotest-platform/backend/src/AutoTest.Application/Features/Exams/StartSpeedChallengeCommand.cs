@@ -1,102 +1,69 @@
 using AutoTest.Application.Common.Interfaces;
 using AutoTest.Application.Common.Models;
 using AutoTest.Domain.Common.Enums;
-using AutoTest.Domain.Common.ValueObjects;
 using AutoTest.Domain.Entities;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace AutoTest.Application.Features.Exams;
 
-public record StartExamCommand(
-    Guid? ExamTemplateId,
+public record StartSpeedChallengeCommand(
     LicenseCategory LicenseCategory,
     Language Language = Language.UzLatin) : IRequest<ApiResponse<ExamSessionDto>>;
 
-public record ExamSessionDto(
-    Guid Id,
-    string Status,
-    int TotalQuestions,
-    int PassingScore,
-    int TimeLimitMinutes,
-    DateTimeOffset? ExpiresAt,
-    string Mode,
-    int? TicketNumber,
-    List<ExamQuestionDto> Questions)
+public class StartSpeedChallengeCommandValidator : AbstractValidator<StartSpeedChallengeCommand>
 {
-    public int? TimeLimitPerQuestionSeconds { get; init; }
+    public StartSpeedChallengeCommandValidator()
+    {
+        RuleFor(x => x.LicenseCategory).IsInEnum();
+    }
 }
 
-public record ExamQuestionDto(
-    Guid Id,
-    Guid QuestionId,
-    int Order,
-    LocalizedText Text,
-    string? ImageUrl,
-    List<ExamAnswerOptionDto> AnswerOptions,
-    Guid? SelectedAnswerId = null);
-
-public record ExamAnswerOptionDto(Guid Id, LocalizedText Text, string? ImageUrl);
-
-public class StartExamCommandHandler(
+public class StartSpeedChallengeCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     IFileStorageService storage,
-    ICacheService cache,
     IDistributedLockService lockService,
     IDateTimeProvider dateTime,
-    ILogger<StartExamCommandHandler> logger) : IRequestHandler<StartExamCommand, ApiResponse<ExamSessionDto>>
+    ILogger<StartSpeedChallengeCommandHandler> logger) : IRequestHandler<StartSpeedChallengeCommand, ApiResponse<ExamSessionDto>>
 {
-    public async Task<ApiResponse<ExamSessionDto>> Handle(StartExamCommand request, CancellationToken ct)
+    public async Task<ApiResponse<ExamSessionDto>> Handle(StartSpeedChallengeCommand request, CancellationToken ct)
     {
         if (currentUser.UserId is null)
             return ApiResponse<ExamSessionDto>.Fail("UNAUTHORIZED", "Not authenticated.");
 
         var userId = currentUser.UserId.Value;
 
-        // Distributed lock prevents concurrent exam starts for the same user
         await using var lockHandle = await lockService.TryAcquireAsync(
             $"avtolider:lock:exam:{userId}", TimeSpan.FromSeconds(10), ct);
         if (lockHandle is null)
             return ApiResponse<ExamSessionDto>.Fail("CONCURRENT_REQUEST", "Another exam start is in progress.");
 
-        // Check free daily limit vs subscription
+        // Speed challenge requires premium
         var now = dateTime.UtcNow;
         var hasSubscription = await db.Subscriptions
             .AnyAsync(s => s.UserId == userId && s.Status == SubscriptionStatus.Active && s.ExpiresAt > now, ct);
 
-        // Prevent multiple concurrent active sessions (max_active_sessions = 1)
+        if (!hasSubscription)
+            return ApiResponse<ExamSessionDto>.Fail("PREMIUM_REQUIRED", "Speed Challenge requires a premium subscription.");
+
+        // Prevent concurrent active sessions
         var hasActiveSession = await db.ExamSessions
             .AnyAsync(s => s.UserId == userId && s.Status == ExamStatus.InProgress, ct);
         if (hasActiveSession)
             return ApiResponse<ExamSessionDto>.Fail("ACTIVE_SESSION_EXISTS",
                 "You already have an active exam session. Complete or abandon it first.");
 
-        if (!hasSubscription)
-        {
-            var limitSetting = await cache.GetAsync<string>("avtolider:settings:free_daily_exam_limit", ct);
-            var limit = int.TryParse(limitSetting, out var l) ? l : 3;
-
-            var today = new DateTimeOffset(now.Date, TimeSpan.Zero);
-            var todayExams = await db.ExamSessions
-                .CountAsync(s => s.UserId == userId
-                    && s.Mode == ExamMode.Exam
-                    && s.CreatedAt >= today, ct);
-
-            if (todayExams >= limit)
-                return ApiResponse<ExamSessionDto>.Fail("DAILY_LIMIT_REACHED",
-                    $"Free daily exam limit ({limit}) reached. Subscribe to continue.");
-        }
-
-        // Load template + pool rules
-        var templateQuery = db.ExamTemplates.Include(t => t.PoolRules).Where(t => t.IsActive);
-        var template = request.ExamTemplateId is { } tid && tid != Guid.Empty
-            ? await templateQuery.FirstOrDefaultAsync(t => t.Id == tid, ct)
-            : await templateQuery.FirstOrDefaultAsync(ct);
+        // Find speed challenge template (one with TimeLimitPerQuestionSeconds set)
+        var template = await db.ExamTemplates
+            .Include(t => t.PoolRules)
+            .Where(t => t.IsActive && t.TimeLimitPerQuestionSeconds.HasValue)
+            .FirstOrDefaultAsync(ct);
 
         if (template is null)
-            return ApiResponse<ExamSessionDto>.Fail("TEMPLATE_NOT_FOUND", "Exam template not found.");
+            return ApiResponse<ExamSessionDto>.Fail("TEMPLATE_NOT_FOUND", "Speed challenge template not found.");
 
         // Select random questions per pool rules
         List<Question> selectedQuestions = [];
@@ -123,21 +90,24 @@ public class StartExamCommandHandler(
         }
 
         if (selectedQuestions.Count == 0)
-            return ApiResponse<ExamSessionDto>.Fail("NO_QUESTIONS", "No questions available for this exam.");
+            return ApiResponse<ExamSessionDto>.Fail("NO_QUESTIONS", "No questions available for speed challenge.");
 
-        // Shuffle questions
         var shuffled = selectedQuestions.OrderBy(_ => Random.Shared.Next()).ToList();
 
-        var expiresAt = now.AddMinutes(template.TimeLimitMinutes);
+        var perQuestionSeconds = template.TimeLimitPerQuestionSeconds!.Value;
+        var totalSeconds = shuffled.Count * perQuestionSeconds;
+        var expiresAt = now.AddSeconds(totalSeconds);
+
         var session = new ExamSession
         {
             Id = Guid.NewGuid(),
             UserId = userId,
             ExamTemplateId = template.Id,
             Status = ExamStatus.InProgress,
-            Mode = ExamMode.Exam,
+            Mode = ExamMode.SpeedChallenge,
             LicenseCategory = request.LicenseCategory,
             ExpiresAt = expiresAt,
+            TimeLimitPerQuestionSeconds = perQuestionSeconds,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -156,7 +126,7 @@ public class StartExamCommandHandler(
         db.ExamSessions.Add(session);
         await db.SaveChangesAsync(ct);
 
-        // Batch presigned URL generation — single parallel call instead of N+1
+        // Batch presigned URLs
         var allImageKeys = new List<string>();
         foreach (var q in shuffled)
         {
@@ -167,7 +137,6 @@ public class StartExamCommandHandler(
 
         var urlMap = await storage.GetPresignedUrlsBatchAsync(allImageKeys, ct);
 
-        // Build response WITHOUT correct answers
         var questionDtos = shuffled.Select((q, idx) =>
         {
             var imgUrl = q.ImageUrl is not null ? urlMap.GetValueOrDefault(q.ImageUrl) : null;
@@ -187,7 +156,9 @@ public class StartExamCommandHandler(
                 optDtos);
         }).ToList();
 
-        logger.LogInformation("Exam started: session {SessionId} for user {UserId}", session.Id, userId);
+        logger.LogInformation("Speed challenge started: session {SessionId} for user {UserId}, {Count} questions, {Seconds}s/question",
+            session.Id, userId, shuffled.Count, perQuestionSeconds);
+
         return ApiResponse<ExamSessionDto>.Ok(new ExamSessionDto(
             session.Id,
             "inProgress",
@@ -195,8 +166,11 @@ public class StartExamCommandHandler(
             template.PassingScore,
             template.TimeLimitMinutes,
             expiresAt,
-            "exam",
+            "speedChallenge",
             null,
-            questionDtos));
+            questionDtos)
+        {
+            TimeLimitPerQuestionSeconds = perQuestionSeconds
+        });
     }
 }

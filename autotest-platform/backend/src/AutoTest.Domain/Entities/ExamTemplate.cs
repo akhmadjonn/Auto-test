@@ -8,6 +8,7 @@ public class ExamTemplate : BaseAuditableEntity
     public int TotalQuestions { get; set; }
     public int PassingScore { get; set; }
     public int TimeLimitMinutes { get; set; }
+    public int? TimeLimitPerQuestionSeconds { get; set; }
     public bool IsActive { get; set; }
 
     public ICollection<ExamPoolRule> PoolRules { get; set; } = [];

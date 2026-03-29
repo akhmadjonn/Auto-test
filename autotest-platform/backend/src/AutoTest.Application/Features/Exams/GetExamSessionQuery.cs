@@ -36,6 +36,7 @@ public class GetExamSessionQueryHandler(
             ExamMode.Exam => "exam",
             ExamMode.Ticket => "ticket",
             ExamMode.Marathon => "marathon",
+            ExamMode.SpeedChallenge => "speedChallenge",
             _ => "exam"
         };
 
@@ -81,6 +82,9 @@ public class GetExamSessionQueryHandler(
             session.ExpiresAt,
             mode,
             session.TicketNumber,
-            questionDtos));
+            questionDtos)
+        {
+            TimeLimitPerQuestionSeconds = session.TimeLimitPerQuestionSeconds
+        });
     }
 }
