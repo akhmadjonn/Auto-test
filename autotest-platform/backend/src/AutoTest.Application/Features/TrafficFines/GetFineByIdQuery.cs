@@ -39,8 +39,8 @@ public class GetFineByIdQueryHandler(
             fine.SortOrder,
             fine.IsActive);
 
-        await cache.SetAsync(cacheKey, dto, TimeSpan.FromHours(1), ct);
-        logger.LogDebug("Fine {FineId} loaded from DB, cached for 1h", request.Id);
+        await cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(50), ct);
+        logger.LogDebug("Fine {FineId} loaded from DB, cached for 50min", request.Id);
 
         return ApiResponse<FineDto>.Ok(dto);
     }

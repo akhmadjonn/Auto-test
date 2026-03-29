@@ -70,8 +70,8 @@ public class GetFirstAidProcedureQueryHandler(
             procedure.SortOrder,
             steps);
 
-        await cache.SetAsync(cacheKey, dto, TimeSpan.FromHours(24), ct);
-        logger.LogDebug("First aid procedure {Slug} loaded from DB, cached for 24h", request.Slug);
+        await cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(50), ct);
+        logger.LogDebug("First aid procedure {Slug} loaded from DB, cached for 50min", request.Slug);
 
         return ApiResponse<FirstAidProcedureDto>.Ok(dto);
     }

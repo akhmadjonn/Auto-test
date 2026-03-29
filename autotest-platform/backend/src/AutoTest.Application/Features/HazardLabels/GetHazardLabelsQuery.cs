@@ -53,8 +53,8 @@ public class GetHazardLabelsQueryHandler(
                 label.SortOrder));
         }
 
-        await cache.SetAsync(cacheKey, dtos, TimeSpan.FromHours(24), ct);
-        logger.LogDebug("Hazard labels loaded from DB, cached for 24h");
+        await cache.SetAsync(cacheKey, dtos, TimeSpan.FromMinutes(50), ct);
+        logger.LogDebug("Hazard labels loaded from DB, cached for 50min");
 
         return ApiResponse<List<HazardLabelDto>>.Ok(dtos);
     }

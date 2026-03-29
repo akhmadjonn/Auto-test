@@ -35,7 +35,7 @@ public class GetColorVisionPlatesQueryHandler(
             dtos.Add(new ColorVisionPlateDto($"plate-{plate.PlateNumber:D2}", url));
         }
 
-        await cache.SetAsync(CacheKey, dtos, TimeSpan.FromHours(1), ct);
+        await cache.SetAsync(CacheKey, dtos, TimeSpan.FromMinutes(50), ct);
 
         return ApiResponse<List<ColorVisionPlateDto>>.Ok(dtos);
     }
