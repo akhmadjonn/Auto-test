@@ -37,8 +37,8 @@ public class GetHazardLabelByIdQueryHandler(
             label.HazardClass,
             label.SortOrder);
 
-        await cache.SetAsync(cacheKey, dto, TimeSpan.FromHours(24), ct);
-        logger.LogDebug("Hazard label {Id} loaded from DB, cached for 24h", request.Id);
+        await cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(50), ct);
+        logger.LogDebug("Hazard label {Id} loaded from DB, cached for 50min", request.Id);
 
         return ApiResponse<HazardLabelDto>.Ok(dto);
     }

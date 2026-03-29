@@ -89,8 +89,8 @@ public class GetFinesQueryHandler(
 
         var final = new PaginatedList<FineDto>(items, totalCount, request.Page, request.PageSize);
 
-        await cache.SetAsync(cacheKey, final, TimeSpan.FromHours(1), ct);
-        logger.LogDebug("Fines list loaded from DB, cached for 1h");
+        await cache.SetAsync(cacheKey, final, TimeSpan.FromMinutes(50), ct);
+        logger.LogDebug("Fines list loaded from DB, cached for 50min");
 
         return ApiResponse<PaginatedList<FineDto>>.Ok(final);
     }

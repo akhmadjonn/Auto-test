@@ -39,6 +39,7 @@ public class GetActiveExamQueryHandler(
             ExamMode.Exam => "exam",
             ExamMode.Ticket => "ticket",
             ExamMode.Marathon => "marathon",
+            ExamMode.SpeedChallenge => "speedChallenge",
             _ => "exam"
         };
 

@@ -13,8 +13,8 @@ namespace AutoTest.Application.Features.Admin;
 // DTOs
 public record ExamTemplateDto(
     Guid Id, string TitleUz, string TitleUzLatin, string TitleRu,
-    int TotalQuestions, int PassingScore, int TimeLimitMinutes, bool IsActive,
-    List<PoolRuleDto> PoolRules);
+    int TotalQuestions, int PassingScore, int TimeLimitMinutes, int? TimeLimitPerQuestionSeconds,
+    bool IsActive, List<PoolRuleDto> PoolRules);
 
 public record PoolRuleDto(Guid Id, Guid CategoryId, string? CategoryName, Difficulty? Difficulty, int QuestionCount);
 
@@ -35,7 +35,7 @@ public class GetExamTemplatesQueryHandler(
 
         var dtos = templates.Select(t => new ExamTemplateDto(
             t.Id, t.Title.Uz, t.Title.UzLatin, t.Title.Ru,
-            t.TotalQuestions, t.PassingScore, t.TimeLimitMinutes, t.IsActive,
+            t.TotalQuestions, t.PassingScore, t.TimeLimitMinutes, t.TimeLimitPerQuestionSeconds, t.IsActive,
             t.PoolRules.Select(r => new PoolRuleDto(
                 r.Id, r.CategoryId, r.Category.Name.UzLatin, r.Difficulty, r.QuestionCount)).ToList()
         )).ToList();
@@ -47,8 +47,8 @@ public class GetExamTemplatesQueryHandler(
 // CREATE template
 public record CreateExamTemplateCommand(
     string TitleUz, string TitleUzLatin, string TitleRu,
-    int TotalQuestions, int PassingScore, int TimeLimitMinutes, bool IsActive,
-    List<CreatePoolRuleDto> PoolRules) : IRequest<ApiResponse<ExamTemplateDto>>;
+    int TotalQuestions, int PassingScore, int TimeLimitMinutes, int? TimeLimitPerQuestionSeconds,
+    bool IsActive, List<CreatePoolRuleDto> PoolRules) : IRequest<ApiResponse<ExamTemplateDto>>;
 
 public record CreatePoolRuleDto(Guid CategoryId, Difficulty? Difficulty, int QuestionCount);
 
@@ -62,6 +62,8 @@ public class CreateExamTemplateCommandValidator : AbstractValidator<CreateExamTe
         RuleFor(x => x.TotalQuestions).GreaterThan(0);
         RuleFor(x => x.PassingScore).InclusiveBetween(1, 100);
         RuleFor(x => x.TimeLimitMinutes).GreaterThan(0);
+        RuleFor(x => x.TimeLimitPerQuestionSeconds)
+            .GreaterThan(0).When(x => x.TimeLimitPerQuestionSeconds.HasValue);
         RuleFor(x => x.PoolRules).NotEmpty();
         RuleForEach(x => x.PoolRules).ChildRules(r =>
         {
@@ -89,6 +91,7 @@ public class CreateExamTemplateCommandHandler(
             TotalQuestions = request.TotalQuestions,
             PassingScore = request.PassingScore,
             TimeLimitMinutes = request.TimeLimitMinutes,
+            TimeLimitPerQuestionSeconds = request.TimeLimitPerQuestionSeconds,
             IsActive = request.IsActive,
             CreatedAt = now,
             UpdatedAt = now
@@ -113,7 +116,8 @@ public class CreateExamTemplateCommandHandler(
 
         return ApiResponse<ExamTemplateDto>.Ok(new ExamTemplateDto(
             template.Id, request.TitleUz, request.TitleUzLatin, request.TitleRu,
-            template.TotalQuestions, template.PassingScore, template.TimeLimitMinutes, template.IsActive,
+            template.TotalQuestions, template.PassingScore, template.TimeLimitMinutes, template.TimeLimitPerQuestionSeconds,
+            template.IsActive,
             rules.Select(r => new PoolRuleDto(r.Id, r.CategoryId, null, r.Difficulty, r.QuestionCount)).ToList()));
     }
 }
@@ -122,8 +126,8 @@ public class CreateExamTemplateCommandHandler(
 public record UpdateExamTemplateCommand(
     Guid Id,
     string TitleUz, string TitleUzLatin, string TitleRu,
-    int TotalQuestions, int PassingScore, int TimeLimitMinutes, bool IsActive,
-    List<CreatePoolRuleDto> PoolRules) : IRequest<ApiResponse>;
+    int TotalQuestions, int PassingScore, int TimeLimitMinutes, int? TimeLimitPerQuestionSeconds,
+    bool IsActive, List<CreatePoolRuleDto> PoolRules) : IRequest<ApiResponse>;
 
 public class UpdateExamTemplateCommandValidator : AbstractValidator<UpdateExamTemplateCommand>
 {
@@ -134,6 +138,8 @@ public class UpdateExamTemplateCommandValidator : AbstractValidator<UpdateExamTe
         RuleFor(x => x.TotalQuestions).GreaterThan(0);
         RuleFor(x => x.PassingScore).InclusiveBetween(1, 100);
         RuleFor(x => x.TimeLimitMinutes).GreaterThan(0);
+        RuleFor(x => x.TimeLimitPerQuestionSeconds)
+            .GreaterThan(0).When(x => x.TimeLimitPerQuestionSeconds.HasValue);
         RuleFor(x => x.PoolRules).NotEmpty();
         RuleFor(x => x).Must(x => x.PoolRules.Sum(r => r.QuestionCount) == x.TotalQuestions)
             .WithMessage("Pool rules question count sum must equal TotalQuestions.");
@@ -159,6 +165,7 @@ public class UpdateExamTemplateCommandHandler(
         template.TotalQuestions = request.TotalQuestions;
         template.PassingScore = request.PassingScore;
         template.TimeLimitMinutes = request.TimeLimitMinutes;
+        template.TimeLimitPerQuestionSeconds = request.TimeLimitPerQuestionSeconds;
         template.IsActive = request.IsActive;
         template.UpdatedAt = now;
 
