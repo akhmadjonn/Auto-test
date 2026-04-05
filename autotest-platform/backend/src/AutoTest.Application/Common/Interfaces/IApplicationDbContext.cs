@@ -40,5 +40,9 @@ public interface IApplicationDbContext
     DbSet<GlossaryTerm> GlossaryTerms { get; }
     DbSet<ColorVisionPlate> ColorVisionPlates { get; }
 
+    // Animated test
+    DbSet<AnimatedTestSession> AnimatedTestSessions { get; }
+    DbSet<AnimatedTestAnswer> AnimatedTestAnswers { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
