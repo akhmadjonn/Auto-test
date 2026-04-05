@@ -37,4 +37,8 @@ public static class TableNames
     public const string GlossaryCategories = nameof(GlossaryCategories);
     public const string GlossaryTerms = nameof(GlossaryTerms);
     public const string ColorVisionPlates = nameof(ColorVisionPlates);
+
+    // Animated test
+    public const string AnimatedTestSessions = nameof(AnimatedTestSessions);
+    public const string AnimatedTestAnswers = nameof(AnimatedTestAnswers);
 }

@@ -42,6 +42,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
     public DbSet<ColorVisionPlate> ColorVisionPlates => Set<ColorVisionPlate>();
 
+    // Animated test
+    public DbSet<AnimatedTestSession> AnimatedTestSessions => Set<AnimatedTestSession>();
+    public DbSet<AnimatedTestAnswer> AnimatedTestAnswers => Set<AnimatedTestAnswer>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("autotest");
