@@ -13,7 +13,8 @@ namespace AutoTest.Application.Features.Practice;
 public record SubmitPracticeAnswerCommand(
     Guid QuestionId,
     Guid SelectedAnswerId,
-    int? TimeSpentSeconds = null) : IRequest<ApiResponse<PracticeAnswerFeedbackDto>>;
+    int? TimeSpentSeconds = null,
+    bool ReviewMode = false) : IRequest<ApiResponse<PracticeAnswerFeedbackDto>>;
 
 public record PracticeAnswerFeedbackDto(
     bool IsCorrect,
@@ -70,7 +71,8 @@ public class SubmitPracticeAnswerCommandHandler(
         var state = await db.UserQuestionStates
             .FirstOrDefaultAsync(s => s.UserId == userId && s.QuestionId == request.QuestionId, ct);
 
-        if (state is null)
+        var isNewState = state is null;
+        if (isNewState)
         {
             state = new UserQuestionState
             {
@@ -97,9 +99,21 @@ public class SubmitPracticeAnswerCommandHandler(
         }
         else
         {
-            // Reset to Box1 on incorrect
             state.LeitnerBox = LeitnerBox.Box1;
-            state.NextReviewDate = now.AddDays(LeitnerIntervals[0]);
+            if (request.ReviewMode)
+            {
+                // Existing due question: keep old NextReviewDate so it stays at the FRONT of the
+                // review queue (old timestamp = highest priority) and remains in the due pool.
+                // New question (padding): set to now so it enters the due pool immediately.
+                if (isNewState)
+                    state.NextReviewDate = now;
+                // else: NextReviewDate unchanged — already <= now, stays due and near front of queue
+            }
+            else
+            {
+                // Regular practice: schedule for tomorrow
+                state.NextReviewDate = now.AddDays(LeitnerIntervals[0]);
+            }
         }
 
         // Update global question statistics
