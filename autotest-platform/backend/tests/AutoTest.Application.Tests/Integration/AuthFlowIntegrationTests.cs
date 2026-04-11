@@ -21,6 +21,7 @@ public class AuthFlowIntegrationTests
     private readonly IOtpService _otpService = Substitute.For<IOtpService>();
     private readonly ISmsService _smsService = Substitute.For<ISmsService>();
     private readonly IJwtTokenService _jwtService = Substitute.For<IJwtTokenService>();
+    private readonly IDistributedLockService _lockService = Substitute.For<IDistributedLockService>();
     private readonly FakeDateTimeProvider _dateTime = new() { UtcNow = DateTimeOffset.UtcNow };
     private readonly FakeCurrentUser _currentUser = new();
 
@@ -35,6 +36,9 @@ public class AuthFlowIntegrationTests
         // Default: allow verify attempts (brute-force protection passes)
         _otpService.CheckAndIncrementVerifyAttemptsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((true, 5));
+        // Default: lock always acquired
+        _lockService.TryAcquireAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns(Substitute.For<IAsyncDisposable>());
     }
 
     [Fact]
@@ -64,7 +68,7 @@ public class AuthFlowIntegrationTests
         _jwtService.GenerateRefreshTokenAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns("test-refresh-token");
 
         var verifyHandler = new VerifyOtpCommandHandler(
-            _otpService, _jwtService, db, _dateTime,
+            _otpService, _jwtService, db, _lockService, _dateTime,
             Substitute.For<ILogger<VerifyOtpCommandHandler>>());
 
         var verifyResult = await verifyHandler.Handle(new VerifyOtpCommand(PhoneWithPlus, code), CancellationToken.None);
@@ -150,7 +154,7 @@ public class AuthFlowIntegrationTests
         _jwtService.GenerateRefreshTokenAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns("refresh");
 
         var verifyHandler = new VerifyOtpCommandHandler(
-            _otpService, _jwtService, db, _dateTime,
+            _otpService, _jwtService, db, _lockService, _dateTime,
             Substitute.For<ILogger<VerifyOtpCommandHandler>>());
 
         var result = await verifyHandler.Handle(new VerifyOtpCommand(Phone2WithPlus, "111111"), CancellationToken.None);

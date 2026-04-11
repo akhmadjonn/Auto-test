@@ -13,6 +13,7 @@ public class VerifyOtpCommandTests
 {
     private readonly IOtpService _otpService = Substitute.For<IOtpService>();
     private readonly IJwtTokenService _jwtService = Substitute.For<IJwtTokenService>();
+    private readonly IDistributedLockService _lockService = Substitute.For<IDistributedLockService>();
     private readonly FakeDateTimeProvider _dateTime = new();
     private readonly ILogger<VerifyOtpCommandHandler> _logger = Substitute.For<ILogger<VerifyOtpCommandHandler>>();
 
@@ -25,10 +26,13 @@ public class VerifyOtpCommandTests
         // Default: allow verify attempts (brute-force protection passes)
         _otpService.CheckAndIncrementVerifyAttemptsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((true, 5));
+        // Default: lock always acquired
+        _lockService.TryAcquireAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns(Substitute.For<IAsyncDisposable>());
     }
 
     private VerifyOtpCommandHandler CreateHandler(IApplicationDbContext db) =>
-        new(_otpService, _jwtService, db, _dateTime, _logger);
+        new(_otpService, _jwtService, db, _lockService, _dateTime, _logger);
 
     [Fact]
     public async Task Handle_ValidOtp_ReturnsTokens()

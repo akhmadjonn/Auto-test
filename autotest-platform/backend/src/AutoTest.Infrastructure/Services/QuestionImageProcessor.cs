@@ -26,34 +26,45 @@ public class QuestionImageProcessor : IImageProcessingService
         await ValidateMagicBytesAsync(imageStream, ct);
         imageStream.Position = 0;
 
-        using var image = await Image.LoadAsync(imageStream, ct);
-
-        // Resize if oversized
-        if (image.Width > MaxDimension || image.Height > MaxDimension)
+        Image image;
+        try
         {
-            image.Mutate(x => x.Resize(new ResizeOptions
-            {
-                Size = new Size(MaxDimension, MaxDimension),
-                Mode = ResizeMode.Max
-            }));
+            image = await Image.LoadAsync(imageStream, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            throw new InvalidOperationException($"Image file '{fileName}' is corrupted or has an unsupported internal format.", ex);
         }
 
-        // Encode main image to WebP
-        var processedStream = new MemoryStream();
-        await image.SaveAsync(processedStream, new WebpEncoder { Quality = 85 }, ct);
-        processedStream.Position = 0;
-
-        // Generate 200x200 thumbnail
-        var thumbStream = new MemoryStream();
-        using var thumb = image.Clone(ctx => ctx.Resize(new ResizeOptions
+        using (image)
         {
-            Size = new Size(ThumbnailSize, ThumbnailSize),
-            Mode = ResizeMode.Crop
-        }));
-        await thumb.SaveAsync(thumbStream, new WebpEncoder { Quality = 75 }, ct);
-        thumbStream.Position = 0;
+            // Resize if oversized
+            if (image.Width > MaxDimension || image.Height > MaxDimension)
+            {
+                image.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Size = new Size(MaxDimension, MaxDimension),
+                    Mode = ResizeMode.Max
+                }));
+            }
 
-        return new ImageProcessingResult(processedStream, thumbStream, "image/webp");
+            // Encode main image to WebP
+            var processedStream = new MemoryStream();
+            await image.SaveAsync(processedStream, new WebpEncoder { Quality = 85 }, ct);
+            processedStream.Position = 0;
+
+            // Generate 200x200 thumbnail
+            var thumbStream = new MemoryStream();
+            using var thumb = image.Clone(ctx => ctx.Resize(new ResizeOptions
+            {
+                Size = new Size(ThumbnailSize, ThumbnailSize),
+                Mode = ResizeMode.Crop
+            }));
+            await thumb.SaveAsync(thumbStream, new WebpEncoder { Quality = 75 }, ct);
+            thumbStream.Position = 0;
+
+            return new ImageProcessingResult(processedStream, thumbStream, "image/webp");
+        }
     }
 
     private static async Task ValidateMagicBytesAsync(Stream stream, CancellationToken ct)
