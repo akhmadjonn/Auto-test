@@ -12,6 +12,8 @@ namespace AutoTest.Infrastructure.Services;
 // 27=Opt4TextUz, 28=Opt4TextUzLatin, 29=Opt4TextRu, 30=Opt4Image
 public class ExcelQuestionParser : IQuestionImportService
 {
+    private const int MaxImportRows = 5000;
+
     public Task<QuestionImportResult> ParseExcelAsync(Stream excelStream, CancellationToken ct = default)
     {
         var questions = new List<ImportQuestionDto>();
@@ -20,6 +22,12 @@ public class ExcelQuestionParser : IQuestionImportService
         using var wb = new XLWorkbook(excelStream);
         var ws = wb.Worksheets.First();
         var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
+
+        if (lastRow - 1 > MaxImportRows)
+        {
+            errors.Add(new ImportRowError(0, "General", $"File has {lastRow - 1} data rows, exceeding the maximum of {MaxImportRows}. Please split into smaller files."));
+            return Task.FromResult(new QuestionImportResult(questions, errors));
+        }
 
         for (var row = 2; row <= lastRow; row++)
         {

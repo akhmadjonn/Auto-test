@@ -42,7 +42,7 @@ public class SubscriptionBillingService(
         // Distributed lock: only one instance processes billing across all pods
         var redisDb = redis.GetDatabase();
         var lockValue = Guid.NewGuid().ToString("N");
-        var acquired = await redisDb.StringSetAsync(BillingLockKey, lockValue, TimeSpan.FromHours(1), When.NotExists);
+        var acquired = await redisDb.StringSetAsync(BillingLockKey, lockValue, TimeSpan.FromMinutes(30), When.NotExists);
         if (!acquired)
         {
             logger.LogInformation("Billing cycle: skipped — another instance holds the lock");

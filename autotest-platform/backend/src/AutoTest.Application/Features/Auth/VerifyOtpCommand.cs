@@ -26,6 +26,7 @@ public class VerifyOtpCommandHandler(
     IOtpService otpService,
     IJwtTokenService jwtService,
     IApplicationDbContext db,
+    IDistributedLockService lockService,
     IDateTimeProvider dateTime,
     ILogger<VerifyOtpCommandHandler> logger) : IRequestHandler<VerifyOtpCommand, ApiResponse<AuthTokensDto>>
 {
@@ -44,6 +45,12 @@ public class VerifyOtpCommandHandler(
 
         // Successful verify — reset attempt counter
         await otpService.ResetVerifyAttemptsAsync(phone, ct);
+
+        // Distributed lock prevents race condition creating duplicate users
+        await using var lockHandle = await lockService.TryAcquireAsync(
+            $"avtolider:lock:otp-verify:{phone}", TimeSpan.FromSeconds(10), ct);
+        if (lockHandle is null)
+            return ApiResponse<AuthTokensDto>.Fail("CONCURRENT_REQUEST", "Verification in progress. Please wait.");
 
         var isNew = false;
         var user = await db.Users.FirstOrDefaultAsync(

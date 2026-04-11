@@ -70,14 +70,12 @@ public class SubmitAnswerCommandHandler(
         if (sq is null)
             return ApiResponse.Fail("QUESTION_NOT_FOUND", "Session question not found.");
 
-        if (sq.SelectedAnswerId.HasValue)
-            return ApiResponse.Fail("ALREADY_ANSWERED", "Question already answered.");
-
         // Validate the answer belongs to this question
         var answer = sq.Question.AnswerOptions.FirstOrDefault(a => a.Id == request.SelectedAnswerId);
         if (answer is null)
             return ApiResponse.Fail("INVALID_ANSWER", "Answer option does not belong to this question.");
 
+        // Allow answer changes — user can review and modify before finishing
         sq.SelectedAnswerId = request.SelectedAnswerId;
         sq.IsCorrect = answer.IsCorrect;
         sq.TimeSpentSeconds = request.TimeSpentSeconds;
