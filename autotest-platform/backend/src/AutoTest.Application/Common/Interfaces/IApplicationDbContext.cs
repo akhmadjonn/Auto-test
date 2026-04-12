@@ -45,5 +45,11 @@ public interface IApplicationDbContext
     DbSet<RoadSign> RoadSigns { get; }
     DbSet<RoadMarking> RoadMarkings { get; }
 
+    // Phase 4 — Video Lessons
+    DbSet<VideoCategory> VideoCategories { get; }
+    DbSet<VideoLesson> VideoLessons { get; }
+    DbSet<LessonAttachment> LessonAttachments { get; }
+    DbSet<UserLessonProgress> UserLessonProgress { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

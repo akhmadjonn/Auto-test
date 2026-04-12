@@ -79,6 +79,9 @@ public class FakeFileStorageService : IFileStorageService
 
     public Task<string> UploadContentImageAsync(Stream stream, string folder, string fileName, CancellationToken ct = default) =>
         Task.FromResult($"{folder}/{fileName}");
+
+    public Task<string> UploadFileAsync(Stream stream, string folder, string fileName, string contentType, CancellationToken ct = default) =>
+        Task.FromResult($"{folder}/{fileName}");
 }
 
 public class FakeDistributedLockService : IDistributedLockService

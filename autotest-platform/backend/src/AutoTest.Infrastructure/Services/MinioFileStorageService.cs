@@ -108,6 +108,13 @@ public class MinioFileStorageService(
         return key;
     }
 
+    public async Task<string> UploadFileAsync(Stream stream, string folder, string fileName, string contentType, CancellationToken ct = default)
+    {
+        var key = $"{folder}/{fileName}";
+        await UploadAsync(stream, key, contentType, ct);
+        return key;
+    }
+
     public async Task EnsureBucketExistsAsync(CancellationToken ct = default)
     {
         try

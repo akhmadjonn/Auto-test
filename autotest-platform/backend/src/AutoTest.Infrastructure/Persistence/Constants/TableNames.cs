@@ -42,4 +42,10 @@ public static class TableNames
     public const string RoadSignCategories = nameof(RoadSignCategories);
     public const string RoadSigns = nameof(RoadSigns);
     public const string RoadMarkings = nameof(RoadMarkings);
+
+    // Phase 4 — Video Lessons
+    public const string VideoCategories = nameof(VideoCategories);
+    public const string VideoLessons = nameof(VideoLessons);
+    public const string LessonAttachments = nameof(LessonAttachments);
+    public const string UserLessonProgress = nameof(UserLessonProgress);
 }
