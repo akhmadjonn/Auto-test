@@ -9,4 +9,5 @@ public interface IOtpService
     Task<bool> IsOnCooldownAsync(string phoneNumber, CancellationToken ct = default);
     Task<(bool Allowed, int Remaining)> CheckAndIncrementVerifyAttemptsAsync(string phoneNumber, CancellationToken ct = default);
     Task ResetVerifyAttemptsAsync(string phoneNumber, CancellationToken ct = default);
+    string? GetAndroidAppHash();
 }

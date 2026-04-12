@@ -74,7 +74,6 @@ services:
       - source: api-secrets
         target: /secrets.json
     depends_on:
-      - postgres
       - redis
       - minio
     networks:
@@ -101,8 +100,6 @@ services:
     secrets:
       - source: api-secrets
         target: /secrets.json
-    depends_on:
-      - postgres
     networks:
       - app-internal
 
@@ -126,7 +123,6 @@ services:
       - source: api-secrets
         target: /secrets.json
     depends_on:
-      - postgres
       - redis
       - minio
     networks:
@@ -156,34 +152,6 @@ services:
         - "traefik.http.services.frontend.loadbalancer.server.port=3000"
     networks:
       - app-public
-
-  postgres:
-    image: postgres:16-alpine
-    deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 5
-    environment:
-      POSTGRES_DB: autotest
-      POSTGRES_USER: autotest
-      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
-    secrets:
-      - db-password
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U autotest -d autotest"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - app-internal
 
   redis:
     image: redis:7-alpine
@@ -243,33 +211,6 @@ services:
     networks:
       - app-internal
 
-  pg-backup:
-    image: kartoza/pg-backup:16
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DBNAME: autotest
-      POSTGRES_USER: autotest
-      POSTGRES_PASS_FILE: /run/secrets/db-password
-      CRON_SCHEDULE: "0 2 * * *"
-      REMOVE_BEFORE: "14"
-      STORAGE_BACKEND: FILE
-      DBNAME_OVERRIDES: autotest
-    secrets:
-      - db-password
-    volumes:
-      - backups:/backups
-    depends_on:
-      - postgres
-    networks:
-      - app-internal
-
 networks:
   app-public:
     driver: overlay
@@ -278,19 +219,15 @@ networks:
     internal: true
 
 volumes:
-  pgdata:
   redisdata:
   miniodata:
-  backups:
   traefik-certs:
 
 secrets:
   # App secrets — single JSON file with all credentials
   api-secrets:
     external: true
-  # Infrastructure secrets — individual files for PG/Redis/MinIO native _FILE support
-  db-password:
-    external: true
+  # Infrastructure secrets — individual files for Redis/MinIO native _FILE support
   redis-password:
     external: true
   minio-access-key:

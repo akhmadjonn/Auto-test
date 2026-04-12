@@ -51,10 +51,12 @@ public static class DependencyInjection
             }));
         services.AddScoped<IFileStorageService, MinioFileStorageService>();
 
-        // Eskiz SMS
+        // Eskiz SMS — trailing slash required for HttpClient relative URI resolution
+        var eskizBaseUrl = configuration["EskizSettings:BaseUrl"] ?? "https://notify.eskiz.uz/api/";
+        if (!eskizBaseUrl.EndsWith('/')) eskizBaseUrl += '/';
         services.AddHttpClient("Eskiz", client =>
         {
-            client.BaseAddress = new Uri(configuration["EskizSettings:BaseUrl"] ?? "https://notify.eskiz.uz/api/");
+            client.BaseAddress = new Uri(eskizBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(30);
         });
         services.AddSingleton<ISmsService, EskizSmsService>();

@@ -14,7 +14,8 @@ public class AuthController(IMediator mediator) : ControllerBase
     [HttpPost("otp/send")]
     public async Task<IActionResult> SendOtp([FromBody] SendOtpCommand command, CancellationToken ct)
     {
-        var result = await mediator.Send(command, ct);
+        var lang = Request.Headers.AcceptLanguage.FirstOrDefault();
+        var result = await mediator.Send(command with { Language = lang }, ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 

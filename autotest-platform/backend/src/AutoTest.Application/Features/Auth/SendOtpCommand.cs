@@ -1,12 +1,14 @@
+using AutoTest.Application.Common.Constants;
 using AutoTest.Application.Common.Interfaces;
 using AutoTest.Application.Common.Models;
+using AutoTest.Domain.Common.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace AutoTest.Application.Features.Auth;
 
-public record SendOtpCommand(string PhoneNumber) : IRequest<ApiResponse>;
+public record SendOtpCommand(string PhoneNumber, string? Language = null) : IRequest<ApiResponse>;
 
 public class SendOtpCommandValidator : AbstractValidator<SendOtpCommand>
 {
@@ -39,23 +41,33 @@ public class SendOtpCommandHandler(
 
         var code = await otpService.GenerateAndStoreAsync(phone, ct);
 
-        // Skip SMS for whitelisted test numbers
         if (otpService.IsWhitelistedNumber(phone))
         {
-            logger.LogInformation("Whitelist OTP for {Phone} | Code: {Code}", phone, code);
+            logger.LogInformation("Whitelist OTP for {Phone}", phone);
             return ApiResponse.Ok();
         }
 
+        var language = ParseLanguage(request.Language);
+        var message = SmsTemplates.FormatOtp(code, language, otpService.GetAndroidAppHash());
+
         try
         {
-            await smsService.SendAsync(phone, $"Avtolider: your code is {code}. Valid for 5 minutes.", ct);
+            await smsService.SendAsync(phone, message, ct);
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "SMS send failed for {Phone} — OTP still valid in Redis", phone);
         }
 
-        logger.LogInformation("OTP sent to {Phone}", phone);
+        logger.LogInformation("OTP sent to {Phone} lang={Language}", phone, language);
         return ApiResponse.Ok();
     }
+
+    private static Language ParseLanguage(string? lang) => lang?.ToLowerInvariant() switch
+    {
+        "uz" => Language.Uz,
+        "uzlatin" => Language.UzLatin,
+        "ru" => Language.Ru,
+        _ => Language.UzLatin
+    };
 }

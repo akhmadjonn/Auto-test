@@ -11,8 +11,6 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
 {
     public async Task SeedAsync(CancellationToken ct = default)
     {
-        await db.Database.MigrateAsync(ct);
-
         await SeedCategoriesAsync(ct);
         await SeedSystemSettingsAsync(ct);
         await SeedSubscriptionPlansAsync(ct);
