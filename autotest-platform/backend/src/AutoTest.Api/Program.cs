@@ -126,8 +126,10 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
     });
 
-// JWT Authentication
+// JWT Authentication — fail fast if production uses default dev secrets
 var jwtKey = builder.Configuration["JwtSettings:SecretKey"] ?? "super-secret-key-for-development-only-min-32-chars";
+if (!builder.Environment.IsDevelopment() && jwtKey == "super-secret-key-for-development-only-min-32-chars")
+    throw new InvalidOperationException("JwtSettings:SecretKey must be configured in production. Do not use the default development key.");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

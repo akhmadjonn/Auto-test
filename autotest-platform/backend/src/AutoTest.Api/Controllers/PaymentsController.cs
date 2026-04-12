@@ -93,8 +93,12 @@ public class PaymentsController(ISender mediator, IConfiguration configuration) 
             var parts = credentials.Split(':', 2);
             if (parts.Length != 2) return false;
 
-            return parts[0] == (configuration["PaymeSettings:MerchantId"] ?? "")
-                && parts[1] == (configuration["PaymeSettings:SecretKey"] ?? "");
+            var expectedMerchant = Encoding.UTF8.GetBytes(configuration["PaymeSettings:MerchantId"] ?? "");
+            var expectedSecret = Encoding.UTF8.GetBytes(configuration["PaymeSettings:SecretKey"] ?? "");
+            var actualMerchant = Encoding.UTF8.GetBytes(parts[0]);
+            var actualSecret = Encoding.UTF8.GetBytes(parts[1]);
+            return CryptographicOperations.FixedTimeEquals(expectedMerchant, actualMerchant)
+                && CryptographicOperations.FixedTimeEquals(expectedSecret, actualSecret);
         }
         catch { return false; }
     }
@@ -108,8 +112,9 @@ public class PaymentsController(ISender mediator, IConfiguration configuration) 
             ? $"{r.ClickTransId}{r.ServiceId}{secretKey}{r.MerchantTransId}{r.Amount:F2}{r.Action}{r.SignTime}"
             : $"{r.ClickTransId}{r.ServiceId}{secretKey}{r.MerchantTransId}{r.MerchantPrepareId}{r.Amount:F2}{r.Action}{r.SignTime}";
 
-        var expected = Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(raw))).ToLower();
-        return expected == r.SignString?.ToLower();
+        var expectedBytes = Encoding.UTF8.GetBytes(Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(raw))).ToLower());
+        var actualBytes = Encoding.UTF8.GetBytes(r.SignString?.ToLower() ?? "");
+        return CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
     }
 
     private static object PaymeError(int id, int code, string message) =>
