@@ -1,9 +1,5 @@
-# Video files (large, local only)
-**/Videos/*.mp4
-**/Videos/*.avi
-**/Videos/*.mkv
-**/Videos/*.mov
-**/Videos/*.webm
+# Training data files (large, local only)
+**/Videos/
 
 # Competitor analysis data (large APKs, dumps — local only)
 Competitor's apps/

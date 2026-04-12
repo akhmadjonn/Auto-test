@@ -52,7 +52,7 @@ public class GetVideoLessonByIdQueryHandler(
         // resolve video URL
         var videoUrl = lesson.SourceType switch
         {
-            VideoSourceType.Upload => await storage.GetPresignedUrlAsync(lesson.VideoUrl, ct),
+            VideoSourceType.Upload or VideoSourceType.Presentation => await storage.GetPresignedUrlAsync(lesson.VideoUrl, ct),
             _ => lesson.VideoUrl
         };
 
@@ -85,7 +85,7 @@ public class GetVideoLessonByIdQueryHandler(
 
         var dto = new VideoLessonDetailDto(
             lesson.Id, lesson.Title, lesson.Description, lesson.SourceType,
-            videoUrl, thumbnailUrl, lesson.DurationSeconds, lesson.IsFree, lesson.IsDownloadable,
+            videoUrl, thumbnailUrl, lesson.DurationSeconds, lesson.IsFree, lesson.IsDownloadable, lesson.LinkedCategoryId,
             progress?.IsCompleted ?? false,
             progress?.WatchedSeconds ?? 0,
             attachmentDtos);

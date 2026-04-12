@@ -21,6 +21,7 @@ public record VideoLessonDto(
     int DurationSeconds,
     bool IsFree,
     bool IsDownloadable,
+    Guid? LinkedCategoryId,
     bool IsCompleted,
     int WatchedSeconds);
 
@@ -34,6 +35,7 @@ public record VideoLessonDetailDto(
     int DurationSeconds,
     bool IsFree,
     bool IsDownloadable,
+    Guid? LinkedCategoryId,
     bool IsCompleted,
     int WatchedSeconds,
     List<LessonAttachmentDto> Attachments);
@@ -63,5 +65,6 @@ public record VideoLessonAdminDto(
     int SortOrder,
     bool IsFree,
     bool IsDownloadable,
+    Guid? LinkedCategoryId,
     bool IsActive,
     DateTimeOffset CreatedAt);

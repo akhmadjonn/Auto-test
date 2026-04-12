@@ -23,6 +23,7 @@ public record UpdateVideoLessonCommand(
     int SortOrder,
     bool IsFree,
     bool IsDownloadable,
+    Guid? LinkedCategoryId,
     bool IsActive) : IRequest<ApiResponse>;
 
 public class UpdateVideoLessonCommandValidator : AbstractValidator<UpdateVideoLessonCommand>
@@ -67,6 +68,7 @@ public class UpdateVideoLessonCommandHandler(
         lesson.SortOrder = request.SortOrder;
         lesson.IsFree = request.IsFree;
         lesson.IsDownloadable = request.IsDownloadable;
+        lesson.LinkedCategoryId = request.LinkedCategoryId;
         lesson.IsActive = request.IsActive;
         lesson.UpdatedAt = dateTime.UtcNow;
 

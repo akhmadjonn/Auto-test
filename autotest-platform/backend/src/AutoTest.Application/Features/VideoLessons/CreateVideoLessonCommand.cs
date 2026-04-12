@@ -24,7 +24,8 @@ public record CreateVideoLessonCommand(
     int DurationSeconds,
     int SortOrder,
     bool IsFree,
-    bool IsDownloadable) : IRequest<ApiResponse<Guid>>;
+    bool IsDownloadable,
+    Guid? LinkedCategoryId) : IRequest<ApiResponse<Guid>>;
 
 public class CreateVideoLessonCommandValidator : AbstractValidator<CreateVideoLessonCommand>
 {
@@ -83,6 +84,7 @@ public class CreateVideoLessonCommandHandler(
             SortOrder = request.SortOrder,
             IsFree = request.IsFree,
             IsDownloadable = request.IsDownloadable,
+            LinkedCategoryId = request.LinkedCategoryId,
             CreatedAt = now,
             UpdatedAt = now
         };

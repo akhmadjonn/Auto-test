@@ -40,7 +40,9 @@ public class UploadVideoFileCommandHandler(
         var objectKey = await storage.UploadFileAsync(request.FileStream, "lessons/videos", fileName, request.ContentType, ct);
 
         lesson.VideoUrl = objectKey;
-        lesson.SourceType = Domain.Common.Enums.VideoSourceType.Upload;
+        // Only set SourceType to Upload if it wasn't explicitly set to Presentation
+        if (lesson.SourceType != Domain.Common.Enums.VideoSourceType.Presentation)
+            lesson.SourceType = Domain.Common.Enums.VideoSourceType.Upload;
         lesson.UpdatedAt = dateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 

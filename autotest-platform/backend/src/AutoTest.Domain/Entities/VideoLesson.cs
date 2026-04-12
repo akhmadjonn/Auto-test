@@ -16,7 +16,9 @@ public class VideoLesson : BaseAuditableEntity
     public bool IsFree { get; set; }
     public bool IsDownloadable { get; set; }
     public bool IsActive { get; set; } = true;
+    public Guid? LinkedCategoryId { get; set; }
 
     public VideoCategory Category { get; set; } = null!;
+    public Category? LinkedCategory { get; set; }
     public ICollection<LessonAttachment> Attachments { get; set; } = [];
 }

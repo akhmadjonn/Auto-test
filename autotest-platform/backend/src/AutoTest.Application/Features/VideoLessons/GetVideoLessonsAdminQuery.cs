@@ -23,7 +23,7 @@ public class GetVideoLessonsAdminQueryHandler(
                 l.Id, l.VideoCategoryId, l.Title, l.Description,
                 l.SourceType, l.VideoUrl, l.ThumbnailUrl,
                 l.DurationSeconds, l.SortOrder,
-                l.IsFree, l.IsDownloadable, l.IsActive, l.CreatedAt))
+                l.IsFree, l.IsDownloadable, l.LinkedCategoryId, l.IsActive, l.CreatedAt))
             .ToListAsync(ct);
 
         return ApiResponse<List<VideoLessonAdminDto>>.Ok(lessons);

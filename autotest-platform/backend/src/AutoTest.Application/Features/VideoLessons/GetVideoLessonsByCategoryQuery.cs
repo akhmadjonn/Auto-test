@@ -32,7 +32,7 @@ public class GetVideoLessonsByCategoryQueryHandler(
             .Select(l => new
             {
                 l.Id, l.Title, l.Description, l.SourceType,
-                l.ThumbnailUrl, l.DurationSeconds, l.IsFree, l.IsDownloadable,
+                l.ThumbnailUrl, l.DurationSeconds, l.IsFree, l.IsDownloadable, l.LinkedCategoryId,
                 Progress = userId.HasValue
                     ? db.UserLessonProgress
                         .Where(p => p.VideoLessonId == l.Id && p.UserId == userId.Value)
@@ -54,7 +54,7 @@ public class GetVideoLessonsByCategoryQueryHandler(
         var dtos = lessons.Select(l => new VideoLessonDto(
             l.Id, l.Title, l.Description, l.SourceType,
             !string.IsNullOrEmpty(l.ThumbnailUrl) && presignedUrls.TryGetValue(l.ThumbnailUrl!, out var url) ? url : null,
-            l.DurationSeconds, l.IsFree, l.IsDownloadable,
+            l.DurationSeconds, l.IsFree, l.IsDownloadable, l.LinkedCategoryId,
             l.Progress?.IsCompleted ?? false,
             l.Progress?.WatchedSeconds ?? 0)).ToList();
 

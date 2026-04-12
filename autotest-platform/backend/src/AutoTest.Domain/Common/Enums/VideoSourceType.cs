@@ -4,5 +4,6 @@ public enum VideoSourceType
 {
     Upload = 0,
     YouTube = 1,
-    ExternalLink = 2
+    ExternalLink = 2,
+    Presentation = 3
 }

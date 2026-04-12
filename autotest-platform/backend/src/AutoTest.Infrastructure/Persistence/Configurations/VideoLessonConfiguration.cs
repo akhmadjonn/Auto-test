@@ -20,6 +20,11 @@ public class VideoLessonConfiguration : IEntityTypeConfiguration<VideoLesson>
 
         builder.HasIndex(e => new { e.VideoCategoryId, e.IsActive, e.SortOrder });
 
+        builder.HasOne(e => e.LinkedCategory)
+            .WithMany()
+            .HasForeignKey(e => e.LinkedCategoryId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasMany(e => e.Attachments)
             .WithOne(a => a.Lesson)
             .HasForeignKey(a => a.VideoLessonId)
