@@ -36,6 +36,10 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
         await SeedGlossaryCategoriesAndTermsAsync(ct);
         await SeedColorVisionPlatesAsync(ct);
 
+        // Phase 3 — Road Signs & Markings
+        await SeedRoadSignCategoriesAndSignsAsync(ct);
+        await SeedRoadMarkingsAsync(ct);
+
         await db.SaveChangesAsync(ct);
 
         await SyncSettingsToRedisAsync(ct);
@@ -1036,6 +1040,241 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             Term = term, Definition = definition,
             SortOrder = sort, RelatedQuestionIds = [],
             CreatedAt = now, UpdatedAt = now
+        };
+
+    // ── Phase 3 — Road Signs & Markings ──
+
+    private async Task SeedRoadSignCategoriesAndSignsAsync(CancellationToken ct)
+    {
+        if (await db.RoadSignCategories.AnyAsync(ct))
+            return;
+
+        var now = DateTimeOffset.UtcNow;
+
+        var categories = new List<RoadSignCategory>
+        {
+            SignCategory("warning", "1", T("Огоҳлантирувчи белгилар", "Ogohlantiruvchi belgilar", "Предупреждающие знаки"),
+                T("Йўл ҳаракати қатнашчиларига хавфли йўл қисмлари ҳақида маълумот беради", "Yo'l harakati qatnashchilariga xavfli yo'l qismlari haqida ma'lumot beradi", "Предупреждают участников дорожного движения об опасных участках дороги"), 1, now),
+            SignCategory("priority", "2", T("Имтиёзли белгилар", "Imtiyozli belgilar", "Знаки приоритета"),
+                T("Чорраҳаларда ҳаракатланиш навбатини белгилайди", "Chorrahalarda harakatlanish navbatini belgilaydi", "Устанавливают очерёдность проезда перекрёстков"), 2, now),
+            SignCategory("prohibitory", "3", T("Тақиқловчи белгилар", "Taqiqlovchi belgilar", "Запрещающие знаки"),
+                T("Йўл ҳаракатига маълум чекланишлар киритади ёки уларни бекор қилади", "Yo'l harakatiga ma'lum cheklanishlar kiritadi yoki ularni bekor qiladi", "Вводят определённые ограничения в дорожное движение или отменяют их"), 3, now),
+            SignCategory("mandatory", "4", T("Буюрувчи белгилар", "Buyuruvchi belgilar", "Предписывающие знаки"),
+                T("Транспорт воситаларига кўрсатилган йўналишда ҳаракатланишни буюради", "Transport vositalariga ko'rsatilgan yo'nalishda harakatlanishni buyuradi", "Предписывают транспортным средствам двигаться в указанных направлениях"), 4, now),
+            SignCategory("informational", "5", T("Ахборот-кўрсатгич белгилар", "Axborot-ko'rsatgich belgilar", "Информационно-указательные знаки"),
+                T("Ҳаракат тартиби хусусиятлари ва мақсадларнинг жойлашуви ҳақида маълумот беради", "Harakat tartibi xususiyatlari va maqsadlarning joylashuvi haqida ma'lumot beradi", "Информируют об особенностях режима движения и расположении объектов"), 5, now),
+            SignCategory("service", "6", T("Сервис белгилари", "Servis belgilari", "Знаки сервиса"),
+                T("Хизмат кўрсатиш жойлари ҳақида маълумот беради", "Xizmat ko'rsatish joylari haqida ma'lumot beradi", "Информируют о расположении соответствующих объектов обслуживания"), 6, now),
+            SignCategory("additional", "7", T("Қўшимча ахборот белгилари", "Qo'shimcha axborot belgilari", "Знаки дополнительной информации"),
+                T("Бошқа белгиларнинг таъсирини аниқлаштиради ёки чеклайди", "Boshqa belgilarning ta'sirini aniqlashtirad yoki cheklaydi", "Уточняют или ограничивают действие других знаков"), 7, now),
+        };
+
+        db.RoadSignCategories.AddRange(categories);
+        await db.SaveChangesAsync(ct);
+
+        // Build lookup by code
+        var catMap = categories.ToDictionary(c => c.Code, c => c.Id);
+
+        var signs = new List<RoadSign>
+        {
+            // Category 1 — Warning Signs
+            Sign(catMap["1"], "1.1", T("Шлагбаумли темир йўл кесишмаси", "Shlagbaumli temir yo'l kesishmasi", "Железнодорожный переезд со шлагбаумом"), null, 1, now),
+            Sign(catMap["1"], "1.2", T("Шлагбаумсиз темир йўл кесишмаси", "Shlagbaumsiz temir yo'l kesishmasi", "Железнодорожный переезд без шлагбаума"), null, 2, now),
+            Sign(catMap["1"], "1.3.1", T("Бир изли темир йўл", "Bir izli temir yo'l", "Однопутная железная дорога"), null, 3, now),
+            Sign(catMap["1"], "1.3.2", T("Кўп изли темир йўл", "Ko'p izli temir yo'l", "Многопутная железная дорога"), null, 4, now),
+            Sign(catMap["1"], "1.5", T("Трамвай йўли билан кесишув", "Tramvay yo'li bilan kesishuv", "Пересечение с трамвайной линией"), null, 5, now),
+            Sign(catMap["1"], "1.6", T("Тенг аҳамиятли йўллар кесишуви", "Teng ahamiyatli yo'llar kesishuvi", "Пересечение равнозначных дорог"), null, 6, now),
+            Sign(catMap["1"], "1.7", T("Айланма ҳаракатланиш билан кесишув", "Aylanma harakatlanish bilan kesishuv", "Пересечение с круговым движением"), null, 7, now),
+            Sign(catMap["1"], "1.8", T("Светофор тартибга солади", "Svetofor tartibga soladi", "Светофорное регулирование"),
+                T("Ҳаракат светофор орқали тартибга солинган чорраҳа", "Harakat svetofor orqali tartibga solingan chorraha", "Перекрёсток, регулируемый светофором"), 8, now),
+            Sign(catMap["1"], "1.9", T("Кўтарма кўприк", "Ko'tarma ko'prik", "Разводной мост"), null, 9, now),
+            Sign(catMap["1"], "1.10", T("Соҳилга чиқиш", "Sohilga chiqish", "Выезд на набережную"), null, 10, now),
+            Sign(catMap["1"], "1.11", T("Хавфли бурилиш", "Xavfli burilish", "Опасный поворот"),
+                T("Йўлнинг кичик радиусли ёки кўриниши чекланган бурилиши", "Yo'lning kichik radiusli yoki ko'rinishi cheklangan burilishi", "Поворот дороги малого радиуса или с ограниченной видимостью"), 11, now),
+            Sign(catMap["1"], "1.12", T("Хавфли бурилишлар", "Xavfli burilishlar", "Опасные повороты"),
+                T("Йўлнинг хавфли бурилишлари бўлган қисми", "Yo'lning xavfli burilishlari bo'lgan qismi", "Участок дороги с опасными поворотами"), 12, now),
+            Sign(catMap["1"], "1.13", T("Тик нишаб", "Tik nishab", "Крутой спуск"), null, 13, now),
+            Sign(catMap["1"], "1.14", T("Тик қия", "Tik qiya", "Крутой подъём"), null, 14, now),
+            Sign(catMap["1"], "1.15", T("Сирпанчиқ йўл", "Sirpanchiq yo'l", "Скользкая дорога"), null, 15, now),
+            Sign(catMap["1"], "1.16", T("Нотекис йўл", "Notekis yo'l", "Неровная дорога"), null, 16, now),
+            Sign(catMap["1"], "1.17", T("Сунъий нотекислик", "Sun'iy notekislik", "Искусственная неровность"), null, 17, now),
+            Sign(catMap["1"], "1.18", T("Шағал отилиши", "Shag'al otilishi", "Выброс гравия"), null, 18, now),
+            Sign(catMap["1"], "1.19", T("Пиёдалар ўтиш жойи", "Piyodalar o'tish joyi", "Пешеходный переход"), null, 19, now),
+            Sign(catMap["1"], "1.20", T("Болалар", "Bolalar", "Дети"), null, 20, now),
+            Sign(catMap["1"], "1.21", T("Велосипедчилар ҳаракати", "Velosipedchilar harakati", "Велосипедная дорожка"), null, 21, now),
+            Sign(catMap["1"], "1.22", T("Йўл ишлари", "Yo'l ishlari", "Дорожные работы"), null, 22, now),
+            Sign(catMap["1"], "1.23", T("Ҳайвонлар ўтиши", "Hayvonlar o'tishi", "Перегон скота"), null, 23, now),
+            Sign(catMap["1"], "1.24", T("Ёввойи ҳайвонлар", "Yovvoyi hayvonlar", "Дикие животные"), null, 24, now),
+            Sign(catMap["1"], "1.25", T("Тоннель", "Tonnell", "Тоннель"), null, 25, now),
+
+            // Category 2 — Priority Signs
+            Sign(catMap["2"], "2.1", T("Асосий йўл", "Asosiy yo'l", "Главная дорога"),
+                T("Тартибга солинмаган чорраҳаларда устунлик берилади", "Tartibga solinmagan chorrahalarda ustunlik beriladi", "Предоставляет преимущество на нерегулируемых перекрёстках"), 1, now),
+            Sign(catMap["2"], "2.2", T("Асосий йўлнинг охири", "Asosiy yo'lning oxiri", "Конец главной дороги"), null, 2, now),
+            Sign(catMap["2"], "2.3.1", T("Иккинчи даражали йўл билан кесишув", "Ikkinchi darajali yo'l bilan kesishuv", "Пересечение со второстепенной дорогой"), null, 3, now),
+            Sign(catMap["2"], "2.4", T("Йўл беринг", "Yo'l bering", "Уступите дорогу"),
+                T("Ҳайдовчи кесиб ўтилаётган йўлдан келаётган транспортга йўл бериши керак", "Haydovchi kesib o'tilayotgan yo'ldan kelayotgan transportga yo'l berishi kerak", "Водитель должен уступить дорогу транспорту, движущемуся по пересекаемой дороге"), 4, now),
+            Sign(catMap["2"], "2.5", T("Тўхтамасдан ҳаракатланиш тақиқланган", "To'xtamasdan harakatlanish taqiqlangan", "Движение без остановки запрещено"),
+                T("Тўхташ чизиғи олдида тўхтамасдан ҳаракатланиш тақиқланади", "To'xtash chizig'i oldida to'xtamasdan harakatlanish taqiqlanadi", "Запрещается движение без остановки перед стоп-линией"), 5, now),
+            Sign(catMap["2"], "2.6", T("Рўпара ҳаракатланишнинг устунлиги", "Ro'para harakatlanishning ustunligi", "Преимущество встречного движения"), null, 6, now),
+            Sign(catMap["2"], "2.7", T("Рўпарадаги ҳаракатга нисбатан имтиёз", "Ro'paradagi harakatga nisbatan imtiyoz", "Преимущество перед встречным движением"), null, 7, now),
+
+            // Category 3 — Prohibitory Signs
+            Sign(catMap["3"], "3.1", T("Кириш тақиқланган", "Kirish taqiqlangan", "Въезд запрещён"),
+                T("Барча транспорт воситаларининг кириши тақиқланган", "Barcha transport vositalarining kirishi taqiqlangan", "Запрещается въезд всех транспортных средств"), 1, now),
+            Sign(catMap["3"], "3.2", T("Ҳаракатланиш тақиқланган", "Harakatlanish taqiqlangan", "Движение запрещено"),
+                T("Барча транспорт воситаларининг ҳаракатланиши тақиқланади", "Barcha transport vositalarining harakatlanishi taqiqlanadi", "Запрещается движение всех транспортных средств"), 2, now),
+            Sign(catMap["3"], "3.3", T("Механик транспорт воситалари тақиқланган", "Mexanik transport vositalari taqiqlangan", "Движение механических ТС запрещено"), null, 3, now),
+            Sign(catMap["3"], "3.4", T("Юк автомобиллари тақиқланган", "Yuk avtomobillari taqiqlangan", "Движение грузовых автомобилей запрещено"),
+                T("Тўла вазни 3.5 тоннадан ортиқ бўлган юк автомобиллари тақиқланади", "To'la vazni 3.5 tonnadan ortiq bo'lgan yuk avtomobillari taqiqlanadi", "Запрещается движение грузовых автомобилей с разрешённой максимальной массой более 3,5 тонн"), 4, now),
+            Sign(catMap["3"], "3.5", T("Мотоциклларда ҳаракатланиш тақиқланган", "Mototsikllarda harakatlanish taqiqlangan", "Движение мотоциклов запрещено"), null, 5, now),
+            Sign(catMap["3"], "3.6", T("Тракторлар ҳаракатланиши тақиқланган", "Traktorlar harakatlanishi taqiqlangan", "Движение тракторов запрещено"), null, 6, now),
+            Sign(catMap["3"], "3.7", T("Тиркамали ҳаракатланиш тақиқланган", "Tirkamali harakatlanish taqiqlangan", "Движение с прицепом запрещено"), null, 7, now),
+            Sign(catMap["3"], "3.8", T("От-арава ҳаракатланиши тақиқланган", "Ot-arava harakatlanishi taqiqlangan", "Движение гужевых повозок запрещено"), null, 8, now),
+            Sign(catMap["3"], "3.9", T("Велосипедда ҳаракатланиш тақиқланган", "Velosipedda harakatlanish taqiqlangan", "Движение на велосипедах запрещено"), null, 9, now),
+            Sign(catMap["3"], "3.20", T("Қувиб ўтиш тақиқланган", "Quvib o'tish taqiqlangan", "Обгон запрещён"), null, 10, now),
+            Sign(catMap["3"], "3.24", T("Энг юқори тезлик чекланган", "Eng yuqori tezlik cheklangan", "Ограничение максимальной скорости"), null, 11, now),
+
+            // Category 4 — Mandatory Signs
+            Sign(catMap["4"], "4.1.1", T("Ҳаракатланиш тўғрига", "Harakatlanish to'g'riga", "Движение прямо"), null, 1, now),
+            Sign(catMap["4"], "4.1.2", T("Ҳаракатланиш ўнгга", "Harakatlanish o'ngga", "Движение направо"), null, 2, now),
+            Sign(catMap["4"], "4.1.3", T("Ҳаракатланиш чапга", "Harakatlanish chapga", "Движение налево"), null, 3, now),
+            Sign(catMap["4"], "4.1.4", T("Ҳаракатланиш тўғрига ёки ўнгга", "Harakatlanish to'g'riga yoki o'ngga", "Движение прямо или направо"), null, 4, now),
+            Sign(catMap["4"], "4.1.5", T("Ҳаракатланиш тўғрига ёки чапга", "Harakatlanish to'g'riga yoki chapga", "Движение прямо или налево"), null, 5, now),
+            Sign(catMap["4"], "4.1.6", T("Ҳаракатланиш ўнгга ёки чапга", "Harakatlanish o'ngga yoki chapga", "Движение направо или налево"), null, 6, now),
+            Sign(catMap["4"], "4.2.1", T("Тўсиқни ўнгдан четлаб ўтиш", "To'siqni o'ngdan chetlab o'tish", "Объезд препятствия справа"), null, 7, now),
+            Sign(catMap["4"], "4.2.2", T("Тўсиқни чапдан четлаб ўтиш", "To'siqni chapdan chetlab o'tish", "Объезд препятствия слева"), null, 8, now),
+            Sign(catMap["4"], "4.3", T("Айланма ҳаракатланиш", "Aylanma harakatlanish", "Круговое движение"), null, 9, now),
+            Sign(catMap["4"], "4.4", T("Енгил автомобиллар ҳаракатланади", "Yengil avtomobillar harakatlanadi", "Легковые автомобили"), null, 10, now),
+            Sign(catMap["4"], "4.5", T("Велосипед йўлкаси", "Velosiped yo'lkasi", "Велосипедная дорожка"), null, 11, now),
+            Sign(catMap["4"], "4.6", T("Пиёдалар йўлкаси", "Piyodalar yo'lkasi", "Пешеходная дорожка"), null, 12, now),
+            Sign(catMap["4"], "4.7", T("Энг кам тезлик", "Eng kam tezlik", "Ограничение минимальной скорости"), null, 13, now),
+            Sign(catMap["4"], "4.8", T("Энг кам тезлик белгиланган йўлнинг охири", "Eng kam tezlik belgilangan yo'lning oxiri", "Конец ограничения минимальной скорости"), null, 14, now),
+
+            // Category 5 — Informational Signs
+            Sign(catMap["5"], "5.1", T("Автомагистрал", "Avtomagistral", "Автомагистраль"), null, 1, now),
+            Sign(catMap["5"], "5.2", T("Автомагистралнинг охири", "Avtomagistralning oxiri", "Конец автомагистрали"), null, 2, now),
+            Sign(catMap["5"], "5.3", T("Автомобиллар учун мўлжалланган йўл", "Avtomobillar uchun mo'ljallangan yo'l", "Дорога для автомобилей"), null, 3, now),
+            Sign(catMap["5"], "5.5", T("Бир томонлама ҳаракатланиш йўли", "Bir tomonlama harakatlanish yo'li", "Дорога с односторонним движением"), null, 4, now),
+            Sign(catMap["5"], "5.6", T("Бир томонлама ҳаракатланиш йўлининг охири", "Bir tomonlama harakatlanish yo'lining oxiri", "Конец дороги с односторонним движением"), null, 5, now),
+            Sign(catMap["5"], "5.7", T("Бир томонлама ҳаракатланиш йўлига чиқиш", "Bir tomonlama harakatlanish yo'liga chiqish", "Выезд на дорогу с односторонним движением"), null, 6, now),
+            Sign(catMap["5"], "5.8.1", T("Бўлак бўйича ҳаракатланиш йўналиши", "Bo'lak bo'yicha harakatlanish yo'nalishi", "Направление движения по полосам"), null, 7, now),
+            Sign(catMap["5"], "5.16.1", T("Автобус бекати", "Avtobus bekati", "Остановка автобуса"),
+                T("Йўловчилар миниш ва тушиш жойи", "Yo'lovchilar minish va tushish joyi", "Место остановки автобуса и/или троллейбуса"), 8, now),
+            Sign(catMap["5"], "5.16.2", T("Трамвай бекати", "Tramvay bekati", "Остановка трамвая"), null, 9, now),
+            Sign(catMap["5"], "5.19.1", T("Пиёдалар ўтиш жойи", "Piyodalar o'tish joyi", "Пешеходный переход"), null, 10, now),
+
+            // Category 6 — Service Signs
+            Sign(catMap["6"], "6.1", T("Тиббий ёрдам кўрсатиш жойи", "Tibbiy yordam ko'rsatish joyi", "Пункт первой медицинской помощи"), null, 1, now),
+            Sign(catMap["6"], "6.2", T("Шифохона", "Shifoxona", "Больница"), null, 2, now),
+            Sign(catMap["6"], "6.3", T("Ёнилғи шохобчаси", "Yonilg'i shoxobchasi", "Автозаправочная станция"), null, 3, now),
+            Sign(catMap["6"], "6.4", T("Техник хизмат кўрсатиш жойи", "Texnik xizmat ko'rsatish joyi", "Техническое обслуживание автомобилей"), null, 4, now),
+            Sign(catMap["6"], "6.5", T("Транспорт воситаларини ювиш жойи", "Transport vositalarini yuvish joyi", "Мойка автомобилей"), null, 5, now),
+            Sign(catMap["6"], "6.6", T("Телефон", "Telefon", "Телефон"), null, 6, now),
+            Sign(catMap["6"], "6.7", T("Ошхона", "Oshxona", "Пункт питания"), null, 7, now),
+            Sign(catMap["6"], "6.8", T("Ичимлик суви", "Ichimlik suvi", "Питьевая вода"), null, 8, now),
+            Sign(catMap["6"], "6.9", T("Меҳмонхона", "Mehmonxona", "Гостиница"), null, 9, now),
+            Sign(catMap["6"], "6.10", T("Кемпинг", "Kemping", "Кемпинг"), null, 10, now),
+            Sign(catMap["6"], "6.11", T("Дам олиш жойи", "Dam olish joyi", "Место отдыха"), null, 11, now),
+            Sign(catMap["6"], "6.12", T("Йўл патрул хизмати маскани", "Yo'l patrul xizmati maskani", "Пост дорожной полиции"), null, 12, now),
+
+            // Category 7 — Additional Information Signs (subset)
+            Sign(catMap["7"], "7.1.1", T("Масофа — объектгача", "Masofa — ob'yektgacha", "Расстояние до объекта"), null, 1, now),
+            Sign(catMap["7"], "7.1.2", T("Масофа — тўхташ чизиғигача", "Masofa — to'xtash chizig'igacha", "Расстояние до стоп-линии"), null, 2, now),
+            Sign(catMap["7"], "7.2.1", T("Таъсир ҳудуди", "Ta'sir hududi", "Зона действия"), null, 3, now),
+            Sign(catMap["7"], "7.3.1", T("Таъсир йўналиши — ўнгга", "Ta'sir yo'nalishi — o'ngga", "Направление действия — направо"), null, 4, now),
+            Sign(catMap["7"], "7.3.2", T("Таъсир йўналиши — чапга", "Ta'sir yo'nalishi — chapga", "Направление действия — налево"), null, 5, now),
+            Sign(catMap["7"], "7.4.1", T("Шанба, якшанба ва байрам кунлари", "Shanba, yakshanba va bayram kunlari", "Субботние, воскресные и праздничные дни"), null, 6, now),
+            Sign(catMap["7"], "7.4.2", T("Иш кунлари", "Ish kunlari", "Рабочие дни"), null, 7, now),
+        };
+
+        db.RoadSigns.AddRange(signs);
+        logger.LogInformation("Seeded {CategoryCount} road sign categories and {SignCount} road signs", categories.Count, signs.Count);
+    }
+
+    private async Task SeedRoadMarkingsAsync(CancellationToken ct)
+    {
+        if (await db.RoadMarkings.AnyAsync(ct))
+            return;
+
+        var now = DateTimeOffset.UtcNow;
+
+        var markings = new List<RoadMarking>
+        {
+            // Horizontal Markings (Yotiq chiziqlar)
+            Marking("1.1", RoadMarkingType.Horizontal, T("Узлуксиз чизиқ", "Uzluksiz chiziq", "Сплошная линия"),
+                T("Қарама-қарши оқимларни ажратади, хавфли жойларда бўлак чегараларини белгилайди", "Qarama-qarshi oqimlarni ajratadi, xavfli joylarda bo'lak chegaralarini belgilaydi", "Разделяет транспортные потоки, обозначает границы полос в опасных местах"), 1, now),
+            Marking("1.2", RoadMarkingType.Horizontal, T("Йўл ёқаси чизиғи", "Yo'l yoqasi chizig'i", "Край проезжей части"),
+                T("Автомагистралларда қатнов қисмининг чеккасини белгилайди", "Avtomagistralda qatnov qismining chekkasini belgilaydi", "Обозначает край проезжей части на автомагистралях"), 2, now),
+            Marking("1.3", RoadMarkingType.Horizontal, T("Қўш узлуксиз чизиқ", "Qo'sh uzluksiz chiziq", "Двойная сплошная линия"),
+                T("Қарама-қарши оқимларни ажратади (4 ва ундан ортиқ бўлакли йўлларда)", "Qarama-qarshi oqimlarni ajratadi (4 va undan ortiq bo'lakli yo'llarda)", "Разделяет транспортные потоки на дорогах с 4 и более полосами"), 3, now),
+            Marking("1.4", RoadMarkingType.Horizontal, T("Тўхташ тақиқланган зона (сариқ)", "To'xtash taqiqlangan zona (sariq)", "Зона запрета остановки (жёлтая)"), null, 4, now),
+            Marking("1.5", RoadMarkingType.Horizontal, T("Узилган чизиқ", "Uzilgan chiziq", "Прерывистая линия"),
+                T("Бўлакларни ажратади, кесиб ўтиш мумкин", "Bo'laklarni ajratadi, kesib o'tish mumkin", "Разделяет полосы, допускается пересечение"), 5, now),
+            Marking("1.6", RoadMarkingType.Horizontal, T("Яқинлашув огоҳлантирувчи чизиқ", "Yaqinlashuv ogohlantiruvchi chiziq", "Линия приближения"),
+                T("1.1 ёки 1.11 чизиқларга яқинлашувни огоҳлантиради", "1.1 yoki 1.11 chiziqlarga yaqinlashuvni ogohlantiradi", "Предупреждает о приближении к разметке 1.1 или 1.11"), 6, now),
+            Marking("1.7", RoadMarkingType.Horizontal, T("Чорраҳа ичидаги чизиқ", "Chorraha ichidagi chiziq", "Полосы в пределах перекрёстка"), null, 7, now),
+            Marking("1.8", RoadMarkingType.Horizontal, T("Тезлаштириш бўлаги чегараси", "Tezlashtirish bo'lagi chegarasi", "Граница полосы разгона/торможения"), null, 8, now),
+            Marking("1.9", RoadMarkingType.Horizontal, T("Реверсив ҳаракат бўлаги", "Reversiv harakat bo'lagi", "Полосы реверсивного движения"), null, 9, now),
+            Marking("1.10", RoadMarkingType.Horizontal, T("Турғаш тақиқланган зона (сариқ)", "Turg'ash taqiqlangan zona (sariq)", "Зона запрета стоянки (жёлтая)"), null, 10, now),
+            Marking("1.11", RoadMarkingType.Horizontal, T("Бир тарафга кесиб ўтиш мумкин", "Bir tarafga kesib o'tish mumkin", "Разрешён переезд в одну сторону"), null, 11, now),
+            Marking("1.12", RoadMarkingType.Horizontal, T("Тўхташ чизиғи", "To'xtash chizig'i", "Стоп-линия"), null, 12, now),
+            Marking("1.13", RoadMarkingType.Horizontal, T("Йўл беринг чизиғи", "Yo'l bering chizig'i", "Линия \"Уступите дорогу\""), null, 13, now),
+            Marking("1.14.1", RoadMarkingType.Horizontal, T("Пиёдалар ўтиш жойи (зебра)", "Piyodalar o'tish joyi (zebra)", "Пешеходный переход (зебра)"), null, 14, now),
+            Marking("1.14.2", RoadMarkingType.Horizontal, T("Пиёдалар ўтиш жойи (йўналишли)", "Piyodalar o'tish joyi (yo'nalishli)", "Пешеходный переход (с направлением)"), null, 15, now),
+            Marking("1.15", RoadMarkingType.Horizontal, T("Велосипед йўлкаси кесишуви", "Velosiped yo'lkasi kesishuvi", "Пересечение велосипедной дорожки"), null, 16, now),
+            Marking("1.16.1", RoadMarkingType.Horizontal, T("Йўналтирувчи оролча — ажратувчи", "Yo'naltiruvchi orolcha — ajratuvchi", "Направляющий островок — разделительный"), null, 17, now),
+            Marking("1.17", RoadMarkingType.Horizontal, T("Автобус бекати (сариқ)", "Avtobus bekati (sariq)", "Остановка маршрутных ТС (жёлтая)"), null, 18, now),
+            Marking("1.18", RoadMarkingType.Horizontal, T("Бўлак бўйича бурилиш йўналишлари", "Bo'lak bo'yicha burilish yo'nalishlari", "Направления движения по полосам"), null, 19, now),
+            Marking("1.19", RoadMarkingType.Horizontal, T("Торайишга яқинлашув", "Torayishga yaqinlashuv", "Приближение к сужению"), null, 20, now),
+            Marking("1.20", RoadMarkingType.Horizontal, T("1.13 чизиққа яқинлашув", "1.13 chiziqqa yaqinlashuv", "Приближение к разметке 1.13"), null, 21, now),
+            Marking("1.21", RoadMarkingType.Horizontal, T("\"СТОП\" ёзуви", "\"STOP\" yozuvi", "Надпись \"СТОП\""), null, 22, now),
+            Marking("1.22", RoadMarkingType.Horizontal, T("Йўл/маршрут рақами", "Yo'l/marshrut raqami", "Номер дороги/маршрута"), null, 23, now),
+            Marking("1.23", RoadMarkingType.Horizontal, T("Жамоат транспорти бўлаги", "Jamoat transporti bo'lagi", "Полоса для маршрутных ТС"), null, 24, now),
+
+            // Vertical Markings (Tik chiziqlar)
+            Marking("2.1", RoadMarkingType.Vertical, T("Кўприк таянчлари", "Ko'prik tayanchlari", "Элементы мостовых сооружений"),
+                T("Кўприк, ўтказгич ва тоннелларнинг вертикал элементлари", "Ko'prik, o'tkazgich va tonnellarning vertikal elementlari", "Вертикальные элементы мостов, путепроводов и тоннелей"), 25, now),
+            Marking("2.2", RoadMarkingType.Vertical, T("Тоннель/кўприк пастки қирраси", "Tonnell/ko'prik pastki qirrasi", "Нижний край пролётного строения"), null, 26, now),
+            Marking("2.3", RoadMarkingType.Vertical, T("Думалоқ тумба", "Dumaloq tumba", "Круглый столбик"),
+                T("Ажратувчи бўлакдаги думалоқ тумбалар", "Ajratuvchi bo'lakdagi dumaloq tumbalar", "Круглые тумбы на разделительных полосах"), 27, now),
+            Marking("2.4", RoadMarkingType.Vertical, T("Йўналтирувчи устунлар", "Yo'naltiruvchi ustunlar", "Направляющие столбики"), null, 28, now),
+            Marking("2.5", RoadMarkingType.Vertical, T("Тўсиқ ён юзалари — хавфли", "To'siq yon yuzalari — xavfli", "Боковые поверхности ограждений — опасные"),
+                T("Хавфли бурилишлар ва нишабликларда тўсиқларнинг ён юзалари", "Xavfli burilishlar va nishabliklarida to'siqlarning yon yuzalari", "Боковые поверхности ограждений дорог на закруглениях и крутых спусках"), 29, now),
+            Marking("2.6", RoadMarkingType.Vertical, T("Тўсиқ ён юзалари — бошқа", "To'siq yon yuzalari — boshqa", "Боковые поверхности ограждений — прочие"), null, 30, now),
+            Marking("2.7", RoadMarkingType.Vertical, T("Бордюрлар", "Bordyurlar", "Бордюры"),
+                T("Хавфли жойлар ва хавфсизлик оролчаларидаги бордюрлар", "Xavfli joylar va xavfsizlik orolchalaridagi bordyurlar", "Бордюры на опасных участках и островках безопасности"), 31, now),
+        };
+
+        db.RoadMarkings.AddRange(markings);
+        logger.LogInformation("Seeded {Count} road markings", markings.Count);
+    }
+
+    private static RoadSignCategory SignCategory(string slug, string code, LocalizedText name, LocalizedText description, int sort, DateTimeOffset now) =>
+        new()
+        {
+            Id = Guid.NewGuid(), Slug = slug, Code = code,
+            Name = name, Description = description,
+            SortOrder = sort, IsActive = true,
+            CreatedAt = now
+        };
+
+    private static RoadSign Sign(Guid categoryId, string signCode, LocalizedText name, LocalizedText? description, int sort, DateTimeOffset now) =>
+        new()
+        {
+            Id = Guid.NewGuid(), CategoryId = categoryId, SignCode = signCode,
+            Name = name, Description = description,
+            SortOrder = sort, IsActive = true,
+            CreatedAt = now
+        };
+
+    private static RoadMarking Marking(string markingCode, RoadMarkingType type, LocalizedText name, LocalizedText? description, int sort, DateTimeOffset now) =>
+        new()
+        {
+            Id = Guid.NewGuid(), MarkingCode = markingCode, MarkingType = type,
+            Name = name, Description = description,
+            SortOrder = sort, IsActive = true,
+            CreatedAt = now
         };
 
     // ── Helpers ──

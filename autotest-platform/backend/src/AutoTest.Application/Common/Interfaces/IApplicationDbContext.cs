@@ -40,5 +40,10 @@ public interface IApplicationDbContext
     DbSet<GlossaryTerm> GlossaryTerms { get; }
     DbSet<ColorVisionPlate> ColorVisionPlates { get; }
 
+    // Phase 3 — Road Signs & Markings
+    DbSet<RoadSignCategory> RoadSignCategories { get; }
+    DbSet<RoadSign> RoadSigns { get; }
+    DbSet<RoadMarking> RoadMarkings { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

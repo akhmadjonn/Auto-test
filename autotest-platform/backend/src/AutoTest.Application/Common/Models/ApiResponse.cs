@@ -15,7 +15,7 @@ public class ApiResponse
 
 public class ApiResponse<T> : ApiResponse
 {
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T? Data { get; init; }
 
     public static ApiResponse<T> Ok(T data) => new() { Success = true, Data = data };

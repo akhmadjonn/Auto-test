@@ -42,6 +42,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
     public DbSet<ColorVisionPlate> ColorVisionPlates => Set<ColorVisionPlate>();
 
+    // Phase 3 — Road Signs & Markings
+    public DbSet<RoadSignCategory> RoadSignCategories => Set<RoadSignCategory>();
+    public DbSet<RoadSign> RoadSigns => Set<RoadSign>();
+    public DbSet<RoadMarking> RoadMarkings => Set<RoadMarking>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("autotest");
