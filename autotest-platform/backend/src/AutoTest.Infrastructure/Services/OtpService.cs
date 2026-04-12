@@ -112,6 +112,12 @@ public class OtpService(IConnectionMultiplexer redis, IConfiguration configurati
     public async Task ResetVerifyAttemptsAsync(string phoneNumber, CancellationToken ct = default) =>
         await _db.KeyDeleteAsync(VerifyAttemptsKey(phoneNumber));
 
+    public string? GetAndroidAppHash()
+    {
+        var hash = configuration["OtpSettings:AndroidAppHash"];
+        return string.IsNullOrWhiteSpace(hash) ? null : hash;
+    }
+
     private static string NormalizePhone(string phone) =>
         phone.TrimStart('+');
 
