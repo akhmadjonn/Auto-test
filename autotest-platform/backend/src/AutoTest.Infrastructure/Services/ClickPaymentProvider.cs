@@ -30,14 +30,14 @@ public class ClickPaymentProvider(
 
     public async Task<string> CreatePaymentAsync(Guid subscriptionId, long amountInTiyins, CancellationToken ct = default)
     {
-        var amountUzs = amountInTiyins / 100.0m; // tiyins → sum
+        var amountUzs = Math.Round(amountInTiyins / 100m, 2); // tiyins → sum
         var result = await InitiatePaymentAsync(subscriptionId.ToString(), amountUzs, ct);
         return result;
     }
 
     public string GenerateCheckoutUrl(string providerTransactionId, long amountInTiyins, Guid subscriptionId)
     {
-        var amountUzs = amountInTiyins / 100.0m;
+        var amountUzs = Math.Round(amountInTiyins / 100m, 2);
         var checkoutBase = configuration["ClickSettings:CheckoutUrl"] ?? "https://my.click.uz/services/pay";
         return $"{checkoutBase}?service_id={_serviceId}&merchant_id={_merchantId}&amount={amountUzs}&transaction_param={subscriptionId}";
     }
@@ -58,7 +58,7 @@ public class ClickPaymentProvider(
     {
         try
         {
-            var amountUzs = amountInTiyins / 100.0m;
+            var amountUzs = Math.Round(amountInTiyins / 100m, 2);
             var client = CreateAuthenticatedClient();
 
             var payload = new

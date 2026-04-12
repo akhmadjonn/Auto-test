@@ -3,6 +3,7 @@ using System;
 using AutoTest.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AutoTest.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260412134241_AddIsDownloadableToVideoLesson")]
+    partial class AddIsDownloadableToVideoLesson
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1421,9 +1424,6 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsFree")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid?>("LinkedCategoryId")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 
@@ -1446,8 +1446,6 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(1000)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("LinkedCategoryId");
 
                     b.HasIndex("VideoCategoryId", "IsActive", "SortOrder");
 
@@ -2695,11 +2693,6 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("AutoTest.Domain.Entities.VideoLesson", b =>
                 {
-                    b.HasOne("AutoTest.Domain.Entities.Category", "LinkedCategory")
-                        .WithMany()
-                        .HasForeignKey("LinkedCategoryId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("AutoTest.Domain.Entities.VideoCategory", "Category")
                         .WithMany("Lessons")
                         .HasForeignKey("VideoCategoryId")
@@ -2763,8 +2756,6 @@ namespace AutoTest.Infrastructure.Persistence.Migrations
                     b.Navigation("Category");
 
                     b.Navigation("Description");
-
-                    b.Navigation("LinkedCategory");
 
                     b.Navigation("Title")
                         .IsRequired();

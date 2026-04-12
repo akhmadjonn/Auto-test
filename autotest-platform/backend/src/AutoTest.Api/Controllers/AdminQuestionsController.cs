@@ -70,20 +70,28 @@ public class AdminQuestionsController(IMediator mediator) : ControllerBase
             optionImageNames.Add(imgFile?.FileName);
         }
 
-        var command = new CreateQuestionCommand(
-            form.CategoryId,
-            form.TextUz, form.TextUzLatin, form.TextRu,
-            form.ExplanationUz, form.ExplanationUzLatin, form.ExplanationRu,
-            form.Difficulty, form.TicketNumber, form.LicenseCategory,
-            form.Status,
-            form.QuestionImage?.OpenReadStream(),
-            form.QuestionImage?.FileName,
-            form.AnswerOptions?.Select((o, i) => new CreateAnswerOptionDto(
-                o.TextUz, o.TextUzLatin, o.TextRu, o.IsCorrect,
-                optionImages[i], optionImageNames[i])).ToList() ?? []);
+        try
+        {
+            var command = new CreateQuestionCommand(
+                form.CategoryId,
+                form.TextUz, form.TextUzLatin, form.TextRu,
+                form.ExplanationUz, form.ExplanationUzLatin, form.ExplanationRu,
+                form.Difficulty, form.TicketNumber, form.LicenseCategory,
+                form.Status,
+                form.QuestionImage?.OpenReadStream(),
+                form.QuestionImage?.FileName,
+                form.AnswerOptions?.Select((o, i) => new CreateAnswerOptionDto(
+                    o.TextUz, o.TextUzLatin, o.TextRu, o.IsCorrect,
+                    optionImages[i], optionImageNames[i])).ToList() ?? []);
 
-        var result = await mediator.Send(command, ct);
-        return result.Success ? Ok(result) : BadRequest(result);
+            var result = await mediator.Send(command, ct);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+        finally
+        {
+            foreach (var stream in optionImages)
+                stream?.Dispose();
+        }
     }
 
     [HttpPut("{id}")]
@@ -100,20 +108,28 @@ public class AdminQuestionsController(IMediator mediator) : ControllerBase
             optionImageNames.Add(imgFile?.FileName);
         }
 
-        var command = new UpdateQuestionCommand(
-            id,
-            form.TextUz, form.TextUzLatin, form.TextRu,
-            form.ExplanationUz, form.ExplanationUzLatin, form.ExplanationRu,
-            form.Difficulty, form.TicketNumber, form.LicenseCategory, form.Status,
-            form.RemoveQuestionImage,
-            form.NewQuestionImage?.OpenReadStream(),
-            form.NewQuestionImage?.FileName,
-            form.AnswerOptions?.Select((o, i) => new UpdateAnswerOptionDto(
-                o.ExistingId, o.TextUz, o.TextUzLatin, o.TextRu, o.IsCorrect,
-                o.RemoveImage, optionImages[i], optionImageNames[i])).ToList() ?? []);
+        try
+        {
+            var command = new UpdateQuestionCommand(
+                id,
+                form.TextUz, form.TextUzLatin, form.TextRu,
+                form.ExplanationUz, form.ExplanationUzLatin, form.ExplanationRu,
+                form.Difficulty, form.TicketNumber, form.LicenseCategory, form.Status,
+                form.RemoveQuestionImage,
+                form.NewQuestionImage?.OpenReadStream(),
+                form.NewQuestionImage?.FileName,
+                form.AnswerOptions?.Select((o, i) => new UpdateAnswerOptionDto(
+                    o.ExistingId, o.TextUz, o.TextUzLatin, o.TextRu, o.IsCorrect,
+                    o.RemoveImage, optionImages[i], optionImageNames[i])).ToList() ?? []);
 
-        var result = await mediator.Send(command, ct);
-        return result.Success ? Ok(result) : BadRequest(result);
+            var result = await mediator.Send(command, ct);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+        finally
+        {
+            foreach (var stream in optionImages)
+                stream?.Dispose();
+        }
     }
 
     [HttpPatch("{id}/status")]
@@ -148,9 +164,9 @@ public class AdminQuestionsController(IMediator mediator) : ControllerBase
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> BulkImport(IFormFile excel, IFormFile? images, CancellationToken ct)
     {
-        var command = new BulkImportQuestionsCommand(
-            excel.OpenReadStream(),
-            images?.OpenReadStream());
+        using var excelStream = excel.OpenReadStream();
+        using var imagesStream = images?.OpenReadStream();
+        var command = new BulkImportQuestionsCommand(excelStream, imagesStream);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }

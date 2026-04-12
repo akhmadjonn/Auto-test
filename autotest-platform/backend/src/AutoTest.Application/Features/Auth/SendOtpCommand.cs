@@ -55,7 +55,7 @@ public class SendOtpCommandHandler(
             logger.LogWarning(ex, "SMS send failed for {Phone} — OTP still valid in Redis", phone);
         }
 
-        logger.LogInformation("OTP sent to {Phone} | DEV code: {Code}", phone, code);
+        logger.LogInformation("OTP sent to {Phone}", phone);
         return ApiResponse.Ok();
     }
 }

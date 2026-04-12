@@ -47,6 +47,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RoadSign> RoadSigns => Set<RoadSign>();
     public DbSet<RoadMarking> RoadMarkings => Set<RoadMarking>();
 
+    // Phase 4 — Video Lessons
+    public DbSet<VideoCategory> VideoCategories => Set<VideoCategory>();
+    public DbSet<VideoLesson> VideoLessons => Set<VideoLesson>();
+    public DbSet<LessonAttachment> LessonAttachments => Set<LessonAttachment>();
+    public DbSet<UserLessonProgress> UserLessonProgress => Set<UserLessonProgress>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("autotest");

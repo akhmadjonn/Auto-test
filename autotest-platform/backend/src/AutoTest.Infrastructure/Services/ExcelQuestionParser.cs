@@ -20,7 +20,12 @@ public class ExcelQuestionParser : IQuestionImportService
         var errors = new List<ImportRowError>();
 
         using var wb = new XLWorkbook(excelStream);
-        var ws = wb.Worksheets.First();
+        var ws = wb.Worksheets.FirstOrDefault();
+        if (ws is null)
+        {
+            errors.Add(new ImportRowError(0, "General", "Excel file contains no worksheets."));
+            return Task.FromResult(new QuestionImportResult(questions, errors));
+        }
         var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
 
         if (lastRow - 1 > MaxImportRows)
