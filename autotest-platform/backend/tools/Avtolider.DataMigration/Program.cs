@@ -128,14 +128,19 @@ try
             await ImportVisualAssetsCommand.ExecuteAsync(ctx, cts.Token);
             break;
 
+        case "import-road-signs":
+            await ImportRoadSignsCommand.ExecuteAsync(ctx, cts.Token);
+            break;
+
         case "import-all":
-            Console.WriteLine("Running full import pipeline (6 stages)...");
+            Console.WriteLine("Running full import pipeline (7 stages)...");
             await ImportApkCommand.ExecuteAsync(ctx, cts.Token);
             await ImportAvtoliderCommand.ExecuteAsync(ctx, cts.Token);
             await DeduplicateCommand.ExecuteAsync(ctx, hardDelete, cts.Token);
             await MergeExplanationsCommand.ExecuteAsync(ctx, cts.Token);
             await AssignCategoriesCommand.ExecuteAsync(ctx, cts.Token);
             await ImportVisualAssetsCommand.ExecuteAsync(ctx, cts.Token);
+            await ImportRoadSignsCommand.ExecuteAsync(ctx, cts.Token);
             break;
 
         default:
@@ -177,7 +182,8 @@ static void PrintUsage()
     Console.WriteLine("    merge-explanations    Backfill explanations from APK into DB-only questions");
     Console.WriteLine("    assign-categories     Reassign APK questions to proper PDD theme categories");
     Console.WriteLine("    import-visual-assets  Upload road signs, markings, first aid images to MinIO");
-    Console.WriteLine("    import-all            Run full pipeline (all 6 stages in sequence)");
+    Console.WriteLine("    import-road-signs     Import road sign/marking images from extracted competitor APKs");
+    Console.WriteLine("    import-all            Run full pipeline (all 7 stages in sequence)");
     Console.WriteLine();
     Console.WriteLine("  Options:");
     Console.WriteLine("    --dry-run          Preview what would be imported/deleted without writing");

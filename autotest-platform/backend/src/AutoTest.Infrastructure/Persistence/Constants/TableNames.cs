@@ -37,4 +37,9 @@ public static class TableNames
     public const string GlossaryCategories = nameof(GlossaryCategories);
     public const string GlossaryTerms = nameof(GlossaryTerms);
     public const string ColorVisionPlates = nameof(ColorVisionPlates);
+
+    // Phase 3 — Road Signs & Markings
+    public const string RoadSignCategories = nameof(RoadSignCategories);
+    public const string RoadSigns = nameof(RoadSigns);
+    public const string RoadMarkings = nameof(RoadMarkings);
 }
