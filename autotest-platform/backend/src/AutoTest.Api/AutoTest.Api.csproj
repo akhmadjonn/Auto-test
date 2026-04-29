@@ -25,4 +25,10 @@
     <ProjectReference Include="..\AutoTest.Application\AutoTest.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Resources\localizations.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

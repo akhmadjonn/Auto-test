@@ -1,0 +1,509 @@
+# errorCode|language|httpStatusCode|localizedMessage
+# Languages: uz (Uzbek, default), ru (Russian), en (English)
+# Keep rows grouped by error code for easy review.
+
+# -32000 General errors
+-32000|uz|500|So'rovni qayta ishlashda xatolik yuz berdi. Iltimos, keyinroq urinib ko'ring.
+-32000|ru|500|Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже.
+-32000|en|500|An error occurred while processing the request. Please try again later.
+-32001|uz|503|Xizmat vaqtinchalik mavjud emas. Iltimos, keyinroq urinib ko'ring.
+-32001|ru|503|Сервис временно недоступен. Пожалуйста, попробуйте позже.
+-32001|en|503|Service temporarily unavailable. Please try again later.
+-32002|uz|500|Ichki xatolik yuz berdi. Iltimos, keyinroq urinib ko'ring.
+-32002|ru|500|Произошла внутренняя ошибка. Пожалуйста, попробуйте позже.
+-32002|en|500|Internal error occurred. Please try again later.
+-32003|uz|400|Noto'g'ri argument berilgan.
+-32003|ru|400|Неверный аргумент.
+-32003|en|400|Invalid argument.
+-32004|uz|400|So'rov formati noto'g'ri.
+-32004|ru|400|Неверный формат запроса.
+-32004|en|400|Invalid payload format.
+-32005|uz|409|Ushbu yozuv allaqachon mavjud.
+-32005|ru|409|Запись уже существует.
+-32005|en|409|Already exists.
+-32006|uz|500|Ma'lumotlarni saqlashda xatolik yuz berdi.
+-32006|ru|500|Ошибка при сохранении данных.
+-32006|en|500|Failed to save data.
+-32007|uz|401|Avtorizatsiya talab qilinadi.
+-32007|ru|401|Требуется авторизация.
+-32007|en|401|Unauthorized.
+-32008|uz|403|Ushbu amalga ruxsatingiz yo'q.
+-32008|ru|403|У вас нет доступа к этому действию.
+-32008|en|403|Forbidden.
+-32009|uz|400|Validatsiya xatosi.
+-32009|ru|400|Ошибка валидации.
+-32009|en|400|Validation error.
+
+# -32010 User
+-32010|uz|404|Foydalanuvchi topilmadi.
+-32010|ru|404|Пользователь не найден.
+-32010|en|404|User not found.
+-32011|uz|400|Foydalanuvchini qo'shishda xatolik yuz berdi. Iltimos, keyinroq urinib ko'ring.
+-32011|ru|400|Не удалось добавить пользователя. Пожалуйста, попробуйте позже.
+-32011|en|400|Failed to add user. Please try again later.
+-32012|uz|400|Foydalanuvchini yangilashda xatolik yuz berdi.
+-32012|ru|400|Не удалось обновить пользователя.
+-32012|en|400|Failed to update user.
+-32013|uz|400|Foydalanuvchi ma'lumotlarini olishda xatolik yuz berdi.
+-32013|ru|400|Не удалось получить данные пользователя.
+-32013|en|400|Failed to get user.
+-32014|uz|400|Foydalanuvchini o'chirishda xatolik yuz berdi.
+-32014|ru|400|Не удалось удалить пользователя.
+-32014|en|400|Failed to delete user.
+-32015|uz|403|Ushbu foydalanuvchi bloklangan.
+-32015|ru|403|Пользователь заблокирован.
+-32015|en|403|User is blocked.
+-32016|uz|409|Ushbu foydalanuvchi allaqachon mavjud.
+-32016|ru|409|Пользователь уже существует.
+-32016|en|409|User already exists.
+-32017|uz|400|Foydalanuvchi roli noto'g'ri.
+-32017|ru|400|Неверная роль пользователя.
+-32017|en|400|Invalid user role.
+
+# -32020 Auth / OTP
+-32020|uz|400|Tasdiqlash kodi noto'g'ri yoki muddati o'tgan.
+-32020|ru|400|Неверный или устаревший код подтверждения.
+-32020|en|400|Invalid or expired OTP code.
+-32021|uz|400|Tasdiqlash kodining muddati o'tgan.
+-32021|ru|400|Срок действия кода истёк.
+-32021|en|400|OTP code has expired.
+-32022|uz|429|Juda ko'p so'rov. Iltimos, 15 daqiqadan so'ng urinib ko'ring.
+-32022|ru|429|Слишком много запросов. Пожалуйста, попробуйте через 15 минут.
+-32022|en|429|Too many OTP requests. Please wait 15 minutes.
+-32023|uz|429|Iltimos, keyingi tasdiqlash kodini so'rashdan oldin 60 soniya kuting.
+-32023|ru|429|Пожалуйста, подождите 60 секунд перед повторным запросом.
+-32023|en|429|Please wait 60 seconds before requesting another OTP.
+-32024|uz|429|Juda ko'p urinish. Iltimos, 15 daqiqadan so'ng qayta urining.
+-32024|ru|429|Слишком много попыток. Попробуйте через 15 минут.
+-32024|en|429|Too many attempts. Try again in 15 minutes.
+-32025|uz|401|Token noto'g'ri yoki muddati o'tgan.
+-32025|ru|401|Неверный или устаревший токен.
+-32025|en|401|Invalid or expired token.
+-32026|uz|401|Yangilash tokenining muddati o'tgan. Qayta tizimga kiring.
+-32026|ru|401|Срок действия refresh-токена истёк. Пожалуйста, войдите снова.
+-32026|en|401|Refresh token expired. Please log in again.
+-32027|uz|409|Avtorizatsiya jarayonida. Iltimos, kuting.
+-32027|ru|409|Верификация в процессе. Пожалуйста, подождите.
+-32027|en|409|Verification in progress. Please wait.
+-32028|uz|400|Telegram avtorizatsiyasida xatolik yuz berdi.
+-32028|ru|400|Ошибка авторизации через Telegram.
+-32028|en|400|Telegram authentication error.
+-32029|uz|400|Tasdiqlash kodini yuborishda xatolik yuz berdi.
+-32029|ru|400|Не удалось отправить код подтверждения.
+-32029|en|400|Failed to send OTP code.
+
+# -32030 Question
+-32030|uz|404|Savol topilmadi.
+-32030|ru|404|Вопрос не найден.
+-32030|en|404|Question not found.
+-32031|uz|400|Savolni qo'shishda xatolik yuz berdi.
+-32031|ru|400|Не удалось добавить вопрос.
+-32031|en|400|Failed to add question.
+-32032|uz|400|Savolni yangilashda xatolik yuz berdi.
+-32032|ru|400|Не удалось обновить вопрос.
+-32032|en|400|Failed to update question.
+-32033|uz|400|Savol ma'lumotlarini olishda xatolik yuz berdi.
+-32033|ru|400|Не удалось получить вопрос.
+-32033|en|400|Failed to get question.
+-32034|uz|400|Savolni o'chirishda xatolik yuz berdi.
+-32034|ru|400|Не удалось удалить вопрос.
+-32034|en|400|Failed to delete question.
+-32035|uz|400|Savollarni import qilishda xatolik yuz berdi.
+-32035|ru|400|Ошибка при импорте вопросов.
+-32035|en|400|Failed to import questions.
+-32036|uz|400|Savol ma'lumotlari noto'g'ri.
+-32036|ru|400|Некорректные данные вопроса.
+-32036|en|400|Invalid question payload.
+
+# -32040 AnswerOption
+-32040|uz|404|Javob varianti topilmadi.
+-32040|ru|404|Вариант ответа не найден.
+-32040|en|404|Answer option not found.
+-32041|uz|400|Javob variantini qo'shishda xatolik yuz berdi.
+-32041|ru|400|Не удалось добавить вариант ответа.
+-32041|en|400|Failed to add answer option.
+-32042|uz|400|Javob variantini yangilashda xatolik yuz berdi.
+-32042|ru|400|Не удалось обновить вариант ответа.
+-32042|en|400|Failed to update answer option.
+-32043|uz|400|Javob variantini o'chirishda xatolik yuz berdi.
+-32043|ru|400|Не удалось удалить вариант ответа.
+-32043|en|400|Failed to delete answer option.
+
+# -32050 Category
+-32050|uz|404|Kategoriya topilmadi.
+-32050|ru|404|Категория не найдена.
+-32050|en|404|Category not found.
+-32051|uz|400|Kategoriyani qo'shishda xatolik yuz berdi.
+-32051|ru|400|Не удалось добавить категорию.
+-32051|en|400|Failed to add category.
+-32052|uz|400|Kategoriyani yangilashda xatolik yuz berdi.
+-32052|ru|400|Не удалось обновить категорию.
+-32052|en|400|Failed to update category.
+-32053|uz|400|Kategoriyani olishda xatolik yuz berdi.
+-32053|ru|400|Не удалось получить категорию.
+-32053|en|400|Failed to get category.
+-32054|uz|400|Kategoriyani o'chirishda xatolik yuz berdi.
+-32054|ru|400|Не удалось удалить категорию.
+-32054|en|400|Failed to delete category.
+-32055|uz|409|Ushbu kategoriya allaqachon mavjud.
+-32055|ru|409|Категория уже существует.
+-32055|en|409|Category already exists.
+
+# -32060 Exam / Session
+-32060|uz|404|Imtihon sessiyasi topilmadi.
+-32060|ru|404|Сессия экзамена не найдена.
+-32060|en|404|Exam session not found.
+-32061|uz|400|Imtihonni boshlashda xatolik yuz berdi.
+-32061|ru|400|Не удалось начать экзамен.
+-32061|en|400|Failed to start exam.
+-32062|uz|400|Javobni yuborishda xatolik yuz berdi.
+-32062|ru|400|Не удалось отправить ответ.
+-32062|en|400|Failed to submit answer.
+-32063|uz|400|Imtihonni yakunlashda xatolik yuz berdi.
+-32063|ru|400|Не удалось завершить экзамен.
+-32063|en|400|Failed to complete exam.
+-32064|uz|410|Imtihon vaqti tugagan.
+-32064|ru|410|Время экзамена истекло.
+-32064|en|410|Exam session expired.
+-32065|uz|409|Imtihon allaqachon yakunlangan.
+-32065|ru|409|Экзамен уже завершён.
+-32065|en|409|Exam session already completed.
+-32066|uz|400|Ushbu savol ushbu imtihonga tegishli emas.
+-32066|ru|400|Этот вопрос не относится к данному экзамену.
+-32066|en|400|Invalid question for this exam.
+-32067|uz|404|Imtihon shabloni topilmadi.
+-32067|ru|404|Шаблон экзамена не найден.
+-32067|en|404|Exam template not found.
+-32068|uz|400|Imtihon shablonini qo'shishda xatolik yuz berdi.
+-32068|ru|400|Не удалось добавить шаблон экзамена.
+-32068|en|400|Failed to add exam template.
+-32069|uz|400|Imtihon shablonini yangilashda xatolik yuz berdi.
+-32069|ru|400|Не удалось обновить шаблон экзамена.
+-32069|en|400|Failed to update exam template.
+-32070|uz|400|Imtihon shablonini o'chirishda xatolik yuz berdi.
+-32070|ru|400|Не удалось удалить шаблон экзамена.
+-32070|en|400|Failed to delete exam template.
+-32071|uz|404|Imtihon qoidasi topilmadi.
+-32071|ru|404|Правило пула экзамена не найдено.
+-32071|en|404|Exam pool rule not found.
+
+# -32080 Practice
+-32080|uz|404|Amaliy mashg'ulot sessiyasi topilmadi.
+-32080|ru|404|Сессия практики не найдена.
+-32080|en|404|Practice session not found.
+-32081|uz|400|Amaliy mashg'ulot sessiyasini olishda xatolik yuz berdi.
+-32081|ru|400|Не удалось получить сессию практики.
+-32081|en|400|Failed to get practice session.
+-32082|uz|400|Amaliy javobni yuborishda xatolik yuz berdi.
+-32082|ru|400|Не удалось отправить ответ практики.
+-32082|en|400|Failed to submit practice answer.
+-32083|uz|404|Takrorlash uchun savollar yo'q.
+-32083|ru|404|Нет вопросов для повторения.
+-32083|en|404|No questions available for review.
+
+# -32090 Subscription
+-32090|uz|404|Obuna topilmadi.
+-32090|ru|404|Подписка не найдена.
+-32090|en|404|Subscription not found.
+-32091|uz|400|Obunani yaratishda xatolik yuz berdi.
+-32091|ru|400|Не удалось создать подписку.
+-32091|en|400|Failed to create subscription.
+-32092|uz|400|Obunani bekor qilishda xatolik yuz berdi.
+-32092|ru|400|Не удалось отменить подписку.
+-32092|en|400|Failed to cancel subscription.
+-32093|uz|400|Obuna ma'lumotlarini olishda xatolik yuz berdi.
+-32093|ru|400|Не удалось получить подписку.
+-32093|en|400|Failed to get subscription.
+-32094|uz|403|Obunaning muddati o'tgan.
+-32094|ru|403|Срок подписки истёк.
+-32094|en|403|Subscription expired.
+-32095|uz|409|Obuna allaqachon faol.
+-32095|ru|409|Подписка уже активна.
+-32095|en|409|Subscription already active.
+-32100|uz|404|Obuna tarifi topilmadi.
+-32100|ru|404|Тарифный план не найден.
+-32100|en|404|Subscription plan not found.
+-32101|uz|400|Obuna tarifini qo'shishda xatolik yuz berdi.
+-32101|ru|400|Не удалось добавить тарифный план.
+-32101|en|400|Failed to add subscription plan.
+-32102|uz|400|Obuna tarifini yangilashda xatolik yuz berdi.
+-32102|ru|400|Не удалось обновить тарифный план.
+-32102|en|400|Failed to update subscription plan.
+-32103|uz|400|Obuna tarifini o'chirishda xatolik yuz berdi.
+-32103|ru|400|Не удалось удалить тарифный план.
+-32103|en|400|Failed to delete subscription plan.
+
+# -32110 Payment
+-32110|uz|404|To'lov topilmadi.
+-32110|ru|404|Платёж не найден.
+-32110|en|404|Payment not found.
+-32111|uz|400|To'lovni boshlashda xatolik yuz berdi.
+-32111|ru|400|Не удалось инициировать платёж.
+-32111|en|400|Failed to initiate payment.
+-32112|uz|400|To'lov webhook xatoligi.
+-32112|ru|400|Ошибка webhook платежа.
+-32112|en|400|Payment webhook error.
+-32113|uz|409|To'lov allaqachon qayta ishlangan.
+-32113|ru|409|Платёж уже обработан.
+-32113|en|409|Payment already processed.
+-32114|uz|400|To'lov muvaffaqiyatsiz yakunlandi.
+-32114|ru|400|Платёж не прошёл.
+-32114|en|400|Payment failed.
+-32115|uz|400|To'lov summasi noto'g'ri.
+-32115|ru|400|Неверная сумма платежа.
+-32115|en|400|Invalid payment amount.
+
+# -32120 Announcement
+-32120|uz|404|E'lon topilmadi.
+-32120|ru|404|Объявление не найдено.
+-32120|en|404|Announcement not found.
+-32121|uz|400|E'lonni qo'shishda xatolik yuz berdi.
+-32121|ru|400|Не удалось добавить объявление.
+-32121|en|400|Failed to add announcement.
+-32122|uz|400|E'lonni yangilashda xatolik yuz berdi.
+-32122|ru|400|Не удалось обновить объявление.
+-32122|en|400|Failed to update announcement.
+-32123|uz|400|E'lonni olishda xatolik yuz berdi.
+-32123|ru|400|Не удалось получить объявление.
+-32123|en|400|Failed to get announcement.
+-32124|uz|400|E'lonni o'chirishda xatolik yuz berdi.
+-32124|ru|400|Не удалось удалить объявление.
+-32124|en|400|Failed to delete announcement.
+
+# -32130 RoadSign
+-32130|uz|404|Yo'l belgisi topilmadi.
+-32130|ru|404|Дорожный знак не найден.
+-32130|en|404|Road sign not found.
+-32131|uz|400|Yo'l belgisini qo'shishda xatolik yuz berdi.
+-32131|ru|400|Не удалось добавить дорожный знак.
+-32131|en|400|Failed to add road sign.
+-32132|uz|400|Yo'l belgisini yangilashda xatolik yuz berdi.
+-32132|ru|400|Не удалось обновить дорожный знак.
+-32132|en|400|Failed to update road sign.
+-32133|uz|400|Yo'l belgisini olishda xatolik yuz berdi.
+-32133|ru|400|Не удалось получить дорожный знак.
+-32133|en|400|Failed to get road sign.
+-32134|uz|400|Yo'l belgisini o'chirishda xatolik yuz berdi.
+-32134|ru|400|Не удалось удалить дорожный знак.
+-32134|en|400|Failed to delete road sign.
+-32140|uz|404|Yo'l belgisi kategoriyasi topilmadi.
+-32140|ru|404|Категория дорожных знаков не найдена.
+-32140|en|404|Road sign category not found.
+-32141|uz|400|Yo'l belgisi kategoriyasini qo'shishda xatolik yuz berdi.
+-32141|ru|400|Не удалось добавить категорию дорожных знаков.
+-32141|en|400|Failed to add road sign category.
+-32142|uz|400|Yo'l belgisi kategoriyasini yangilashda xatolik yuz berdi.
+-32142|ru|400|Не удалось обновить категорию дорожных знаков.
+-32142|en|400|Failed to update road sign category.
+-32143|uz|400|Yo'l belgisi kategoriyasini o'chirishda xatolik yuz berdi.
+-32143|ru|400|Не удалось удалить категорию дорожных знаков.
+-32143|en|400|Failed to delete road sign category.
+
+# -32150 RoadMarking
+-32150|uz|404|Yo'l chizig'i topilmadi.
+-32150|ru|404|Дорожная разметка не найдена.
+-32150|en|404|Road marking not found.
+-32151|uz|400|Yo'l chizig'ini qo'shishda xatolik yuz berdi.
+-32151|ru|400|Не удалось добавить дорожную разметку.
+-32151|en|400|Failed to add road marking.
+-32152|uz|400|Yo'l chizig'ini yangilashda xatolik yuz berdi.
+-32152|ru|400|Не удалось обновить дорожную разметку.
+-32152|en|400|Failed to update road marking.
+-32153|uz|400|Yo'l chizig'ini olishda xatolik yuz berdi.
+-32153|ru|400|Не удалось получить дорожную разметку.
+-32153|en|400|Failed to get road marking.
+-32154|uz|400|Yo'l chizig'ini o'chirishda xatolik yuz berdi.
+-32154|ru|400|Не удалось удалить дорожную разметку.
+-32154|en|400|Failed to delete road marking.
+
+# -32160 HazardLabel
+-32160|uz|404|Xavf belgisi topilmadi.
+-32160|ru|404|Предупреждающий знак не найден.
+-32160|en|404|Hazard label not found.
+-32161|uz|400|Xavf belgisini qo'shishda xatolik yuz berdi.
+-32161|ru|400|Не удалось добавить предупреждающий знак.
+-32161|en|400|Failed to add hazard label.
+-32162|uz|400|Xavf belgisini yangilashda xatolik yuz berdi.
+-32162|ru|400|Не удалось обновить предупреждающий знак.
+-32162|en|400|Failed to update hazard label.
+-32163|uz|400|Xavf belgisini olishda xatolik yuz berdi.
+-32163|ru|400|Не удалось получить предупреждающий знак.
+-32163|en|400|Failed to get hazard label.
+-32164|uz|400|Xavf belgisini o'chirishda xatolik yuz berdi.
+-32164|ru|400|Не удалось удалить предупреждающий знак.
+-32164|en|400|Failed to delete hazard label.
+
+# -32170 TrafficFine
+-32170|uz|404|Jarima topilmadi.
+-32170|ru|404|Штраф не найден.
+-32170|en|404|Traffic fine not found.
+-32171|uz|400|Jarimani qo'shishda xatolik yuz berdi.
+-32171|ru|400|Не удалось добавить штраф.
+-32171|en|400|Failed to add traffic fine.
+-32172|uz|400|Jarimani yangilashda xatolik yuz berdi.
+-32172|ru|400|Не удалось обновить штраф.
+-32172|en|400|Failed to update traffic fine.
+-32173|uz|400|Jarimani olishda xatolik yuz berdi.
+-32173|ru|400|Не удалось получить штраф.
+-32173|en|400|Failed to get traffic fine.
+-32174|uz|400|Jarimani o'chirishda xatolik yuz berdi.
+-32174|ru|400|Не удалось удалить штраф.
+-32174|en|400|Failed to delete traffic fine.
+
+# -32180 FirstAid
+-32180|uz|404|Birinchi tibbiy yordam tartibi topilmadi.
+-32180|ru|404|Процедура первой помощи не найдена.
+-32180|en|404|First aid procedure not found.
+-32181|uz|400|Birinchi tibbiy yordam tartibini qo'shishda xatolik yuz berdi.
+-32181|ru|400|Не удалось добавить процедуру первой помощи.
+-32181|en|400|Failed to add first aid procedure.
+-32182|uz|400|Birinchi tibbiy yordam tartibini yangilashda xatolik yuz berdi.
+-32182|ru|400|Не удалось обновить процедуру первой помощи.
+-32182|en|400|Failed to update first aid procedure.
+-32183|uz|400|Birinchi tibbiy yordam tartibini o'chirishda xatolik yuz berdi.
+-32183|ru|400|Не удалось удалить процедуру первой помощи.
+-32183|en|400|Failed to delete first aid procedure.
+-32190|uz|404|Birinchi tibbiy yordam qadami topilmadi.
+-32190|ru|404|Шаг первой помощи не найден.
+-32190|en|404|First aid step not found.
+-32191|uz|400|Birinchi tibbiy yordam qadamini qo'shishda xatolik yuz berdi.
+-32191|ru|400|Не удалось добавить шаг первой помощи.
+-32191|en|400|Failed to add first aid step.
+-32192|uz|400|Birinchi tibbiy yordam qadamini yangilashda xatolik yuz berdi.
+-32192|ru|400|Не удалось обновить шаг первой помощи.
+-32192|en|400|Failed to update first aid step.
+-32193|uz|400|Birinchi tibbiy yordam qadamini o'chirishda xatolik yuz berdi.
+-32193|ru|400|Не удалось удалить шаг первой помощи.
+-32193|en|400|Failed to delete first aid step.
+
+# -32200 Glossary
+-32200|uz|404|Lug'at atamasi topilmadi.
+-32200|ru|404|Термин глоссария не найден.
+-32200|en|404|Glossary term not found.
+-32201|uz|400|Lug'at atamasini qo'shishda xatolik yuz berdi.
+-32201|ru|400|Не удалось добавить термин.
+-32201|en|400|Failed to add glossary term.
+-32202|uz|400|Lug'at atamasini yangilashda xatolik yuz berdi.
+-32202|ru|400|Не удалось обновить термин.
+-32202|en|400|Failed to update glossary term.
+-32203|uz|400|Lug'at atamasini o'chirishda xatolik yuz berdi.
+-32203|ru|400|Не удалось удалить термин.
+-32203|en|400|Failed to delete glossary term.
+-32210|uz|404|Lug'at kategoriyasi topilmadi.
+-32210|ru|404|Категория глоссария не найдена.
+-32210|en|404|Glossary category not found.
+-32211|uz|400|Lug'at kategoriyasini qo'shishda xatolik yuz berdi.
+-32211|ru|400|Не удалось добавить категорию глоссария.
+-32211|en|400|Failed to add glossary category.
+-32212|uz|400|Lug'at kategoriyasini yangilashda xatolik yuz berdi.
+-32212|ru|400|Не удалось обновить категорию глоссария.
+-32212|en|400|Failed to update glossary category.
+-32213|uz|400|Lug'at kategoriyasini o'chirishda xatolik yuz berdi.
+-32213|ru|400|Не удалось удалить категорию глоссария.
+-32213|en|400|Failed to delete glossary category.
+
+# -32220 ColorVisionPlate
+-32220|uz|404|Rangni ko'rish testi topilmadi.
+-32220|ru|404|Тест на цветовосприятие не найден.
+-32220|en|404|Color vision plate not found.
+-32221|uz|400|Rangni ko'rish testini qo'shishda xatolik yuz berdi.
+-32221|ru|400|Не удалось добавить тест на цветовосприятие.
+-32221|en|400|Failed to add color vision plate.
+-32222|uz|400|Rangni ko'rish testini yangilashda xatolik yuz berdi.
+-32222|ru|400|Не удалось обновить тест на цветовосприятие.
+-32222|en|400|Failed to update color vision plate.
+-32223|uz|400|Rangni ko'rish testini o'chirishda xatolik yuz berdi.
+-32223|ru|400|Не удалось удалить тест на цветовосприятие.
+-32223|en|400|Failed to delete color vision plate.
+
+# -32230 VideoLesson
+-32230|uz|404|Video dars topilmadi.
+-32230|ru|404|Видеоурок не найден.
+-32230|en|404|Video lesson not found.
+-32231|uz|400|Video darsni qo'shishda xatolik yuz berdi.
+-32231|ru|400|Не удалось добавить видеоурок.
+-32231|en|400|Failed to add video lesson.
+-32232|uz|400|Video darsni yangilashda xatolik yuz berdi.
+-32232|ru|400|Не удалось обновить видеоурок.
+-32232|en|400|Failed to update video lesson.
+-32233|uz|400|Video darsni olishda xatolik yuz berdi.
+-32233|ru|400|Не удалось получить видеоурок.
+-32233|en|400|Failed to get video lesson.
+-32234|uz|400|Video darsni o'chirishda xatolik yuz berdi.
+-32234|ru|400|Не удалось удалить видеоурок.
+-32234|en|400|Failed to delete video lesson.
+-32240|uz|404|Video kategoriya topilmadi.
+-32240|ru|404|Категория видео не найдена.
+-32240|en|404|Video category not found.
+-32241|uz|400|Video kategoriyani qo'shishda xatolik yuz berdi.
+-32241|ru|400|Не удалось добавить категорию видео.
+-32241|en|400|Failed to add video category.
+-32242|uz|400|Video kategoriyani yangilashda xatolik yuz berdi.
+-32242|ru|400|Не удалось обновить категорию видео.
+-32242|en|400|Failed to update video category.
+-32243|uz|400|Video kategoriyani o'chirishda xatolik yuz berdi.
+-32243|ru|400|Не удалось удалить категорию видео.
+-32243|en|400|Failed to delete video category.
+
+# -32250 Favorite
+-32250|uz|404|Sevimli topilmadi.
+-32250|ru|404|Избранное не найдено.
+-32250|en|404|Favorite not found.
+-32251|uz|400|Sevimliga qo'shishda xatolik yuz berdi.
+-32251|ru|400|Не удалось добавить в избранное.
+-32251|en|400|Failed to add favorite.
+-32252|uz|400|Sevimlidan o'chirishda xatolik yuz berdi.
+-32252|ru|400|Не удалось удалить из избранного.
+-32252|en|400|Failed to remove favorite.
+-32253|uz|400|Sevimlilarni olishda xatolik yuz berdi.
+-32253|ru|400|Не удалось получить избранное.
+-32253|en|400|Failed to get favorites.
+
+# -32260 Settings
+-32260|uz|404|Sozlama topilmadi.
+-32260|ru|404|Настройка не найдена.
+-32260|en|404|Setting not found.
+-32261|uz|400|Sozlamani yangilashda xatolik yuz berdi.
+-32261|ru|400|Не удалось обновить настройку.
+-32261|en|400|Failed to update setting.
+-32262|uz|400|Sozlamani olishda xatolik yuz berdi.
+-32262|ru|400|Не удалось получить настройку.
+-32262|en|400|Failed to get setting.
+
+# -32270 Leaderboard
+-32270|uz|400|Reytingni olishda xatolik yuz berdi.
+-32270|ru|400|Не удалось получить рейтинг.
+-32270|en|400|Failed to get leaderboard.
+-32271|uz|404|Reyting suratga olinmagan.
+-32271|ru|404|Снимок рейтинга не найден.
+-32271|en|404|Leaderboard snapshot not found.
+
+# -32280 Progress
+-32280|uz|400|Natijalarni olishda xatolik yuz berdi.
+-32280|ru|400|Не удалось получить прогресс.
+-32280|en|400|Failed to get progress.
+-32281|uz|404|Foydalanuvchi kategoriya statistikasi topilmadi.
+-32281|ru|404|Статистика пользователя по категории не найдена.
+-32281|en|404|User category stat not found.
+
+# -32290 AuditLog
+-32290|uz|404|Audit yozuvi topilmadi.
+-32290|ru|404|Запись аудита не найдена.
+-32290|en|404|Audit log not found.
+-32291|uz|400|Audit yozuvlarini olishda xatolik yuz berdi.
+-32291|ru|400|Не удалось получить записи аудита.
+-32291|en|400|Failed to get audit logs.
+
+# -32300 Tag
+-32300|uz|404|Teg topilmadi.
+-32300|ru|404|Тег не найден.
+-32300|en|404|Tag not found.
+-32301|uz|400|Tegni qo'shishda xatolik yuz berdi.
+-32301|ru|400|Не удалось добавить тег.
+-32301|en|400|Failed to add tag.
+-32302|uz|400|Tegni yangilashda xatolik yuz berdi.
+-32302|ru|400|Не удалось обновить тег.
+-32302|en|400|Failed to update tag.
+-32303|uz|400|Tegni o'chirishda xatolik yuz berdi.
+-32303|ru|400|Не удалось удалить тег.
+-32303|en|400|Failed to delete tag.

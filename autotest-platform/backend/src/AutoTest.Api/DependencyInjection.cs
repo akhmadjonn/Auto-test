@@ -3,7 +3,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using AutoTest.Api.Services;
 using AutoTest.Application.Common.Models;
+using AutoTest.Application.Common.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
@@ -22,8 +24,16 @@ public static class DependencyInjection
         builder.AddHealthCheckServices();
         builder.AddSwaggerServices();
         builder.AddRateLimitingPolicies();
+        builder.AddLocalizedResponseServices();
 
         return builder;
+    }
+
+    private static void AddLocalizedResponseServices(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddSingleton<LocalizationService>();
+        builder.Services.AddScoped<IResponseService, ResponseService>();
     }
 
     private static void AddJsonSerialization(this WebApplicationBuilder builder)
@@ -187,6 +197,7 @@ public static class DependencyInjection
     public static WebApplication ConfigureMiddleware(this WebApplication app)
     {
         app.UseMiddleware<AutoTest.Api.Middleware.ExceptionHandlingMiddleware>();
+        app.UseMiddleware<AutoTest.Api.Middleware.VaryHeaderMiddleware>();
 
         app.UseSerilogRequestLogging(options =>
         {

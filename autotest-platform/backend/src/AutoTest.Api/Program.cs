@@ -1,6 +1,7 @@
 using AutoTest.Api;
 using AutoTest.Application;
 using AutoTest.Application.Common.Interfaces;
+using AutoTest.Application.Common.Services;
 using AutoTest.Infrastructure;
 using AutoTest.Infrastructure.Persistence;
 using AutoTest.Infrastructure.Services;
@@ -109,6 +110,10 @@ var app = builder.Build();
 
 var apiSettingsService = app.Services.GetRequiredService<ISystemSettingsService>();
 await apiSettingsService.ReloadFromDatabaseAsync();
+
+// Load localized error messages from CSV (Resources/localizations.csv is copied to output)
+var localizationService = app.Services.GetRequiredService<LocalizationService>();
+localizationService.LoadFromFile(Path.Combine(AppContext.BaseDirectory, "Resources", "localizations.csv"));
 
 app.ConfigureMiddleware();
 
