@@ -1,0 +1,200 @@
+# ──────────────────────────────────────────────────────────────────────────────
+#  Avtolider — single-file deployment.  ONE environment, ONE command.
+#
+#  On any Docker host (Contabo VPS, laptop, anywhere):
+#
+#      git clone https://github.com/akhmadjonn/Auto-test.git
+#      cd Auto-test && git submodule update --init --recursive
+#      cd autotest-platform
+#      docker compose up -d --build
+#
+#  That's it. Open:
+#      https://avtolider.uz       → app
+#      https://api.avtolider.uz   → API (webhooks, direct REST)
+#      http://<host>:9001         → MinIO console (minioadmin / change-me-secret)
+#
+#  Caddy auto-issues Let's Encrypt certs for both domains on first boot
+#  (~30 seconds). Make sure DNS A records point to this VPS BEFORE running.
+#
+#  The frontend also reaches the API same-origin via Next.js's server-side
+#  proxy (/api/v1/*  →  api:8080) — so the bundle stays host-agnostic and
+#  the SPA never has to deal with CORS preflights.
+#
+#  Override anything by creating a .env file next to this compose file (see
+#  .env.example). Defaults below are fine for a clean test on the VPS.
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: avtolider
+
+x-api-env: &api-env
+  # Single environment for the whole VPS. "Testing" enables Swagger UI and
+  # nothing else — same security/config as Production. Set ASPNETCORE_ENVIRONMENT
+  # in .env to override (e.g. =Production once you go live).
+  ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Testing}
+  ASPNETCORE_URLS: http://+:8080
+  ConnectionStrings__PostgreSQL: Host=postgres;Port=5432;Database=autotest;Username=autotest;Password=${POSTGRES_PASSWORD:-autotest_secret}
+  ConnectionStrings__Redis: redis:6379
+  MinioSettings__Endpoint: minio:9000
+  MinioSettings__AccessKey: ${MINIO_ACCESS_KEY:-minioadmin}
+  MinioSettings__SecretKey: ${MINIO_SECRET_KEY:-minioadmin12345}
+  MinioSettings__BucketName: ${MINIO_BUCKET:-autotest-images}
+  MinioSettings__UseSSL: "false"
+  JwtSettings__SecretKey: ${JWT_SECRET:-dev-jwt-secret-change-me-min-32-characters-1234567890}
+  OtpSettings__HmacSecret: ${OTP_HMAC_SECRET:-dev-otp-hmac-secret-change-me}
+  EskizSettings__Email: ${ESKIZ_EMAIL:-}
+  EskizSettings__Password: ${ESKIZ_PASSWORD:-}
+  TelegramSettings__BotToken: ${TELEGRAM_BOT_TOKEN:-}
+  TelegramSettings__BotUsername: ${TELEGRAM_BOT_USERNAME:-}
+  PaymeSettings__MerchantId: ${PAYME_MERCHANT_ID:-}
+  PaymeSettings__SecretKey: ${PAYME_SECRET_KEY:-}
+  ClickSettings__ServiceId: ${CLICK_SERVICE_ID:-}
+  ClickSettings__MerchantId: ${CLICK_MERCHANT_ID:-}
+  ClickSettings__MerchantUserId: ${CLICK_MERCHANT_USER_ID:-}
+  ClickSettings__SecretKey: ${CLICK_SECRET_KEY:-}
+  CorsSettings__AllowedOrigins__0: ${PUBLIC_FRONTEND_URL:-https://avtolider.uz}
+  # ── OTP whitelist (test phones bypass real SMS) ─────────────────────────────
+  # Format: OtpSettings__WhitelistNumbers__<phone>=<fixed-otp>
+  # Add more via .env using the same pattern (Compose merges env from .env at runtime).
+  OtpSettings__WhitelistNumbers__998901234567: "111111"
+  OtpSettings__WhitelistNumbers__998000000001: "111111"
+  OtpSettings__WhitelistNumbers__998000000002: "111111"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: avtolider-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: autotest
+      POSTGRES_USER: autotest
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-autotest_secret}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autotest -d autotest"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [avtolider]
+
+  redis:
+    image: redis:7-alpine
+    container_name: avtolider-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [avtolider]
+
+  minio:
+    image: minio/minio:latest
+    container_name: avtolider-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin12345}
+    ports:
+      - "9000:9000"   # S3 API (also used for presigned image URLs from the browser)
+      - "9001:9001"   # Web console
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    networks: [avtolider]
+
+  api-migrator:
+    image: avtolider-api:latest
+    container_name: avtolider-api-migrator
+    build: { context: ./backend }
+    command: ["--apply-migrations"]
+    healthcheck:
+      disable: true
+    environment: *api-env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+      minio:    { condition: service_healthy }
+    restart: "no"
+    networks: [avtolider]
+
+  api:
+    image: avtolider-api:latest
+    container_name: avtolider-api
+    build: { context: ./backend }
+    # No host port — reachable from the internet only via https://api.avtolider.uz (Caddy).
+    expose: ["8080"]
+    environment: *api-env
+    depends_on:
+      api-migrator: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks: [avtolider]
+
+  api-background:
+    image: avtolider-api:latest
+    container_name: avtolider-api-background
+    build: { context: ./backend }
+    command: ["--background"]
+    environment: *api-env
+    depends_on:
+      api-migrator: { condition: service_completed_successfully }
+    restart: unless-stopped
+    networks: [avtolider]
+
+  frontend:
+    image: avtolider-frontend:latest
+    container_name: avtolider-frontend
+    build: { context: ./frontend }
+    # No host port — Caddy fronts everything on 80/443 and reverse-proxies here.
+    expose: ["3000"]
+    environment:
+      NODE_ENV: production
+      # Server-side proxy target for /api/v1/* — frontend container resolves this name.
+      API_UPSTREAM: http://api:8080
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [avtolider]
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: avtolider-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"     # HTTP — also used by Let's Encrypt ACME HTTP-01 challenge
+      - "443:443"   # HTTPS
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data       # Let's Encrypt certs — DO NOT delete this volume
+      - caddy-config:/config
+    depends_on:
+      - frontend
+      - api
+    networks: [avtolider]
+
+networks:
+  avtolider:
+    name: avtolider-net
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  caddy-data:
+  caddy-config:

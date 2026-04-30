@@ -5,3 +5,7 @@
 # Ignore stray Windows NUL device files created accidentally
 /NUL
 /backend/nul
+
+# Local env file with secrets — never commit
+.env
+

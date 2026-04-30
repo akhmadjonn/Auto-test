@@ -1,0 +1,34 @@
+# Caddyfile — auto-HTTPS reverse proxy for avtolider.uz
+#
+# Caddy automatically:
+#   • obtains free Let's Encrypt certs for every site listed below,
+#   • renews them ~30 days before expiry,
+#   • redirects HTTP → HTTPS,
+#   • adds modern TLS, HTTP/2, HSTS.
+# No manual cert management. Certs persist in the `caddy-data` Docker volume.
+
+# Global options
+{
+    # Used for Let's Encrypt expiry notifications and account recovery.
+    email ahmadjon.beelab@gmail.com
+}
+
+# ── Public site ───────────────────────────────────────────────────────────────
+avtolider.uz {
+    encode zstd gzip
+    reverse_proxy frontend:3000
+}
+
+# ── Apex redirect from www ────────────────────────────────────────────────────
+www.avtolider.uz {
+    redir https://avtolider.uz{uri} permanent
+}
+
+# ── Backend API (webhooks, direct REST consumers, mobile apps later) ─────────
+api.avtolider.uz {
+    encode zstd gzip
+    # Trust X-Forwarded-* from this proxy hop.
+    reverse_proxy api:8080 {
+        header_up X-Real-IP {remote_host}
+    }
+}
