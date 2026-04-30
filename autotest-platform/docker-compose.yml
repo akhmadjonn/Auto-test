@@ -68,6 +68,12 @@ services:
       POSTGRES_DB: autotest
       POSTGRES_USER: autotest
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-autotest_secret}
+    # Bound to the VPS loopback so SSH tunnels from a developer machine can
+    # reach it for one-time data migration. NOT exposed publicly — port 5432
+    # is invisible to the internet (binds 127.0.0.1, never 0.0.0.0).
+    # Remove this `ports:` block once initial seed/migration is done.
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
