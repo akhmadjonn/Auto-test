@@ -34,14 +34,20 @@ x-api-env: &api-env
   ASPNETCORE_URLS: http://+:8080
   ConnectionStrings__PostgreSQL: Host=postgres;Port=5432;Database=autotest;Username=autotest;Password=${POSTGRES_PASSWORD:-autotest_secret}
   ConnectionStrings__Redis: redis:6379
-  # Public hostname for MinIO — bakes into every presigned URL the API hands
-  # the browser. Caddy fronts this and proxies to minio:9000 internally with
-  # the Host header preserved so AWS SigV4 still validates server-side.
-  MinioSettings__Endpoint: ${MINIO_PUBLIC_HOST:-cdn.avtolider.uz}
+  # MinIO endpoints — split for server-side vs browser-facing access.
+  #   Endpoint        → INTERNAL (Docker DNS) for uploads, bucket-check.
+  #                     Avoids hairpin NAT (containers can't reach the host's
+  #                     own public IP via Docker bridge — ECONNREFUSED).
+  #   PublicEndpoint  → PUBLIC HTTPS host baked into every presigned URL.
+  #                     Caddy terminates TLS and proxies to minio:9000 over
+  #                     the Docker network, preserving Host so SigV4 validates.
+  MinioSettings__Endpoint: minio:9000
+  MinioSettings__UseSSL: "false"
+  MinioSettings__PublicEndpoint: ${MINIO_PUBLIC_HOST:-cdn.avtolider.uz}
+  MinioSettings__PublicUseSSL: "true"
   MinioSettings__AccessKey: ${MINIO_ACCESS_KEY:-minioadmin}
   MinioSettings__SecretKey: ${MINIO_SECRET_KEY:-minioadmin12345}
   MinioSettings__BucketName: ${MINIO_BUCKET:-autotest-images}
-  MinioSettings__UseSSL: "true"
   JwtSettings__SecretKey: ${JWT_SECRET:-dev-jwt-secret-change-me-min-32-characters-1234567890}
   OtpSettings__HmacSecret: ${OTP_HMAC_SECRET:-dev-otp-hmac-secret-change-me}
   EskizSettings__Email: ${ESKIZ_EMAIL:-}

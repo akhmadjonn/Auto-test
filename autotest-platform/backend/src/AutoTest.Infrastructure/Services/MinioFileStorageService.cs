@@ -7,14 +7,23 @@ using Microsoft.Extensions.Logging;
 namespace AutoTest.Infrastructure.Services;
 
 public class MinioFileStorageService(
-    IAmazonS3 s3,
+    IAmazonS3 s3,                        // internal endpoint — uploads, bucket-check, server-side ops
+    MinioPresignClient presignClient,    // public endpoint — only for URLs handed to browsers
     IConfiguration configuration,
     ILogger<MinioFileStorageService> logger) : IFileStorageService
 {
     private string Bucket => configuration["MinioSettings:BucketName"] ?? "autotest-images";
-    private Protocol S3Protocol => bool.TryParse(configuration["MinioSettings:UseSSL"], out var ssl) && ssl
-        ? Protocol.HTTPS
-        : Protocol.HTTP;
+
+    // Use the public endpoint's protocol for presigned URLs (HTTPS in production behind Caddy).
+    // Falls back to MinioSettings:UseSSL when PublicUseSSL is unset.
+    private Protocol PresignProtocol
+    {
+        get
+        {
+            var v = configuration["MinioSettings:PublicUseSSL"] ?? configuration["MinioSettings:UseSSL"];
+            return bool.TryParse(v, out var ssl) && ssl ? Protocol.HTTPS : Protocol.HTTP;
+        }
+    }
 
     public async Task<string> UploadQuestionImageAsync(Stream stream, string fileName, string category, CancellationToken ct = default)
     {
@@ -37,9 +46,9 @@ public class MinioFileStorageService(
             BucketName = Bucket,
             Key = objectKey,
             Expires = DateTime.UtcNow.AddHours(1),
-            Protocol = S3Protocol
+            Protocol = PresignProtocol
         };
-        return await s3.GetPreSignedURLAsync(request);
+        return await presignClient.Client.GetPreSignedURLAsync(request);
     }
 
     public async Task<string> GetThumbnailUrlAsync(string objectKey, CancellationToken ct = default)
@@ -50,9 +59,9 @@ public class MinioFileStorageService(
             BucketName = Bucket,
             Key = thumbKey,
             Expires = DateTime.UtcNow.AddHours(1),
-            Protocol = S3Protocol
+            Protocol = PresignProtocol
         };
-        return await s3.GetPreSignedURLAsync(request);
+        return await presignClient.Client.GetPreSignedURLAsync(request);
     }
 
     public async Task<Dictionary<string, string>> GetPresignedUrlsBatchAsync(IEnumerable<string> objectKeys, CancellationToken ct = default)

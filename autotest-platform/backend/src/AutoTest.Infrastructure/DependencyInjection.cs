@@ -33,11 +33,21 @@ public static class DependencyInjection
         services.AddSingleton<ICacheService, RedisCacheService>();
         services.AddSingleton<IDistributedLockService, RedisDistributedLockService>();
 
-        // MinIO (S3-compatible)
+        // MinIO (S3-compatible) — two clients:
+        //   • IAmazonS3            → INTERNAL endpoint (e.g. minio:9000) — uploads, bucket ops
+        //   • MinioPresignClient   → PUBLIC endpoint (e.g. cdn.avtolider.uz) — browser-facing presigned URLs
+        // Splitting these avoids the Docker hairpin NAT issue: a container connecting
+        // to its own host's public IP via Docker bridge often gets ECONNREFUSED.
         var minioEndpoint = configuration["MinioSettings:Endpoint"] ?? "localhost:9000";
         var minioAccessKey = configuration["MinioSettings:AccessKey"] ?? "minioadmin";
         var minioSecretKey = configuration["MinioSettings:SecretKey"] ?? "minioadmin";
         var useSSL = bool.TryParse(configuration["MinioSettings:UseSSL"], out var ssl) && ssl;
+
+        // Public endpoint falls back to the internal one if not configured.
+        var publicEndpoint = configuration["MinioSettings:PublicEndpoint"] ?? minioEndpoint;
+        var publicUseSSL = bool.TryParse(configuration["MinioSettings:PublicUseSSL"], out var pssl)
+            ? pssl
+            : useSSL;
 
         services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
             minioAccessKey,
@@ -49,6 +59,18 @@ public static class DependencyInjection
                 AuthenticationRegion = "us-east-1",
                 UseHttp = !useSSL
             }));
+
+        services.AddSingleton(_ => new MinioPresignClient(new AmazonS3Client(
+            minioAccessKey,
+            minioSecretKey,
+            new AmazonS3Config
+            {
+                ServiceURL = $"{(publicUseSSL ? "https" : "http")}://{publicEndpoint}",
+                ForcePathStyle = true,
+                AuthenticationRegion = "us-east-1",
+                UseHttp = !publicUseSSL
+            })));
+
         services.AddScoped<IFileStorageService, MinioFileStorageService>();
 
         // Eskiz SMS — trailing slash required for HttpClient relative URI resolution
