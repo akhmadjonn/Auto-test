@@ -32,3 +32,16 @@ api.avtolider.uz {
         header_up X-Real-IP {remote_host}
     }
 }
+
+# ── MinIO bucket served as a public CDN ──────────────────────────────────────
+# All access still requires a valid AWS SigV4 presigned URL — Caddy is just
+# the HTTPS terminator + path. We forward the original Host header (`cdn.
+# avtolider.uz`) to MinIO so the SigV4 signature on the URL still validates.
+cdn.avtolider.uz {
+    encode zstd gzip
+    reverse_proxy minio:9000 {
+        header_up Host {host}
+    }
+    # GUID-named, content-addressed assets — safe to cache forever.
+    header /autotest-images/* Cache-Control "public, max-age=31536000, immutable"
+}
