@@ -9,26 +9,26 @@ public static class SmsTemplates
     // iOS: @domain #code line triggers keyboard autofill
 
     private const string OtpUzLatin =
-        """
-        Avtolider — tasdiqlash kodingiz: {code}
-        Kod 5 daqiqa amal qiladi. Hech kimga bermang!
-        @avtolider.uz #{code}
-        """;
+    """
+    Avtolider - tasdiqlash kodingiz: {code}
+    Kod 5 daqiqa amal qiladi. Hech kimga bermang!
+    @avtolider.uz #{code}
+    """;
 
-    private const string OtpUzCyrillic =
-        """
-        Avtolider — тасдиқлаш кодингиз: {code}
-        Код 5 дақиқа амал қилади. Ҳеч кимга берманг!
-        @avtolider.uz #{code}
-        """;
+private const string OtpUzCyrillic =
+    """
+    Avtolider — тасдиқлаш кодингиз: {code}
+    Код 5 дақиқа амал қилади. Ҳеч кимга берманг!
+    @avtolider.uz #{code}
+    """;
 
-    private const string OtpRu =
-        """
-        Avtolider — ваш код подтверждения: {code}
-        Код действителен 5 минут. Никому не сообщайте!
-        @avtolider.uz #{code}
-        """;
-
+private const string OtpRu =
+    """
+    Avtolider — ваш код подтверждения: {code}
+    Код действителен 5 минут. Никому не сообщайте!
+    @avtolider.uz #{code}
+    """;
+    
     public static string FormatOtp(string code, Language language, string? androidAppHash = null)
     {
         var template = language switch
