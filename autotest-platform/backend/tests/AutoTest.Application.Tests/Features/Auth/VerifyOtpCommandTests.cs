@@ -39,8 +39,8 @@ public class VerifyOtpCommandTests
     {
         using var db = TestDbContextFactory.Create();
         _otpService.VerifyAsync(Phone, "123456", Arg.Any<CancellationToken>()).Returns(true);
-        _jwtService.GenerateAccessToken(Arg.Any<User>()).Returns("access-token");
-        _jwtService.GenerateRefreshTokenAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns("refresh-token");
+        _jwtService.IssueTokensAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
+            .Returns(("access-token", "refresh-token"));
 
         var handler = CreateHandler(db);
         var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "123456"), CancellationToken.None);
@@ -68,8 +68,8 @@ public class VerifyOtpCommandTests
         await db.SaveChangesAsync();
 
         _otpService.VerifyAsync(Phone, "123456", Arg.Any<CancellationToken>()).Returns(true);
-        _jwtService.GenerateAccessToken(Arg.Any<User>()).Returns("access-token");
-        _jwtService.GenerateRefreshTokenAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns("refresh-token");
+        _jwtService.IssueTokensAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
+            .Returns(("access-token", "refresh-token"));
 
         var handler = CreateHandler(db);
         var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "123456"), CancellationToken.None);
@@ -151,8 +151,8 @@ public class VerifyOtpCommandTests
         _otpService.CheckAndIncrementVerifyAttemptsAsync(Phone, Arg.Any<CancellationToken>())
             .Returns((true, 4));
         _otpService.VerifyAsync(Phone, "123456", Arg.Any<CancellationToken>()).Returns(true);
-        _jwtService.GenerateAccessToken(Arg.Any<User>()).Returns("access-token");
-        _jwtService.GenerateRefreshTokenAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns("refresh-token");
+        _jwtService.IssueTokensAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
+            .Returns(("access-token", "refresh-token"));
 
         var handler = CreateHandler(db);
         var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "123456"), CancellationToken.None);

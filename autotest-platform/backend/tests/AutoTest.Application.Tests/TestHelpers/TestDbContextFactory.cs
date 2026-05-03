@@ -26,6 +26,7 @@ public class FakeDateTimeProvider : IDateTimeProvider
 public class FakeCurrentUser : ICurrentUser
 {
     public Guid? UserId { get; set; }
+    public Guid? SessionId { get; set; }
     public bool IsAuthenticated => UserId.HasValue;
     public bool IsAdmin { get; set; }
 }

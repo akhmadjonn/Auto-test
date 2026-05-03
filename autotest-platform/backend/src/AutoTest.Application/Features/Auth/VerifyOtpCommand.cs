@@ -75,8 +75,7 @@ public class VerifyOtpCommandHandler(
         user.LastActiveAt = dateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
-        var accessToken = jwtService.GenerateAccessToken(user);
-        var refreshToken = await jwtService.GenerateRefreshTokenAsync(user.Id, ct);
+        var (accessToken, refreshToken) = await jwtService.IssueTokensAsync(user, ct);
 
         logger.LogInformation("User {UserId} authenticated via OTP (new: {IsNew})", user.Id, isNew);
         return ApiResponse<AuthTokensDto>.Ok(new AuthTokensDto(accessToken, refreshToken, isNew));

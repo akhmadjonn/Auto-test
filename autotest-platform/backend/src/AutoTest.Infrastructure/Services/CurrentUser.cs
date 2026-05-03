@@ -15,6 +15,15 @@ public class CurrentUser(IHttpContextAccessor httpContextAccessor) : ICurrentUse
         }
     }
 
+    public Guid? SessionId
+    {
+        get
+        {
+            var claim = httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Sid)?.Value;
+            return claim is not null && Guid.TryParse(claim, out var sid) ? sid : null;
+        }
+    }
+
     public bool IsAuthenticated => httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
 
     public bool IsAdmin => httpContextAccessor.HttpContext?.User?.IsInRole("Admin") ?? false;

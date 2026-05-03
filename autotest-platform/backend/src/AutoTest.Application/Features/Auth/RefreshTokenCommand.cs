@@ -24,18 +24,18 @@ public class RefreshTokenCommandHandler(
 {
     public async Task<ApiResponse<AuthTokensDto>> Handle(RefreshTokenCommand request, CancellationToken ct)
     {
-        var userId = await jwtService.ValidateRefreshTokenAsync(request.RefreshToken, ct);
-        if (userId is null)
+        var validation = await jwtService.ValidateRefreshTokenAsync(request.RefreshToken, ct);
+        if (validation is null)
             return ApiResponse<AuthTokensDto>.Fail("REFRESH_TOKEN_INVALID", "Invalid or expired refresh token.");
 
+        var (userId, oldSessionId) = validation.Value;
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user is null || user.IsBlocked)
             return ApiResponse<AuthTokensDto>.Fail("USER_NOT_FOUND", "User not found or blocked.");
 
-        // Rotate: revoke old, issue new
-        await jwtService.RevokeRefreshTokenAsync(request.RefreshToken, ct);
-        var accessToken = jwtService.GenerateAccessToken(user);
-        var newRefresh = await jwtService.GenerateRefreshTokenAsync(user.Id, ct);
+        // Rotate: issue new pair, then revoke old session (both keys)
+        var (accessToken, newRefresh) = await jwtService.IssueTokensAsync(user, ct);
+        await jwtService.RevokeSessionAsync(userId, oldSessionId, ct);
 
         logger.LogInformation("Tokens rotated for user {UserId}", user.Id);
         return ApiResponse<AuthTokensDto>.Ok(new AuthTokensDto(accessToken, newRefresh, false));

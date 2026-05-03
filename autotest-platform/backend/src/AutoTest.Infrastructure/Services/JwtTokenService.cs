@@ -21,7 +21,41 @@ public class JwtTokenService(IConfiguration configuration, IConnectionMultiplexe
     private int AccessTokenMinutes => int.TryParse(configuration["JwtSettings:AccessTokenExpirationMinutes"], out var m) ? m : 15;
     private int RefreshTokenDays => int.TryParse(configuration["JwtSettings:RefreshTokenExpirationDays"], out var d) ? d : 30;
 
-    public string GenerateAccessToken(User user)
+    public async Task<(string AccessToken, string RefreshToken)> IssueTokensAsync(User user, CancellationToken ct = default)
+    {
+        var sessionId = Guid.NewGuid();
+        var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+        var ttl = TimeSpan.FromDays(RefreshTokenDays);
+
+        await _db.StringSetAsync(RefreshKey(refreshToken), $"{user.Id}|{sessionId}", ttl);
+        await _db.StringSetAsync(SessionKey(user.Id, sessionId), refreshToken, ttl);
+
+        return (GenerateAccessToken(user, sessionId), refreshToken);
+    }
+
+    public async Task<(Guid UserId, Guid SessionId)?> ValidateRefreshTokenAsync(string refreshToken, CancellationToken ct = default)
+    {
+        var value = await _db.StringGetAsync(RefreshKey(refreshToken));
+        if (value.IsNullOrEmpty)
+            return null;
+
+        var parts = value.ToString().Split('|');
+        if (parts.Length != 2 || !Guid.TryParse(parts[0], out var userId) || !Guid.TryParse(parts[1], out var sessionId))
+            return null;
+
+        return (userId, sessionId);
+    }
+
+    public async Task RevokeSessionAsync(Guid userId, Guid sessionId, CancellationToken ct = default)
+    {
+        var sessionKey = SessionKey(userId, sessionId);
+        var refreshToken = await _db.StringGetAsync(sessionKey);
+        if (!refreshToken.IsNullOrEmpty)
+            await _db.KeyDeleteAsync(RefreshKey(refreshToken!));
+        await _db.KeyDeleteAsync(sessionKey);
+    }
+
+    private string GenerateAccessToken(User user, Guid sessionId)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -31,7 +65,8 @@ public class JwtTokenService(IConfiguration configuration, IConnectionMultiplexe
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.MobilePhone, user.PhoneNumber ?? ""),
             new Claim(ClaimTypes.Role, user.Role.ToString()),
-            new Claim("preferred_language", user.PreferredLanguage.ToString())
+            new Claim("preferred_language", user.PreferredLanguage.ToString()),
+            new Claim(ClaimTypes.Sid, sessionId.ToString())
         };
 
         var token = new JwtSecurityToken(
@@ -44,28 +79,6 @@ public class JwtTokenService(IConfiguration configuration, IConnectionMultiplexe
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public async Task<string> GenerateRefreshTokenAsync(Guid userId, CancellationToken ct = default)
-    {
-        var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-        var key = RefreshKey(token);
-        await _db.StringSetAsync(key, userId.ToString(), TimeSpan.FromDays(RefreshTokenDays));
-        return token;
-    }
-
-    public async Task<Guid?> ValidateRefreshTokenAsync(string refreshToken, CancellationToken ct = default)
-    {
-        var key = RefreshKey(refreshToken);
-        var value = await _db.StringGetAsync(key);
-        if (value.IsNullOrEmpty)
-            return null;
-        return Guid.TryParse(value, out var userId) ? userId : null;
-    }
-
-    public async Task RevokeRefreshTokenAsync(string refreshToken, CancellationToken ct = default)
-    {
-        var key = RefreshKey(refreshToken);
-        await _db.KeyDeleteAsync(key);
-    }
-
     private static string RefreshKey(string token) => $"avtolider:refresh:{token}";
+    private static string SessionKey(Guid userId, Guid sessionId) => $"avtolider:session:{userId}:{sessionId}";
 }

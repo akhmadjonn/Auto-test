@@ -10,7 +10,7 @@
     {
       "name": "frontend-dev",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "cd autotest-platform\\frontend && npm run dev"],
+      "runtimeArgs": ["/c", "cd autotest-platform\\frontend && set API_UPSTREAM=http://localhost:5228&& npm run dev"],
       "port": 3000
     }
   ]

@@ -64,8 +64,8 @@ public class AuthFlowIntegrationTests
 
         // --- Step 2: Verify OTP (creates new user) ---
         _otpService.VerifyAsync(Phone, code, Arg.Any<CancellationToken>()).Returns(true);
-        _jwtService.GenerateAccessToken(Arg.Any<User>()).Returns("test-access-token");
-        _jwtService.GenerateRefreshTokenAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns("test-refresh-token");
+        _jwtService.IssueTokensAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
+            .Returns(("test-access-token", "test-refresh-token"));
 
         var verifyHandler = new VerifyOtpCommandHandler(
             _otpService, _jwtService, db, _lockService, _dateTime,
@@ -150,8 +150,8 @@ public class AuthFlowIntegrationTests
 
         // Verify OTP for existing user (mock uses trimmed phone)
         _otpService.VerifyAsync(Phone2, "111111", Arg.Any<CancellationToken>()).Returns(true);
-        _jwtService.GenerateAccessToken(Arg.Any<User>()).Returns("token");
-        _jwtService.GenerateRefreshTokenAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns("refresh");
+        _jwtService.IssueTokensAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
+            .Returns(("token", "refresh"));
 
         var verifyHandler = new VerifyOtpCommandHandler(
             _otpService, _jwtService, db, _lockService, _dateTime,

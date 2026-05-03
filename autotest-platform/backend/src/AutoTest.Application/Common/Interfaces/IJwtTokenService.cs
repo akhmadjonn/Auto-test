@@ -4,8 +4,7 @@ namespace AutoTest.Application.Common.Interfaces;
 
 public interface IJwtTokenService
 {
-    string GenerateAccessToken(User user);
-    Task<string> GenerateRefreshTokenAsync(Guid userId, CancellationToken ct = default);
-    Task<Guid?> ValidateRefreshTokenAsync(string refreshToken, CancellationToken ct = default);
-    Task RevokeRefreshTokenAsync(string refreshToken, CancellationToken ct = default);
+    Task<(string AccessToken, string RefreshToken)> IssueTokensAsync(User user, CancellationToken ct = default);
+    Task<(Guid UserId, Guid SessionId)?> ValidateRefreshTokenAsync(string refreshToken, CancellationToken ct = default);
+    Task RevokeSessionAsync(Guid userId, Guid sessionId, CancellationToken ct = default);
 }
