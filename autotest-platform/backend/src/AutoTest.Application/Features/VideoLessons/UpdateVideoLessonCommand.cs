@@ -10,12 +10,8 @@ namespace AutoTest.Application.Features.VideoLessons;
 
 public record UpdateVideoLessonCommand(
     Guid Id,
-    string TitleUz,
-    string TitleUzLatin,
-    string TitleRu,
-    string? DescriptionUz,
-    string? DescriptionUzLatin,
-    string? DescriptionRu,
+    LocalizedText Title,
+    LocalizedText? Description,
     VideoSourceType SourceType,
     string VideoUrl,
     string? ThumbnailUrl,
@@ -31,9 +27,10 @@ public class UpdateVideoLessonCommandValidator : AbstractValidator<UpdateVideoLe
     public UpdateVideoLessonCommandValidator()
     {
         RuleFor(x => x.Id).NotEmpty();
-        RuleFor(x => x.TitleUz).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.TitleUzLatin).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.TitleRu).NotEmpty().MaximumLength(500);
+        RuleFor(x => x.Title).NotNull();
+        RuleFor(x => x.Title.Uz).NotEmpty().MaximumLength(500).When(x => x.Title is not null);
+        RuleFor(x => x.Title.UzLatin).NotEmpty().MaximumLength(500).When(x => x.Title is not null);
+        RuleFor(x => x.Title.Ru).NotEmpty().MaximumLength(500).When(x => x.Title is not null);
         RuleFor(x => x.VideoUrl).MaximumLength(1000)
             .NotEmpty().When(x => x.SourceType != Domain.Common.Enums.VideoSourceType.Upload)
             .WithMessage("Video URL is required for YouTube and External Link sources.");
@@ -55,12 +52,8 @@ public class UpdateVideoLessonCommandHandler(
         if (lesson is null)
             return ApiResponse.Fail("NOT_FOUND", "Video lesson not found.");
 
-        var description = request.DescriptionUz is not null && request.DescriptionUzLatin is not null && request.DescriptionRu is not null
-            ? new LocalizedText(request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu)
-            : null;
-
-        lesson.Title = new LocalizedText(request.TitleUz, request.TitleUzLatin, request.TitleRu);
-        lesson.Description = description;
+        lesson.Title = request.Title;
+        lesson.Description = request.Description;
         lesson.SourceType = request.SourceType;
         lesson.VideoUrl = request.VideoUrl;
         lesson.ThumbnailUrl = request.ThumbnailUrl;

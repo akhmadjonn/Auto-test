@@ -10,12 +10,8 @@ namespace AutoTest.Application.Features.TrafficFines;
 
 public record CreateFineCommand(
     string ArticleNumber,
-    string ViolationDescriptionUz,
-    string ViolationDescriptionUzLatin,
-    string ViolationDescriptionRu,
-    string? AdditionalNotesUz,
-    string? AdditionalNotesUzLatin,
-    string? AdditionalNotesRu,
+    LocalizedText ViolationDescription,
+    LocalizedText? AdditionalNotes,
     long PenaltyAmountTiyins,
     long? PenaltyMaxTiyins,
     int SortOrder) : IRequest<ApiResponse<Guid>>;
@@ -25,9 +21,10 @@ public class CreateFineCommandValidator : AbstractValidator<CreateFineCommand>
     public CreateFineCommandValidator()
     {
         RuleFor(x => x.ArticleNumber).NotEmpty().MaximumLength(50);
-        RuleFor(x => x.ViolationDescriptionUz).NotEmpty();
-        RuleFor(x => x.ViolationDescriptionUzLatin).NotEmpty();
-        RuleFor(x => x.ViolationDescriptionRu).NotEmpty();
+        RuleFor(x => x.ViolationDescription).NotNull();
+        RuleFor(x => x.ViolationDescription.Uz).NotEmpty().When(x => x.ViolationDescription is not null);
+        RuleFor(x => x.ViolationDescription.UzLatin).NotEmpty().When(x => x.ViolationDescription is not null);
+        RuleFor(x => x.ViolationDescription.Ru).NotEmpty().When(x => x.ViolationDescription is not null);
         RuleFor(x => x.PenaltyAmountTiyins).GreaterThan(0);
         RuleFor(x => x.PenaltyMaxTiyins)
             .GreaterThanOrEqualTo(x => x.PenaltyAmountTiyins)
@@ -49,16 +46,8 @@ public class CreateFineCommandHandler(
         {
             Id = Guid.NewGuid(),
             ArticleNumber = request.ArticleNumber,
-            ViolationDescription = new LocalizedText(
-                request.ViolationDescriptionUz,
-                request.ViolationDescriptionUzLatin,
-                request.ViolationDescriptionRu),
-            AdditionalNotes = request.AdditionalNotesUz is not null
-                ? new LocalizedText(
-                    request.AdditionalNotesUz,
-                    request.AdditionalNotesUzLatin ?? string.Empty,
-                    request.AdditionalNotesRu ?? string.Empty)
-                : null,
+            ViolationDescription = request.ViolationDescription,
+            AdditionalNotes = request.AdditionalNotes,
             PenaltyAmountTiyins = request.PenaltyAmountTiyins,
             PenaltyMaxTiyins = request.PenaltyMaxTiyins,
             SortOrder = request.SortOrder,
@@ -77,7 +66,6 @@ public class CreateFineCommandHandler(
 
     internal static async Task InvalidateFineCachesAsync(ICacheService cache, CancellationToken ct)
     {
-        // remove default list cache — filtered/paged caches expire naturally via TTL
         await cache.RemoveAsync("avtolider:fines:list:1:20::::", ct);
     }
 

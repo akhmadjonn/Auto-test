@@ -1,5 +1,6 @@
-using AutoTest.Application.Common.Models;
 using AutoTest.Application.Features.Admin;
+using AutoTest.Domain.Common.Enums;
+using AutoTest.Domain.Common.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,11 +29,11 @@ public class AdminAnnouncementsController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateAnnouncementCommand command, CancellationToken ct)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateAnnouncementBody body, CancellationToken ct)
     {
-        if (id != command.Id)
-            return BadRequest(ApiResponse.Fail("ID_MISMATCH", "Route ID does not match body ID."));
-
+        var command = new UpdateAnnouncementCommand(
+            id, body.Title, body.Content, body.Type, body.IsActive,
+            body.StartsAt, body.ExpiresAt);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
@@ -44,3 +45,11 @@ public class AdminAnnouncementsController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 }
+
+public record UpdateAnnouncementBody(
+    LocalizedText Title,
+    LocalizedText Content,
+    AnnouncementType Type,
+    bool IsActive,
+    DateTimeOffset? StartsAt,
+    DateTimeOffset? ExpiresAt);

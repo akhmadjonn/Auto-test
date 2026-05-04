@@ -46,7 +46,7 @@ public class GetExamTemplatesQueryHandler(
 
 // CREATE template
 public record CreateExamTemplateCommand(
-    string TitleUz, string TitleUzLatin, string TitleRu,
+    LocalizedText Title,
     int TotalQuestions, int PassingScore, int TimeLimitMinutes, int? TimeLimitPerQuestionSeconds,
     bool IsActive, List<CreatePoolRuleDto> PoolRules) : IRequest<ApiResponse<ExamTemplateDto>>;
 
@@ -56,9 +56,10 @@ public class CreateExamTemplateCommandValidator : AbstractValidator<CreateExamTe
 {
     public CreateExamTemplateCommandValidator()
     {
-        RuleFor(x => x.TitleUz).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.TitleUzLatin).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.TitleRu).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Title).NotNull();
+        RuleFor(x => x.Title.Uz).NotEmpty().MaximumLength(200).When(x => x.Title is not null);
+        RuleFor(x => x.Title.UzLatin).NotEmpty().MaximumLength(200).When(x => x.Title is not null);
+        RuleFor(x => x.Title.Ru).NotEmpty().MaximumLength(200).When(x => x.Title is not null);
         RuleFor(x => x.TotalQuestions).GreaterThan(0);
         RuleFor(x => x.PassingScore).InclusiveBetween(1, 100);
         RuleFor(x => x.TimeLimitMinutes).GreaterThan(0);
@@ -87,7 +88,7 @@ public class CreateExamTemplateCommandHandler(
         var template = new ExamTemplate
         {
             Id = Guid.NewGuid(),
-            Title = new LocalizedText(request.TitleUz, request.TitleUzLatin, request.TitleRu),
+            Title = request.Title,
             TotalQuestions = request.TotalQuestions,
             PassingScore = request.PassingScore,
             TimeLimitMinutes = request.TimeLimitMinutes,
@@ -115,7 +116,7 @@ public class CreateExamTemplateCommandHandler(
         logger.LogInformation("ExamTemplate created: {TemplateId}", template.Id);
 
         return ApiResponse<ExamTemplateDto>.Ok(new ExamTemplateDto(
-            template.Id, request.TitleUz, request.TitleUzLatin, request.TitleRu,
+            template.Id, request.Title.Uz, request.Title.UzLatin, request.Title.Ru,
             template.TotalQuestions, template.PassingScore, template.TimeLimitMinutes, template.TimeLimitPerQuestionSeconds,
             template.IsActive,
             rules.Select(r => new PoolRuleDto(r.Id, r.CategoryId, null, r.Difficulty, r.QuestionCount)).ToList()));
@@ -125,7 +126,7 @@ public class CreateExamTemplateCommandHandler(
 // UPDATE template
 public record UpdateExamTemplateCommand(
     Guid Id,
-    string TitleUz, string TitleUzLatin, string TitleRu,
+    LocalizedText Title,
     int TotalQuestions, int PassingScore, int TimeLimitMinutes, int? TimeLimitPerQuestionSeconds,
     bool IsActive, List<CreatePoolRuleDto> PoolRules) : IRequest<ApiResponse>;
 
@@ -134,7 +135,10 @@ public class UpdateExamTemplateCommandValidator : AbstractValidator<UpdateExamTe
     public UpdateExamTemplateCommandValidator()
     {
         RuleFor(x => x.Id).NotEmpty();
-        RuleFor(x => x.TitleUz).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Title).NotNull();
+        RuleFor(x => x.Title.Uz).NotEmpty().MaximumLength(200).When(x => x.Title is not null);
+        RuleFor(x => x.Title.UzLatin).NotEmpty().MaximumLength(200).When(x => x.Title is not null);
+        RuleFor(x => x.Title.Ru).NotEmpty().MaximumLength(200).When(x => x.Title is not null);
         RuleFor(x => x.TotalQuestions).GreaterThan(0);
         RuleFor(x => x.PassingScore).InclusiveBetween(1, 100);
         RuleFor(x => x.TimeLimitMinutes).GreaterThan(0);
@@ -161,7 +165,7 @@ public class UpdateExamTemplateCommandHandler(
             return ApiResponse.Fail("TEMPLATE_NOT_FOUND", "Exam template not found.");
 
         var now = dateTime.UtcNow;
-        template.Title = new LocalizedText(request.TitleUz, request.TitleUzLatin, request.TitleRu);
+        template.Title = request.Title;
         template.TotalQuestions = request.TotalQuestions;
         template.PassingScore = request.PassingScore;
         template.TimeLimitMinutes = request.TimeLimitMinutes;

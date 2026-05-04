@@ -10,12 +10,8 @@ namespace AutoTest.Application.Features.Categories;
 
 public record UpdateCategoryCommand(
     Guid Id,
-    string NameUz,
-    string NameUzLatin,
-    string NameRu,
-    string DescriptionUz,
-    string DescriptionUzLatin,
-    string DescriptionRu,
+    LocalizedText Name,
+    LocalizedText Description,
     string Slug,
     string? IconUrl,
     Guid? ParentId,
@@ -27,9 +23,10 @@ public class UpdateCategoryCommandValidator : AbstractValidator<UpdateCategoryCo
     public UpdateCategoryCommandValidator()
     {
         RuleFor(x => x.Id).NotEmpty();
-        RuleFor(x => x.NameUz).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.NameUzLatin).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.NameRu).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Name).NotNull();
+        RuleFor(x => x.Name.Uz).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.UzLatin).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.Ru).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
         RuleFor(x => x.Slug).NotEmpty().MaximumLength(100)
             .Matches("^[a-z0-9-]+$").WithMessage("Slug must contain only lowercase letters, numbers, and hyphens.");
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
@@ -48,12 +45,10 @@ public class UpdateCategoryCommandHandler(
         if (category is null)
             return ApiResponse.Fail("CATEGORY_NOT_FOUND", "Category not found.");
 
-        // Check slug uniqueness (exclude self)
         var slugExists = await db.Categories.AnyAsync(c => c.Slug == request.Slug && c.Id != request.Id, ct);
         if (slugExists)
             return ApiResponse.Fail("SLUG_DUPLICATE", $"Category with slug '{request.Slug}' already exists.");
 
-        // Prevent circular ParentId
         if (request.ParentId.HasValue)
         {
             if (request.ParentId.Value == request.Id)
@@ -63,13 +58,12 @@ public class UpdateCategoryCommandHandler(
             if (!parentExists)
                 return ApiResponse.Fail("PARENT_NOT_FOUND", "Parent category not found.");
 
-            // Check deeper circular reference: walk up the parent chain
             if (await IsDescendantAsync(db, request.ParentId.Value, request.Id, ct))
                 return ApiResponse.Fail("CIRCULAR_PARENT", "Setting this parent would create a circular reference.");
         }
 
-        category.Name = new LocalizedText(request.NameUz, request.NameUzLatin, request.NameRu);
-        category.Description = new LocalizedText(request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu);
+        category.Name = request.Name;
+        category.Description = request.Description;
         category.Slug = request.Slug;
         category.IconUrl = request.IconUrl;
         category.ParentId = request.ParentId;
@@ -88,14 +82,13 @@ public class UpdateCategoryCommandHandler(
     private static async Task<bool> IsDescendantAsync(
         IApplicationDbContext db, Guid parentId, Guid targetId, CancellationToken ct)
     {
-        // Walk up the tree from parentId; if we reach targetId, it's circular
         var currentId = parentId;
         var visited = new HashSet<Guid>();
 
         while (true)
         {
             if (!visited.Add(currentId))
-                return false; // cycle detected in existing data, bail out
+                return false;
 
             var parent = await db.Categories
                 .Where(c => c.Id == currentId)

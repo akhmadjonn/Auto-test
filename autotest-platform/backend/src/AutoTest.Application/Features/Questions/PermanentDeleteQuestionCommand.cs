@@ -7,7 +7,11 @@ using Microsoft.Extensions.Logging;
 
 namespace AutoTest.Application.Features.Questions;
 
-// Hard delete: remove images + cascade DB delete
+// Hard delete — removes the row + cascades to AnswerOptions + deletes images
+// from MinIO. Irreversible. Use DeleteQuestionCommand (soft delete via
+// Status=Inactive) for the normal admin "delete" action — that path keeps
+// the row so user-history foreign keys (SessionQuestion / UserQuestionState /
+// UserFavoriteQuestion) stay intact.
 public record PermanentDeleteQuestionCommand(Guid QuestionId) : IRequest<ApiResponse>;
 
 public class PermanentDeleteQuestionCommandValidator : AbstractValidator<PermanentDeleteQuestionCommand>
@@ -33,7 +37,7 @@ public class PermanentDeleteQuestionCommandHandler(
         if (question is null)
             return ApiResponse.Fail("QUESTION_NOT_FOUND", "Question not found.");
 
-        // Collect all images for deletion
+        // Collect all images for MinIO cleanup before deleting the rows.
         var imageKeys = new List<string>();
         if (question.ImageUrl is not null) imageKeys.Add(question.ImageUrl);
         if (question.ThumbnailUrl is not null) imageKeys.Add(question.ThumbnailUrl);

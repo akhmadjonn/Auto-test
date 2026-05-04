@@ -1,5 +1,5 @@
-using AutoTest.Application.Common.Models;
 using AutoTest.Application.Features.Glossary;
+using AutoTest.Domain.Common.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,11 +21,9 @@ public class AdminGlossaryController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("categories/{id}")]
-    public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] UpdateGlossaryCategoryCommand command, CancellationToken ct)
+    public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] UpdateGlossaryCategoryBody body, CancellationToken ct)
     {
-        if (id != command.Id)
-            return BadRequest(ApiResponse.Fail("ID_MISMATCH", "Route ID does not match body ID."));
-
+        var command = new UpdateGlossaryCategoryCommand(id, body.Name, body.Slug, body.Icon, body.SortOrder);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
@@ -45,11 +43,11 @@ public class AdminGlossaryController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("terms/{id}")]
-    public async Task<IActionResult> UpdateTerm(Guid id, [FromBody] UpdateGlossaryTermCommand command, CancellationToken ct)
+    public async Task<IActionResult> UpdateTerm(Guid id, [FromBody] UpdateGlossaryTermBody body, CancellationToken ct)
     {
-        if (id != command.Id)
-            return BadRequest(ApiResponse.Fail("ID_MISMATCH", "Route ID does not match body ID."));
-
+        var command = new UpdateGlossaryTermCommand(
+            id, body.GlossaryCategoryId, body.Term, body.Definition,
+            body.SortOrder, body.RelatedQuestionIds);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
@@ -61,3 +59,16 @@ public class AdminGlossaryController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 }
+
+public record UpdateGlossaryCategoryBody(
+    LocalizedText Name,
+    string Slug,
+    string? Icon,
+    int SortOrder);
+
+public record UpdateGlossaryTermBody(
+    Guid GlossaryCategoryId,
+    LocalizedText Term,
+    LocalizedText Definition,
+    int SortOrder,
+    Guid[]? RelatedQuestionIds);

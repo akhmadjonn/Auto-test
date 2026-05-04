@@ -1,5 +1,7 @@
 using AutoTest.Application.Common.Models;
 using AutoTest.Application.Features.VideoLessons;
+using AutoTest.Domain.Common.Enums;
+using AutoTest.Domain.Common.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,11 +32,10 @@ public class AdminVideoLessonsController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("categories/{id}")]
-    public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] UpdateVideoCategoryCommand command, CancellationToken ct)
+    public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] UpdateVideoCategoryBody body, CancellationToken ct)
     {
-        if (id != command.Id)
-            return BadRequest(ApiResponse.Fail("ID_MISMATCH", "Route ID does not match body ID."));
-
+        // Id from route — frontend doesn't put it in the body.
+        var command = new UpdateVideoCategoryCommand(id, body.Name, body.Description, body.SortOrder, body.IsActive);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
@@ -63,11 +64,13 @@ public class AdminVideoLessonsController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateLesson(Guid id, [FromBody] UpdateVideoLessonCommand command, CancellationToken ct)
+    public async Task<IActionResult> UpdateLesson(Guid id, [FromBody] UpdateVideoLessonBody body, CancellationToken ct)
     {
-        if (id != command.Id)
-            return BadRequest(ApiResponse.Fail("ID_MISMATCH", "Route ID does not match body ID."));
-
+        var command = new UpdateVideoLessonCommand(
+            id, body.Title, body.Description, body.SourceType,
+            body.VideoUrl, body.ThumbnailUrl, body.DurationSeconds,
+            body.SortOrder, body.IsFree, body.IsDownloadable,
+            body.LinkedCategoryId, body.IsActive);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
@@ -119,3 +122,22 @@ public class AdminVideoLessonsController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 }
+
+public record UpdateVideoCategoryBody(
+    LocalizedText Name,
+    LocalizedText? Description,
+    int SortOrder,
+    bool IsActive);
+
+public record UpdateVideoLessonBody(
+    LocalizedText Title,
+    LocalizedText? Description,
+    VideoSourceType SourceType,
+    string VideoUrl,
+    string? ThumbnailUrl,
+    int DurationSeconds,
+    int SortOrder,
+    bool IsFree,
+    bool IsDownloadable,
+    Guid? LinkedCategoryId,
+    bool IsActive);

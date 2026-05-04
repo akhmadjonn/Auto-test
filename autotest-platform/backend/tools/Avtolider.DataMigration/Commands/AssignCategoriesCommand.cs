@@ -115,9 +115,11 @@ public static class AssignCategoriesCommand
 
         Console.WriteLine($"  Keyword rules loaded: {keywordToCategory.Count}");
 
-        // Load questions in APK category
+        // Load questions in APK category. Includes Inactive (newly imported, awaiting
+        // categorization) AND Active (older runs from before the Inactive change).
         var questions = await ctx.Db.Questions
-            .Where(q => q.CategoryId == apkCategory.Id && q.Status == QuestionStatus.Active)
+            .Where(q => q.CategoryId == apkCategory.Id
+                     && (q.Status == QuestionStatus.Active || q.Status == QuestionStatus.Inactive))
             .ToListAsync(ct);
 
         Console.WriteLine($"  Questions in '{ctx.DefaultApkCategorySlug}': {questions.Count}");
@@ -149,7 +151,14 @@ public static class AssignCategoriesCommand
             {
                 var bestCategoryId = scores.OrderByDescending(kv => kv.Value).First().Key;
                 if (!ctx.DryRun)
+                {
                     question.CategoryId = bestCategoryId;
+                    // Promote Inactive → Active once the question has a real category.
+                    // Anything left in 'uncategorized' stays Inactive and is invisible
+                    // to users until an admin reviews it.
+                    if (question.Status == QuestionStatus.Inactive)
+                        question.Status = QuestionStatus.Active;
+                }
                 reassigned++;
             }
             else
@@ -163,6 +172,6 @@ public static class AssignCategoriesCommand
         }
 
         Console.WriteLine();
-        Console.WriteLine($"  Assign done: {reassigned} reassigned, {unmatched} unmatched (stay in 'uncategorized')");
+        Console.WriteLine($"  Assign done: {reassigned} reassigned (Inactive→Active), {unmatched} unmatched (stay Inactive in 'uncategorized')");
     }
 }

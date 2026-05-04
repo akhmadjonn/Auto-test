@@ -92,7 +92,12 @@ public class StartSpeedChallengeCommandHandler(
         if (selectedQuestions.Count == 0)
             return ApiResponse<ExamSessionDto>.Fail("NO_QUESTIONS", "No questions available for speed challenge.");
 
-        var shuffled = selectedQuestions.OrderBy(_ => Random.Shared.Next()).ToList();
+        // Shuffle and trim to TotalQuestions — pool rules may oversupply
+        // (e.g. one rule per PDD category yields ~28 candidates for a 20-question exam).
+        var shuffled = selectedQuestions
+            .OrderBy(_ => Random.Shared.Next())
+            .Take(template.TotalQuestions)
+            .ToList();
 
         var perQuestionSeconds = template.TimeLimitPerQuestionSeconds!.Value;
         var totalSeconds = shuffled.Count * perQuestionSeconds;

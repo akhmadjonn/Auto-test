@@ -13,12 +13,8 @@ public record UpdateRoadMarkingCommand(
     Guid Id,
     string MarkingCode,
     RoadMarkingType MarkingType,
-    string NameUz,
-    string NameUzLatin,
-    string NameRu,
-    string? DescriptionUz,
-    string? DescriptionUzLatin,
-    string? DescriptionRu,
+    LocalizedText Name,
+    LocalizedText? Description,
     int SortOrder,
     bool IsActive) : IRequest<ApiResponse>;
 
@@ -30,9 +26,10 @@ public class UpdateRoadMarkingCommandValidator : AbstractValidator<UpdateRoadMar
         RuleFor(x => x.MarkingCode).NotEmpty().MaximumLength(20)
             .Matches(@"^[\d.]+$").WithMessage("Marking code must contain only digits and dots.");
         RuleFor(x => x.MarkingType).IsInEnum();
-        RuleFor(x => x.NameUz).NotEmpty().MaximumLength(300);
-        RuleFor(x => x.NameUzLatin).NotEmpty().MaximumLength(300);
-        RuleFor(x => x.NameRu).NotEmpty().MaximumLength(300);
+        RuleFor(x => x.Name).NotNull();
+        RuleFor(x => x.Name.Uz).NotEmpty().MaximumLength(300).When(x => x.Name is not null);
+        RuleFor(x => x.Name.UzLatin).NotEmpty().MaximumLength(300).When(x => x.Name is not null);
+        RuleFor(x => x.Name.Ru).NotEmpty().MaximumLength(300).When(x => x.Name is not null);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
     }
 }
@@ -55,10 +52,8 @@ public class UpdateRoadMarkingCommandHandler(
 
         marking.MarkingCode = request.MarkingCode;
         marking.MarkingType = request.MarkingType;
-        marking.Name = new LocalizedText(request.NameUz, request.NameUzLatin, request.NameRu);
-        marking.Description = request.DescriptionUzLatin is not null
-            ? new LocalizedText(request.DescriptionUz ?? "", request.DescriptionUzLatin, request.DescriptionRu ?? "")
-            : null;
+        marking.Name = request.Name;
+        marking.Description = request.Description;
         marking.SortOrder = request.SortOrder;
         marking.IsActive = request.IsActive;
         marking.UpdatedAt = dateTime.UtcNow;

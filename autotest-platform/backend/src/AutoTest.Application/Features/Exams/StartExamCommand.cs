@@ -125,8 +125,12 @@ public class StartExamCommandHandler(
         if (selectedQuestions.Count == 0)
             return ApiResponse<ExamSessionDto>.Fail("NO_QUESTIONS", "No questions available for this exam.");
 
-        // Shuffle questions
-        var shuffled = selectedQuestions.OrderBy(_ => Random.Shared.Next()).ToList();
+        // Shuffle and trim to TotalQuestions — pool rules may oversupply
+        // (e.g. one rule per PDD category yields ~28 candidates for a 20-question exam).
+        var shuffled = selectedQuestions
+            .OrderBy(_ => Random.Shared.Next())
+            .Take(template.TotalQuestions)
+            .ToList();
 
         var expiresAt = now.AddMinutes(template.TimeLimitMinutes);
         var session = new ExamSession

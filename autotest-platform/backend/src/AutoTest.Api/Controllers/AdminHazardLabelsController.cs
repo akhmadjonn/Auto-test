@@ -1,5 +1,5 @@
-using AutoTest.Application.Common.Models;
 using AutoTest.Application.Features.HazardLabels;
+using AutoTest.Domain.Common.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,11 +21,11 @@ public class AdminHazardLabelsController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateHazardLabelCommand command, CancellationToken ct)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateHazardLabelBody body, CancellationToken ct)
     {
-        if (id != command.Id)
-            return BadRequest(ApiResponse.Fail("ID_MISMATCH", "Route ID does not match body ID."));
-
+        // Id from route — frontend doesn't put it in the body.
+        var command = new UpdateHazardLabelCommand(
+            id, body.Slug, body.Name, body.Description, body.HazardClass, body.SortOrder);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
@@ -46,3 +46,10 @@ public class AdminHazardLabelsController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 }
+
+public record UpdateHazardLabelBody(
+    string Slug,
+    LocalizedText Name,
+    LocalizedText Description,
+    string HazardClass,
+    int SortOrder);

@@ -12,12 +12,8 @@ namespace AutoTest.Application.Features.FirstAid;
 public record CreateFirstAidStepCommand(
     Guid ProcedureId,
     int StepOrder,
-    string TitleUz,
-    string TitleUzLatin,
-    string TitleRu,
-    string DescriptionUz,
-    string DescriptionUzLatin,
-    string DescriptionRu) : IRequest<ApiResponse<Guid>>;
+    LocalizedText Title,
+    LocalizedText Description) : IRequest<ApiResponse<Guid>>;
 
 public class CreateFirstAidStepCommandValidator : AbstractValidator<CreateFirstAidStepCommand>
 {
@@ -25,12 +21,14 @@ public class CreateFirstAidStepCommandValidator : AbstractValidator<CreateFirstA
     {
         RuleFor(x => x.ProcedureId).NotEmpty();
         RuleFor(x => x.StepOrder).GreaterThan(0);
-        RuleFor(x => x.TitleUz).NotEmpty();
-        RuleFor(x => x.TitleUzLatin).NotEmpty();
-        RuleFor(x => x.TitleRu).NotEmpty();
-        RuleFor(x => x.DescriptionUz).NotEmpty();
-        RuleFor(x => x.DescriptionUzLatin).NotEmpty();
-        RuleFor(x => x.DescriptionRu).NotEmpty();
+        RuleFor(x => x.Title).NotNull();
+        RuleFor(x => x.Title.Uz).NotEmpty().When(x => x.Title is not null);
+        RuleFor(x => x.Title.UzLatin).NotEmpty().When(x => x.Title is not null);
+        RuleFor(x => x.Title.Ru).NotEmpty().When(x => x.Title is not null);
+        RuleFor(x => x.Description).NotNull();
+        RuleFor(x => x.Description.Uz).NotEmpty().When(x => x.Description is not null);
+        RuleFor(x => x.Description.UzLatin).NotEmpty().When(x => x.Description is not null);
+        RuleFor(x => x.Description.Ru).NotEmpty().When(x => x.Description is not null);
     }
 }
 
@@ -54,8 +52,8 @@ public class CreateFirstAidStepCommandHandler(
             Id = Guid.NewGuid(),
             FirstAidProcedureId = request.ProcedureId,
             StepOrder = request.StepOrder,
-            Title = new LocalizedText(request.TitleUz, request.TitleUzLatin, request.TitleRu),
-            Description = new LocalizedText(request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu),
+            Title = request.Title,
+            Description = request.Description,
             CreatedAt = dateTime.UtcNow,
             UpdatedAt = dateTime.UtcNow
         };

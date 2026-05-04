@@ -68,13 +68,13 @@ public static class ImportApkCommand
             .AsNoTracking()
             .Select(q => q.Text.Ru)
             .ToListAsync(ct);
-        var existingRuTexts = new HashSet<string>(existingRuRaw.Select(UzbekTransliterator.Normalize));
-        Console.WriteLine($"  Existing questions in DB: {existingRuTexts.Count}");
+        // Smart dedup: text-only on text alone, image-bearing on text+image-source.
+        // See ImportAvtoliderCommand.BuildDedupKey for the same convention.
+        var pendingDedupKeys = new HashSet<string>(existingRuRaw.Select(UzbekTransliterator.Normalize));
+        Console.WriteLine($"  Existing question texts in DB: {pendingDedupKeys.Count}");
         Console.WriteLine();
 
         var batch = new List<Question>(ctx.BatchSize);
-        // Track texts added in this run to prevent same-run duplicates
-        var pendingRuTexts = new HashSet<string>(existingRuTexts);
 
         int localImported = 0, localSkipped = 0, localImages = 0;
 
@@ -89,9 +89,18 @@ public static class ImportApkCommand
                 continue;
             }
 
-            // Idempotency: check if this Russian text already tracked
-            var normalizedRu = UzbekTransliterator.Normalize(ruEntry.Question);
-            if (normalizedRu.Length == 0 || pendingRuTexts.Contains(normalizedRu))
+            if (string.IsNullOrWhiteSpace(ruEntry.Question))
+            {
+                localSkipped++;
+                continue;
+            }
+
+            // For APK, the "image source" identifier is the Media.Name (a numeric
+            // file stem) — distinct image stems = distinct picture-questions even
+            // when wording matches (PO-confirmed).
+            var apkImageRef = kirEntry.Media.Exist ? kirEntry.Media.Name : null;
+            var dedupKey = ImportAvtoliderCommand.BuildDedupKey(ruEntry.Question, apkImageRef);
+            if (pendingDedupKeys.Contains(dedupKey))
             {
                 localSkipped++;
                 continue;
@@ -137,7 +146,12 @@ public static class ImportApkCommand
             else if (kirEntry.Media.Exist)
                 Console.WriteLine($"  [WARN] No image file for ID={id}, media.name='{kirEntry.Media.Name}'");
 
-            // Build Question entity
+            // Build Question entity.
+            // APK questions enter as Inactive because they land in the 'uncategorized'
+            // bucket. AssignCategoriesCommand promotes them to Active when keyword
+            // matching successfully reassigns them to a real PDD category.
+            // Anything still in 'uncategorized' after assign-categories stays Inactive
+            // and is invisible to users until an admin reviews + categorizes it.
             var question = new Question
             {
                 Id = Guid.NewGuid(),
@@ -148,7 +162,7 @@ public static class ImportApkCommand
                 ImageUrl = imageKey,
                 ThumbnailUrl = thumbKey,
                 LicenseCategory = LicenseCategory.AB,
-                Status = QuestionStatus.Active,
+                Status = QuestionStatus.Inactive,
                 // Group into tickets: 20 questions each → ticket 1 = IDs 1-20, etc.
                 TicketNumber = (id - 1) / 20 + 1,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -188,7 +202,7 @@ public static class ImportApkCommand
             }
 
             batch.Add(question);
-            pendingRuTexts.Add(normalizedRu);
+            pendingDedupKeys.Add(dedupKey);
 
             // Flush batch
             if (batch.Count >= ctx.BatchSize)

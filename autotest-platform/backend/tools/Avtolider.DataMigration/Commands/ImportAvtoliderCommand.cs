@@ -68,12 +68,17 @@ public static class ImportAvtoliderCommand
         Console.WriteLine($"  Categories processed: {categoryMap.Count}");
 
         // --- Load existing Russian texts for idempotency ---
+        // Image-bearing questions are deduped on text+image_url so that legitimate
+        // picture variants (same wording, different diagram) aren't collapsed.
+        // The DB stores post-MinIO image keys, not the source URL — so on re-runs,
+        // we can only recognise text-only duplicates from DB. Image variants on
+        // re-run would be re-inserted; running against a wiped DB avoids this.
         var existingRuRaw = await ctx.Db.Questions
             .AsNoTracking()
             .Select(q => q.Text.Ru)
             .ToListAsync(ct);
-        var existingRuTexts = new HashSet<string>(existingRuRaw.Select(UzbekTransliterator.Normalize));
-        Console.WriteLine($"  Existing questions in DB: {existingRuTexts.Count}");
+        var pendingDedupKeys = new HashSet<string>(existingRuRaw.Select(UzbekTransliterator.Normalize));
+        Console.WriteLine($"  Existing question texts in DB: {pendingDedupKeys.Count}");
         Console.WriteLine();
 
         // Build local image map for downloaded images
@@ -85,7 +90,6 @@ public static class ImportAvtoliderCommand
             await ctx.ImageSvc.EnsureBucketAsync(ct);
         Console.WriteLine();
 
-        var pendingRuTexts = new HashSet<string>(existingRuTexts);
         var batch = new List<Question>(ctx.BatchSize);
         int localImported = 0, localSkipped = 0, localImages = 0, localExternalImages = 0;
         int ticketCounter = 1; // global sequential ticket assignment for Avtolider
@@ -117,9 +121,11 @@ public static class ImportAvtoliderCommand
                 continue;
             }
 
-            // Idempotency check
-            var normalizedRu = UzbekTransliterator.Normalize(ruText);
-            if (pendingRuTexts.Contains(normalizedRu))
+            // Smart dedup: text-only collapses on text alone; image questions
+            // include the source image URL so different diagrams stay separate
+            // (PO-confirmed: same Russian wording + different image = distinct question).
+            var dedupKey = BuildDedupKey(ruText, q.ImageUrl);
+            if (pendingDedupKeys.Contains(dedupKey))
             {
                 localSkipped++;
                 continue;
@@ -182,7 +188,7 @@ public static class ImportAvtoliderCommand
                 ImageUrl = imageKey,
                 ThumbnailUrl = thumbKey,
                 LicenseCategory = LicenseCategory.AB,
-                Status = q.IsActive ? QuestionStatus.Active : QuestionStatus.Draft,
+                Status = q.IsActive ? QuestionStatus.Active : QuestionStatus.Inactive,
                 TicketNumber = (ticketCounter - 1) / 20 + 1,
                 CreatedAt = DateTimeOffset.UtcNow,
             };
@@ -211,7 +217,7 @@ public static class ImportAvtoliderCommand
             }
 
             batch.Add(question);
-            pendingRuTexts.Add(normalizedRu);
+            pendingDedupKeys.Add(dedupKey);
             ticketCounter++;
 
             if (batch.Count >= ctx.BatchSize)
@@ -271,7 +277,19 @@ public static class ImportAvtoliderCommand
         [25] = "technical-requirements",     // _26_ Условия запрещения эксплуатации ТС
         [27] = "driving-safety",             // _27_ Безопасность управления
         [28] = "first-aid",                  // _28_ Первая медицинская помощь
+        [30] = "vehicle-classification",     // _29_ Классификация транспортных средств
     };
+
+    // Smart dedup: text-only questions collapse on normalized text alone;
+    // image-bearing questions include the source image URL in the key, so legitimate
+    // picture variants (same wording, different diagram) are NOT collapsed.
+    internal static string BuildDedupKey(string ruText, string? imageUrl)
+    {
+        var normalized = UzbekTransliterator.Normalize(ruText);
+        return string.IsNullOrWhiteSpace(imageUrl)
+            ? normalized
+            : normalized + "|img:" + imageUrl.Trim();
+    }
 
     private static async Task<Dictionary<int, Category>> ImportThemesAsync(
         AppDbContext db,

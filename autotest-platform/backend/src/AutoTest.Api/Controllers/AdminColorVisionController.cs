@@ -1,4 +1,3 @@
-using AutoTest.Application.Common.Models;
 using AutoTest.Application.Features.ColorVision;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -28,11 +27,11 @@ public class AdminColorVisionController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateColorVisionPlateCommand command, CancellationToken ct)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateColorVisionPlateBody body, CancellationToken ct)
     {
-        if (id != command.Id)
-            return BadRequest(ApiResponse.Fail("ID_MISMATCH", "Route ID does not match body ID."));
-
+        var command = new UpdateColorVisionPlateCommand(
+            id, body.PlateNumber, body.ExpectedAnswer, body.AlternateAnswer,
+            body.SortOrder, body.IsActive);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
@@ -53,3 +52,10 @@ public class AdminColorVisionController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 }
+
+public record UpdateColorVisionPlateBody(
+    int PlateNumber,
+    string ExpectedAnswer,
+    string? AlternateAnswer,
+    int SortOrder,
+    bool IsActive);

@@ -12,12 +12,8 @@ public record UpdateRoadSignCommand(
     Guid Id,
     Guid CategoryId,
     string SignCode,
-    string NameUz,
-    string NameUzLatin,
-    string NameRu,
-    string? DescriptionUz,
-    string? DescriptionUzLatin,
-    string? DescriptionRu,
+    LocalizedText Name,
+    LocalizedText? Description,
     int SortOrder,
     bool IsActive) : IRequest<ApiResponse>;
 
@@ -29,9 +25,10 @@ public class UpdateRoadSignCommandValidator : AbstractValidator<UpdateRoadSignCo
         RuleFor(x => x.CategoryId).NotEmpty();
         RuleFor(x => x.SignCode).NotEmpty().MaximumLength(20)
             .Matches(@"^[\d.]+$").WithMessage("Sign code must contain only digits and dots.");
-        RuleFor(x => x.NameUz).NotEmpty().MaximumLength(300);
-        RuleFor(x => x.NameUzLatin).NotEmpty().MaximumLength(300);
-        RuleFor(x => x.NameRu).NotEmpty().MaximumLength(300);
+        RuleFor(x => x.Name).NotNull();
+        RuleFor(x => x.Name.Uz).NotEmpty().MaximumLength(300).When(x => x.Name is not null);
+        RuleFor(x => x.Name.UzLatin).NotEmpty().MaximumLength(300).When(x => x.Name is not null);
+        RuleFor(x => x.Name.Ru).NotEmpty().MaximumLength(300).When(x => x.Name is not null);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
     }
 }
@@ -56,10 +53,8 @@ public class UpdateRoadSignCommandHandler(
 
         sign.CategoryId = request.CategoryId;
         sign.SignCode = request.SignCode;
-        sign.Name = new LocalizedText(request.NameUz, request.NameUzLatin, request.NameRu);
-        sign.Description = request.DescriptionUzLatin is not null
-            ? new LocalizedText(request.DescriptionUz ?? "", request.DescriptionUzLatin, request.DescriptionRu ?? "")
-            : null;
+        sign.Name = request.Name;
+        sign.Description = request.Description;
         sign.SortOrder = request.SortOrder;
         sign.IsActive = request.IsActive;
         sign.UpdatedAt = dateTime.UtcNow;

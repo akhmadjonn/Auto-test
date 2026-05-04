@@ -12,12 +12,8 @@ namespace AutoTest.Application.Features.VideoLessons;
 
 public record CreateVideoLessonCommand(
     Guid VideoCategoryId,
-    string TitleUz,
-    string TitleUzLatin,
-    string TitleRu,
-    string? DescriptionUz,
-    string? DescriptionUzLatin,
-    string? DescriptionRu,
+    LocalizedText Title,
+    LocalizedText? Description,
     VideoSourceType SourceType,
     string VideoUrl,
     string? ThumbnailUrl,
@@ -32,9 +28,10 @@ public class CreateVideoLessonCommandValidator : AbstractValidator<CreateVideoLe
     public CreateVideoLessonCommandValidator()
     {
         RuleFor(x => x.VideoCategoryId).NotEmpty();
-        RuleFor(x => x.TitleUz).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.TitleUzLatin).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.TitleRu).NotEmpty().MaximumLength(500);
+        RuleFor(x => x.Title).NotNull();
+        RuleFor(x => x.Title.Uz).NotEmpty().MaximumLength(500).When(x => x.Title is not null);
+        RuleFor(x => x.Title.UzLatin).NotEmpty().MaximumLength(500).When(x => x.Title is not null);
+        RuleFor(x => x.Title.Ru).NotEmpty().MaximumLength(500).When(x => x.Title is not null);
         RuleFor(x => x.VideoUrl).MaximumLength(1000)
             .NotEmpty().When(x => x.SourceType != Domain.Common.Enums.VideoSourceType.Upload)
             .WithMessage("Video URL is required for YouTube and External Link sources.");
@@ -56,10 +53,6 @@ public class CreateVideoLessonCommandHandler(
         if (!categoryExists)
             return ApiResponse<Guid>.Fail("CATEGORY_NOT_FOUND", "Video category not found.");
 
-        var description = request.DescriptionUz is not null && request.DescriptionUzLatin is not null && request.DescriptionRu is not null
-            ? new LocalizedText(request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu)
-            : null;
-
         // Auto-generate YouTube thumbnail if not provided
         var thumbnailUrl = request.ThumbnailUrl;
         if (string.IsNullOrEmpty(thumbnailUrl) && request.SourceType == Domain.Common.Enums.VideoSourceType.YouTube
@@ -75,8 +68,8 @@ public class CreateVideoLessonCommandHandler(
         {
             Id = Guid.NewGuid(),
             VideoCategoryId = request.VideoCategoryId,
-            Title = new LocalizedText(request.TitleUz, request.TitleUzLatin, request.TitleRu),
-            Description = description,
+            Title = request.Title,
+            Description = request.Description,
             SourceType = request.SourceType,
             VideoUrl = request.VideoUrl,
             ThumbnailUrl = thumbnailUrl,

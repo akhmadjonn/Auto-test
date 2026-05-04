@@ -11,12 +11,8 @@ namespace AutoTest.Application.Features.HazardLabels;
 
 public record CreateHazardLabelCommand(
     string Slug,
-    string NameUz,
-    string NameUzLatin,
-    string NameRu,
-    string DescriptionUz,
-    string DescriptionUzLatin,
-    string DescriptionRu,
+    LocalizedText Name,
+    LocalizedText Description,
     string HazardClass,
     int SortOrder) : IRequest<ApiResponse<Guid>>;
 
@@ -26,12 +22,14 @@ public class CreateHazardLabelCommandValidator : AbstractValidator<CreateHazardL
     {
         RuleFor(x => x.Slug).NotEmpty().MaximumLength(100)
             .Matches("^[a-z0-9-]+$").WithMessage("Slug must contain only lowercase letters, numbers, and hyphens.");
-        RuleFor(x => x.NameUz).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.NameUzLatin).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.NameRu).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.DescriptionUz).NotEmpty();
-        RuleFor(x => x.DescriptionUzLatin).NotEmpty();
-        RuleFor(x => x.DescriptionRu).NotEmpty();
+        RuleFor(x => x.Name).NotNull();
+        RuleFor(x => x.Name.Uz).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.UzLatin).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.Ru).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Description).NotNull();
+        RuleFor(x => x.Description.Uz).NotEmpty().When(x => x.Description is not null);
+        RuleFor(x => x.Description.UzLatin).NotEmpty().When(x => x.Description is not null);
+        RuleFor(x => x.Description.Ru).NotEmpty().When(x => x.Description is not null);
         RuleFor(x => x.HazardClass).NotEmpty().MaximumLength(50);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
     }
@@ -53,8 +51,8 @@ public class CreateHazardLabelCommandHandler(
         {
             Id = Guid.NewGuid(),
             Slug = request.Slug,
-            Name = new LocalizedText(request.NameUz, request.NameUzLatin, request.NameRu),
-            Description = new LocalizedText(request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu),
+            Name = request.Name,
+            Description = request.Description,
             HazardClass = request.HazardClass,
             SortOrder = request.SortOrder,
             CreatedAt = dateTime.UtcNow

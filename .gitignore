@@ -12,3 +12,4 @@ CODE-AUDIT.md
 COMPETITOR-ANALYSIS-REPORT.md
 MIGRATION-PLAN.md
 SCHEMA-COMPARISON.md
+autotest-platform/backend/tools/Avtolider.DataMigration/scripts/extract_dump.py

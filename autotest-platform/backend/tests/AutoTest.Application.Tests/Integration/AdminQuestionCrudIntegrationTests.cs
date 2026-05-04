@@ -111,13 +111,13 @@ public class AdminQuestionCrudIntegrationTests
             Substitute.For<ILogger<ToggleQuestionStatusCommandHandler>>());
 
         var toggleResult = await toggleHandler.Handle(
-            new ToggleQuestionStatusCommand(questionId, QuestionStatus.Archived), CancellationToken.None);
+            new ToggleQuestionStatusCommand(questionId, QuestionStatus.Inactive), CancellationToken.None);
 
         toggleResult.Success.Should().BeTrue();
 
         // Verify deactivated in DB
         var deactivated = await db.Questions.FindAsync(questionId);
-        deactivated!.Status.Should().Be(QuestionStatus.Archived);
+        deactivated!.Status.Should().Be(QuestionStatus.Inactive);
 
         // --- Step 4: Verify question is excluded from category listing (active-only query) ---
         var readAfterResult = await readHandler.Handle(
@@ -263,7 +263,7 @@ public class AdminQuestionCrudIntegrationTests
             Difficulty = Difficulty.Easy,
             TicketNumber = 1,
             LicenseCategory = LicenseCategory.AB,
-            Status = QuestionStatus.Draft, // initially inactive
+            Status = QuestionStatus.Inactive, // initially inactive
             CreatedAt = _dateTime.UtcNow
         };
         db.Questions.Add(question);

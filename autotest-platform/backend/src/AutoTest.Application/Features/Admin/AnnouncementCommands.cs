@@ -43,8 +43,8 @@ public class GetAnnouncementsQueryHandler(
 
 // CREATE
 public record CreateAnnouncementCommand(
-    string TitleUz, string TitleUzLatin, string TitleRu,
-    string ContentUz, string ContentUzLatin, string ContentRu,
+    LocalizedText Title,
+    LocalizedText Content,
     AnnouncementType Type, bool IsActive,
     DateTimeOffset? StartsAt, DateTimeOffset? ExpiresAt) : IRequest<ApiResponse<AnnouncementDto>>;
 
@@ -52,12 +52,14 @@ public class CreateAnnouncementCommandValidator : AbstractValidator<CreateAnnoun
 {
     public CreateAnnouncementCommandValidator()
     {
-        RuleFor(x => x.TitleUz).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.TitleUzLatin).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.TitleRu).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.ContentUz).NotEmpty();
-        RuleFor(x => x.ContentUzLatin).NotEmpty();
-        RuleFor(x => x.ContentRu).NotEmpty();
+        RuleFor(x => x.Title).NotNull();
+        RuleFor(x => x.Title.Uz).NotEmpty().MaximumLength(500).When(x => x.Title is not null);
+        RuleFor(x => x.Title.UzLatin).NotEmpty().MaximumLength(500).When(x => x.Title is not null);
+        RuleFor(x => x.Title.Ru).NotEmpty().MaximumLength(500).When(x => x.Title is not null);
+        RuleFor(x => x.Content).NotNull();
+        RuleFor(x => x.Content.Uz).NotEmpty().When(x => x.Content is not null);
+        RuleFor(x => x.Content.UzLatin).NotEmpty().When(x => x.Content is not null);
+        RuleFor(x => x.Content.Ru).NotEmpty().When(x => x.Content is not null);
     }
 }
 
@@ -73,8 +75,8 @@ public class CreateAnnouncementCommandHandler(
         var announcement = new Announcement
         {
             Id = Guid.NewGuid(),
-            Title = new LocalizedText(request.TitleUz, request.TitleUzLatin, request.TitleRu),
-            Content = new LocalizedText(request.ContentUz, request.ContentUzLatin, request.ContentRu),
+            Title = request.Title,
+            Content = request.Content,
             Type = request.Type,
             IsActive = request.IsActive,
             StartsAt = request.StartsAt,
@@ -100,8 +102,8 @@ public class CreateAnnouncementCommandHandler(
 // UPDATE
 public record UpdateAnnouncementCommand(
     Guid Id,
-    string TitleUz, string TitleUzLatin, string TitleRu,
-    string ContentUz, string ContentUzLatin, string ContentRu,
+    LocalizedText Title,
+    LocalizedText Content,
     AnnouncementType Type, bool IsActive,
     DateTimeOffset? StartsAt, DateTimeOffset? ExpiresAt) : IRequest<ApiResponse>;
 
@@ -110,7 +112,10 @@ public class UpdateAnnouncementCommandValidator : AbstractValidator<UpdateAnnoun
     public UpdateAnnouncementCommandValidator()
     {
         RuleFor(x => x.Id).NotEmpty();
-        RuleFor(x => x.TitleUz).NotEmpty().MaximumLength(500);
+        RuleFor(x => x.Title).NotNull();
+        RuleFor(x => x.Title.Uz).NotEmpty().MaximumLength(500).When(x => x.Title is not null);
+        RuleFor(x => x.Title.UzLatin).NotEmpty().MaximumLength(500).When(x => x.Title is not null);
+        RuleFor(x => x.Title.Ru).NotEmpty().MaximumLength(500).When(x => x.Title is not null);
     }
 }
 
@@ -125,8 +130,8 @@ public class UpdateAnnouncementCommandHandler(
         if (announcement is null)
             return ApiResponse.Fail("NOT_FOUND", "Announcement not found.");
 
-        announcement.Title = new LocalizedText(request.TitleUz, request.TitleUzLatin, request.TitleRu);
-        announcement.Content = new LocalizedText(request.ContentUz, request.ContentUzLatin, request.ContentRu);
+        announcement.Title = request.Title;
+        announcement.Content = request.Content;
         announcement.Type = request.Type;
         announcement.IsActive = request.IsActive;
         announcement.StartsAt = request.StartsAt;

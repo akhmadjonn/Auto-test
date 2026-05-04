@@ -1,4 +1,6 @@
+using AutoTest.Application.Common.Models;
 using AutoTest.Application.Features.FirstAid;
+using AutoTest.Domain.Common.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,28 +15,17 @@ namespace AutoTest.Api.Controllers;
 public class AdminFirstAidController(IMediator mediator) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateFirstAidProcedureRequest request, CancellationToken ct)
+    public async Task<IActionResult> Create([FromBody] CreateFirstAidProcedureCommand command, CancellationToken ct)
     {
-        var command = new CreateFirstAidProcedureCommand(
-            request.Slug,
-            request.NameUz, request.NameUzLatin, request.NameRu,
-            request.SummaryUz, request.SummaryUzLatin, request.SummaryRu,
-            request.SortOrder);
-
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateFirstAidProcedureRequest request, CancellationToken ct)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateFirstAidProcedureBody body, CancellationToken ct)
     {
-        var command = new UpdateFirstAidProcedureCommand(
-            id,
-            request.Slug,
-            request.NameUz, request.NameUzLatin, request.NameRu,
-            request.SummaryUz, request.SummaryUzLatin, request.SummaryRu,
-            request.SortOrder);
-
+        // Id always comes from the route — frontend never puts it in the body.
+        var command = new UpdateFirstAidProcedureCommand(id, body.Slug, body.Name, body.Summary, body.SortOrder);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -47,27 +38,17 @@ public class AdminFirstAidController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("{procedureId}/steps")]
-    public async Task<IActionResult> CreateStep(Guid procedureId, [FromBody] CreateFirstAidStepRequest request, CancellationToken ct)
+    public async Task<IActionResult> CreateStep(Guid procedureId, [FromBody] CreateFirstAidStepBody body, CancellationToken ct)
     {
-        var command = new CreateFirstAidStepCommand(
-            procedureId,
-            request.StepOrder,
-            request.TitleUz, request.TitleUzLatin, request.TitleRu,
-            request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu);
-
+        var command = new CreateFirstAidStepCommand(procedureId, body.StepOrder, body.Title, body.Description);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
     [HttpPut("{procedureId}/steps/{stepId}")]
-    public async Task<IActionResult> UpdateStep(Guid procedureId, Guid stepId, [FromBody] UpdateFirstAidStepRequest request, CancellationToken ct)
+    public async Task<IActionResult> UpdateStep(Guid procedureId, Guid stepId, [FromBody] UpdateFirstAidStepBody body, CancellationToken ct)
     {
-        var command = new UpdateFirstAidStepCommand(
-            procedureId, stepId,
-            request.StepOrder,
-            request.TitleUz, request.TitleUzLatin, request.TitleRu,
-            request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu);
-
+        var command = new UpdateFirstAidStepCommand(procedureId, stepId, body.StepOrder, body.Title, body.Description);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -91,43 +72,31 @@ public class AdminFirstAidController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpPost("{id}/icon")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadIcon(Guid id, IFormFile image, CancellationToken ct)
+    {
+        var command = new UploadFirstAidProcedureIconCommand(id, image.OpenReadStream(), image.FileName);
+        var result = await mediator.Send(command, ct);
+        return result.Success ? Ok(result) : NotFound(result);
+    }
 }
 
-// Request models
-public record CreateFirstAidProcedureRequest(
+// Request bodies — IDs come from the route, not the body. The frontend
+// never sends `id` so the binding stays simple (matches its actual JSON).
+public record UpdateFirstAidProcedureBody(
     string Slug,
-    string NameUz,
-    string NameUzLatin,
-    string NameRu,
-    string? SummaryUz,
-    string? SummaryUzLatin,
-    string? SummaryRu,
+    LocalizedText Name,
+    LocalizedText? Summary,
     int SortOrder);
 
-public record UpdateFirstAidProcedureRequest(
-    string Slug,
-    string NameUz,
-    string NameUzLatin,
-    string NameRu,
-    string? SummaryUz,
-    string? SummaryUzLatin,
-    string? SummaryRu,
-    int SortOrder);
-
-public record CreateFirstAidStepRequest(
+public record CreateFirstAidStepBody(
     int StepOrder,
-    string TitleUz,
-    string TitleUzLatin,
-    string TitleRu,
-    string DescriptionUz,
-    string DescriptionUzLatin,
-    string DescriptionRu);
+    LocalizedText Title,
+    LocalizedText Description);
 
-public record UpdateFirstAidStepRequest(
+public record UpdateFirstAidStepBody(
     int StepOrder,
-    string TitleUz,
-    string TitleUzLatin,
-    string TitleRu,
-    string DescriptionUz,
-    string DescriptionUzLatin,
-    string DescriptionRu);
+    LocalizedText Title,
+    LocalizedText Description);

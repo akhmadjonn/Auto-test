@@ -1,5 +1,5 @@
-using AutoTest.Application.Common.Models;
 using AutoTest.Application.Features.RoadSigns;
+using AutoTest.Domain.Common.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,11 +30,11 @@ public class AdminRoadSignsController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("categories/{id}")]
-    public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] UpdateRoadSignCategoryCommand command, CancellationToken ct)
+    public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] UpdateRoadSignCategoryBody body, CancellationToken ct)
     {
-        if (id != command.Id)
-            return BadRequest(ApiResponse.Fail("ID_MISMATCH", "Route ID does not match body ID."));
-
+        var command = new UpdateRoadSignCategoryCommand(
+            id, body.Slug, body.Code, body.Name, body.Description,
+            body.SortOrder, body.IsActive);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
@@ -79,11 +79,11 @@ public class AdminRoadSignsController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateSign(Guid id, [FromBody] UpdateRoadSignCommand command, CancellationToken ct)
+    public async Task<IActionResult> UpdateSign(Guid id, [FromBody] UpdateRoadSignBody body, CancellationToken ct)
     {
-        if (id != command.Id)
-            return BadRequest(ApiResponse.Fail("ID_MISMATCH", "Route ID does not match body ID."));
-
+        var command = new UpdateRoadSignCommand(
+            id, body.CategoryId, body.SignCode, body.Name, body.Description,
+            body.SortOrder, body.IsActive);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
@@ -104,3 +104,19 @@ public class AdminRoadSignsController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 }
+
+public record UpdateRoadSignCategoryBody(
+    string Slug,
+    string Code,
+    LocalizedText Name,
+    LocalizedText Description,
+    int SortOrder,
+    bool IsActive);
+
+public record UpdateRoadSignBody(
+    Guid CategoryId,
+    string SignCode,
+    LocalizedText Name,
+    LocalizedText? Description,
+    int SortOrder,
+    bool IsActive);

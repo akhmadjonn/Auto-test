@@ -1,4 +1,5 @@
 using AutoTest.Application.Features.TrafficFines;
+using AutoTest.Domain.Common.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,40 +14,18 @@ namespace AutoTest.Api.Controllers;
 public class AdminFinesController(IMediator mediator) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateFineRequest request, CancellationToken ct)
+    public async Task<IActionResult> Create([FromBody] CreateFineCommand command, CancellationToken ct)
     {
-        var command = new CreateFineCommand(
-            request.ArticleNumber,
-            request.ViolationDescriptionUz,
-            request.ViolationDescriptionUzLatin,
-            request.ViolationDescriptionRu,
-            request.AdditionalNotesUz,
-            request.AdditionalNotesUzLatin,
-            request.AdditionalNotesRu,
-            request.PenaltyAmountTiyins,
-            request.PenaltyMaxTiyins,
-            request.SortOrder);
-
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateFineRequest request, CancellationToken ct)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateFineBody body, CancellationToken ct)
     {
         var command = new UpdateFineCommand(
-            id,
-            request.ArticleNumber,
-            request.ViolationDescriptionUz,
-            request.ViolationDescriptionUzLatin,
-            request.ViolationDescriptionRu,
-            request.AdditionalNotesUz,
-            request.AdditionalNotesUzLatin,
-            request.AdditionalNotesRu,
-            request.PenaltyAmountTiyins,
-            request.PenaltyMaxTiyins,
-            request.SortOrder);
-
+            id, body.ArticleNumber, body.ViolationDescription, body.AdditionalNotes,
+            body.PenaltyAmountTiyins, body.PenaltyMaxTiyins, body.SortOrder);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
@@ -68,26 +47,10 @@ public class AdminFinesController(IMediator mediator) : ControllerBase
     }
 }
 
-public record CreateFineRequest(
+public record UpdateFineBody(
     string ArticleNumber,
-    string ViolationDescriptionUz,
-    string ViolationDescriptionUzLatin,
-    string ViolationDescriptionRu,
-    string? AdditionalNotesUz,
-    string? AdditionalNotesUzLatin,
-    string? AdditionalNotesRu,
-    long PenaltyAmountTiyins,
-    long? PenaltyMaxTiyins,
-    int SortOrder);
-
-public record UpdateFineRequest(
-    string ArticleNumber,
-    string ViolationDescriptionUz,
-    string ViolationDescriptionUzLatin,
-    string ViolationDescriptionRu,
-    string? AdditionalNotesUz,
-    string? AdditionalNotesUzLatin,
-    string? AdditionalNotesRu,
+    LocalizedText ViolationDescription,
+    LocalizedText? AdditionalNotes,
     long PenaltyAmountTiyins,
     long? PenaltyMaxTiyins,
     int SortOrder);

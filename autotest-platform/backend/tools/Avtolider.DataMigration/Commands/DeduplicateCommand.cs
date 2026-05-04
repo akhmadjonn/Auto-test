@@ -33,7 +33,7 @@ public static class DeduplicateCommand
         if (hardDelete)
             Console.WriteLine("  [HARD DELETE] Duplicates will be permanently deleted.");
         else
-            Console.WriteLine("  [SOFT DELETE] Duplicates will be marked Status=Archived.");
+            Console.WriteLine("  [SOFT DELETE] Duplicates will be set Status=Inactive.");
         Console.WriteLine();
 
         // Load all active questions with fields needed for merge decisions
@@ -86,7 +86,14 @@ public static class DeduplicateCommand
                 parent[rootA] = rootB;
         }
 
-        // O(n^2) comparison
+        // O(n^2) comparison.
+        // PO rule: image-bearing questions are unique even with identical wording —
+        // the image is part of the question. So we only union pairs where:
+        //   • both are text-only, OR
+        //   • both share the exact same ImageUrl (post-MinIO key, so always unique
+        //     across uploads — practically only happens on accidental re-imports).
+        // Pairs where one has an image and the other doesn't, or they have different
+        // image keys, are left alone.
         int comparisons = 0;
         for (int i = 0; i < normalized.Count; i++)
         {
@@ -98,6 +105,13 @@ public static class DeduplicateCommand
                 var maxLen = Math.Max(normI.Length, normJ.Length);
                 var minLen = Math.Min(normI.Length, normJ.Length);
                 if ((double)(maxLen - minLen) / maxLen > 0.35)
+                    continue;
+
+                // Skip cross-image pairs to preserve picture-question variants
+                var iHasImg = !string.IsNullOrEmpty(qi.ImageUrl);
+                var jHasImg = !string.IsNullOrEmpty(qj.ImageUrl);
+                if (iHasImg != jHasImg) continue;
+                if (iHasImg && jHasImg && !string.Equals(qi.ImageUrl, qj.ImageUrl, StringComparison.Ordinal))
                     continue;
 
                 if (LevenshteinDistance.AreSimilar(normI, normJ, threshold: 0.20))
@@ -249,9 +263,15 @@ public static class DeduplicateCommand
                 }
                 else
                 {
+                    // Soft-delete via Status=Inactive — questions stay in DB but
+                    // disappear from exam pools / practice / marathon (all filter
+                    // on Status=Active).
+                    var now = DateTimeOffset.UtcNow;
                     await ctx.Db.Questions
                         .Where(q => chunk.Contains(q.Id))
-                        .ExecuteUpdateAsync(s => s.SetProperty(q => q.Status, QuestionStatus.Archived), ct);
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(q => q.Status, QuestionStatus.Inactive)
+                            .SetProperty(q => q.UpdatedAt, now), ct);
                 }
                 removed += chunk.Length;
             }

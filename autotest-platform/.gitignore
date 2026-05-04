@@ -9,3 +9,26 @@
 # Local env file with secrets — never commit
 .env
 
+# Local-only docker compose (Postgres + Redis + MinIO for dev). Production uses
+# the main docker-compose.yml which is committed.
+docker-compose.local.yml
+docker-compose.override.yml
+
+# ── Avtolider.DataMigration tool ─────────────────────────────────────────────
+# JSON files (themes/questions/options) ARE tracked so team members can see
+# changes and PR diffs. Refresh them by running:
+#   python scripts/extract_dump.py <dump>
+#
+# Images are large binaries — never commit. On a fresh checkout, regenerate
+# locally with the same script, or with --images-only to skip the dump-parse
+# and just download from the URLs in the tracked questions.json.
+backend/tools/Avtolider.DataMigration/data/avtolider/img/
+backend/tools/Avtolider.DataMigration/data/avtolider/_quizzes_dump.sql
+backend/tools/Avtolider.DataMigration/data/avtolider/download_failures.json
+backend/tools/Avtolider.DataMigration/data/visual_assets/
+backend/tools/Avtolider.DataMigration/data/Videos/
+backend/tools/Avtolider.DataMigration/data/apk/img/
+
+# Local connection strings — server uses env vars or its own appsettings.local.json
+backend/tools/Avtolider.DataMigration/appsettings.local.json
+backend/tools/Avtolider.DataMigration/appsettings.Development.json

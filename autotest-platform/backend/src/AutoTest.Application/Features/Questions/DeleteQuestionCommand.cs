@@ -7,7 +7,11 @@ using Microsoft.Extensions.Logging;
 
 namespace AutoTest.Application.Features.Questions;
 
-// Soft delete — sets Status to Archived
+// Soft delete — flips Status to Inactive so the question disappears from exam
+// pools, practice, marathon, and ticket queries (all filter on Status=Active).
+// Row stays in DB so user history (SessionQuestion / UserFavoriteQuestion /
+// UserQuestionState foreign keys) stays intact. Use the /permanent endpoint
+// for irreversible removal (DB row + MinIO images).
 public record DeleteQuestionCommand(Guid QuestionId) : IRequest<ApiResponse>;
 
 public class DeleteQuestionCommandValidator : AbstractValidator<DeleteQuestionCommand>
@@ -30,12 +34,12 @@ public class DeleteQuestionCommandHandler(
         if (question is null)
             return ApiResponse.Fail("QUESTION_NOT_FOUND", "Question not found.");
 
-        question.Status = QuestionStatus.Archived;
+        question.Status = QuestionStatus.Inactive;
         question.UpdatedAt = dateTime.UtcNow;
         await db.SaveChangesAsync(ct);
         await CreateQuestionCommandHandler.InvalidateQuestionCachesAsync(cache, ct);
 
-        logger.LogInformation("Soft-deleted question {Id}", request.QuestionId);
+        logger.LogInformation("Soft-deleted question {Id} (Status=Inactive)", request.QuestionId);
         return ApiResponse.Ok();
     }
 }

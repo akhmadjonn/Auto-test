@@ -10,12 +10,8 @@ namespace AutoTest.Application.Features.TrafficFines;
 public record UpdateFineCommand(
     Guid Id,
     string ArticleNumber,
-    string ViolationDescriptionUz,
-    string ViolationDescriptionUzLatin,
-    string ViolationDescriptionRu,
-    string? AdditionalNotesUz,
-    string? AdditionalNotesUzLatin,
-    string? AdditionalNotesRu,
+    LocalizedText ViolationDescription,
+    LocalizedText? AdditionalNotes,
     long PenaltyAmountTiyins,
     long? PenaltyMaxTiyins,
     int SortOrder) : IRequest<ApiResponse>;
@@ -26,9 +22,10 @@ public class UpdateFineCommandValidator : AbstractValidator<UpdateFineCommand>
     {
         RuleFor(x => x.Id).NotEmpty();
         RuleFor(x => x.ArticleNumber).NotEmpty().MaximumLength(50);
-        RuleFor(x => x.ViolationDescriptionUz).NotEmpty();
-        RuleFor(x => x.ViolationDescriptionUzLatin).NotEmpty();
-        RuleFor(x => x.ViolationDescriptionRu).NotEmpty();
+        RuleFor(x => x.ViolationDescription).NotNull();
+        RuleFor(x => x.ViolationDescription.Uz).NotEmpty().When(x => x.ViolationDescription is not null);
+        RuleFor(x => x.ViolationDescription.UzLatin).NotEmpty().When(x => x.ViolationDescription is not null);
+        RuleFor(x => x.ViolationDescription.Ru).NotEmpty().When(x => x.ViolationDescription is not null);
         RuleFor(x => x.PenaltyAmountTiyins).GreaterThan(0);
         RuleFor(x => x.PenaltyMaxTiyins)
             .GreaterThanOrEqualTo(x => x.PenaltyAmountTiyins)
@@ -51,16 +48,8 @@ public class UpdateFineCommandHandler(
             return ApiResponse.Fail("NOT_FOUND", "Traffic fine not found.");
 
         fine.ArticleNumber = request.ArticleNumber;
-        fine.ViolationDescription = new LocalizedText(
-            request.ViolationDescriptionUz,
-            request.ViolationDescriptionUzLatin,
-            request.ViolationDescriptionRu);
-        fine.AdditionalNotes = request.AdditionalNotesUz is not null
-            ? new LocalizedText(
-                request.AdditionalNotesUz,
-                request.AdditionalNotesUzLatin ?? string.Empty,
-                request.AdditionalNotesRu ?? string.Empty)
-            : null;
+        fine.ViolationDescription = request.ViolationDescription;
+        fine.AdditionalNotes = request.AdditionalNotes;
         fine.PenaltyAmountTiyins = request.PenaltyAmountTiyins;
         fine.PenaltyMaxTiyins = request.PenaltyMaxTiyins;
         fine.SortOrder = request.SortOrder;

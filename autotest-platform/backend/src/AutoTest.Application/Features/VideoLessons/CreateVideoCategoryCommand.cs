@@ -9,21 +9,18 @@ using Microsoft.Extensions.Logging;
 namespace AutoTest.Application.Features.VideoLessons;
 
 public record CreateVideoCategoryCommand(
-    string NameUz,
-    string NameUzLatin,
-    string NameRu,
-    string? DescriptionUz,
-    string? DescriptionUzLatin,
-    string? DescriptionRu,
+    LocalizedText Name,
+    LocalizedText? Description,
     int SortOrder) : IRequest<ApiResponse<Guid>>;
 
 public class CreateVideoCategoryCommandValidator : AbstractValidator<CreateVideoCategoryCommand>
 {
     public CreateVideoCategoryCommandValidator()
     {
-        RuleFor(x => x.NameUz).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.NameUzLatin).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.NameRu).NotEmpty().MaximumLength(500);
+        RuleFor(x => x.Name).NotNull();
+        RuleFor(x => x.Name.Uz).NotEmpty().MaximumLength(500).When(x => x.Name is not null);
+        RuleFor(x => x.Name.UzLatin).NotEmpty().MaximumLength(500).When(x => x.Name is not null);
+        RuleFor(x => x.Name.Ru).NotEmpty().MaximumLength(500).When(x => x.Name is not null);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
     }
 }
@@ -36,16 +33,12 @@ public class CreateVideoCategoryCommandHandler(
 {
     public async Task<ApiResponse<Guid>> Handle(CreateVideoCategoryCommand request, CancellationToken ct)
     {
-        var description = request.DescriptionUz is not null && request.DescriptionUzLatin is not null && request.DescriptionRu is not null
-            ? new LocalizedText(request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu)
-            : null;
-
         var now = dateTime.UtcNow;
         var category = new VideoCategory
         {
             Id = Guid.NewGuid(),
-            Name = new LocalizedText(request.NameUz, request.NameUzLatin, request.NameRu),
-            Description = description,
+            Name = request.Name,
+            Description = request.Description,
             SortOrder = request.SortOrder,
             CreatedAt = now,
             UpdatedAt = now

@@ -1,6 +1,6 @@
-using AutoTest.Application.Common.Models;
 using AutoTest.Application.Features.Categories;
 using AutoTest.Domain.Common.Enums;
+using AutoTest.Domain.Common.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,12 +29,21 @@ public class AdminCategoriesController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCategoryCommand command, CancellationToken ct)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCategoryBody body, CancellationToken ct)
     {
-        if (id != command.Id)
-            return BadRequest(ApiResponse.Fail("ID_MISMATCH", "Route ID does not match body ID."));
-
+        var command = new UpdateCategoryCommand(
+            id, body.Name, body.Description, body.Slug, body.IconUrl,
+            body.ParentId, body.SortOrder, body.IsActive);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
 }
+
+public record UpdateCategoryBody(
+    LocalizedText Name,
+    LocalizedText Description,
+    string Slug,
+    string? IconUrl,
+    Guid? ParentId,
+    int SortOrder,
+    bool IsActive);

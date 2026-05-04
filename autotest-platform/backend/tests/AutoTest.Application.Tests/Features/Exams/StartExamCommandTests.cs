@@ -148,7 +148,7 @@ public class StartExamCommandTests
         // Deactivate all but 3
         var questions = db.Questions.ToList();
         for (var i = 3; i < questions.Count; i++)
-            questions[i].Status = QuestionStatus.Archived;
+            questions[i].Status = QuestionStatus.Inactive;
         await db.SaveChangesAsync();
 
         var handler = CreateHandler(db);

@@ -9,12 +9,8 @@ namespace AutoTest.Application.Features.VideoLessons;
 
 public record UpdateVideoCategoryCommand(
     Guid Id,
-    string NameUz,
-    string NameUzLatin,
-    string NameRu,
-    string? DescriptionUz,
-    string? DescriptionUzLatin,
-    string? DescriptionRu,
+    LocalizedText Name,
+    LocalizedText? Description,
     int SortOrder,
     bool IsActive) : IRequest<ApiResponse>;
 
@@ -23,9 +19,10 @@ public class UpdateVideoCategoryCommandValidator : AbstractValidator<UpdateVideo
     public UpdateVideoCategoryCommandValidator()
     {
         RuleFor(x => x.Id).NotEmpty();
-        RuleFor(x => x.NameUz).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.NameUzLatin).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.NameRu).NotEmpty().MaximumLength(500);
+        RuleFor(x => x.Name).NotNull();
+        RuleFor(x => x.Name.Uz).NotEmpty().MaximumLength(500).When(x => x.Name is not null);
+        RuleFor(x => x.Name.UzLatin).NotEmpty().MaximumLength(500).When(x => x.Name is not null);
+        RuleFor(x => x.Name.Ru).NotEmpty().MaximumLength(500).When(x => x.Name is not null);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
     }
 }
@@ -42,12 +39,8 @@ public class UpdateVideoCategoryCommandHandler(
         if (category is null)
             return ApiResponse.Fail("NOT_FOUND", "Video category not found.");
 
-        var description = request.DescriptionUz is not null && request.DescriptionUzLatin is not null && request.DescriptionRu is not null
-            ? new LocalizedText(request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu)
-            : null;
-
-        category.Name = new LocalizedText(request.NameUz, request.NameUzLatin, request.NameRu);
-        category.Description = description;
+        category.Name = request.Name;
+        category.Description = request.Description;
         category.SortOrder = request.SortOrder;
         category.IsActive = request.IsActive;
         category.UpdatedAt = dateTime.UtcNow;

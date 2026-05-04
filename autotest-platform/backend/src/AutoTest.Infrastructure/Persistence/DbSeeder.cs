@@ -3,11 +3,16 @@ using AutoTest.Domain.Common.Enums;
 using AutoTest.Domain.Common.ValueObjects;
 using AutoTest.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace AutoTest.Infrastructure.Persistence;
 
-public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> logger)
+public class DbSeeder(
+    AppDbContext db,
+    ICacheService cache,
+    IConfiguration config,
+    ILogger<DbSeeder> logger)
 {
     public async Task SeedAsync(CancellationToken ct = default)
     {
@@ -22,7 +27,18 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
 
         await SeedExamPoolRulesAsync(ct);
         await SeedSpeedChallengePoolRulesAsync(ct);
-        await SeedQuestionsAsync(ct);
+
+        // Sample-question seeding is local-only: real environments populate
+        // questions via the Avtolider.DataMigration tool (`dotnet run -- import-all`).
+        // Enable in appsettings.Development.json with "Seeding:SeedSampleQuestions": true.
+        if (config.GetValue<bool>("Seeding:SeedSampleQuestions"))
+        {
+            logger.LogInformation("Seeding sample questions (Seeding:SeedSampleQuestions=true)");
+            await SeedQuestionsAsync(ct);
+        }
+        else
+            logger.LogInformation("Skipping sample questions (use Avtolider.DataMigration to populate)");
+
         await SeedAdminUserAsync(ct);
 
         await db.SaveChangesAsync(ct);
@@ -119,8 +135,10 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             MakeCategory("driving-safety", "Ҳаракат хавфсизлиги асослари", "Harakat xavfsizligi asoslari", "Безопасность управления автомобилем", 23, null),
             // PDD Chapter 28: Биринчи тиббий ёрдам / Первая медицинская помощь
             MakeCategory("first-aid", "Биринчи тиббий ёрдам кўрсатиш", "Birinchi tibbiy yordam ko'rsatish", "Первая медицинская помощь", 24, null),
+            // PDD Chapter 29: Автотранспорт воситаларининг таснифи / Классификация ТС
+            MakeCategory("vehicle-classification", "Автотранспорт воситаларининг таснифи", "Avtotransport vositalarining tasnifi", "Классификация транспортных средств", 25, null),
             // Extra categories
-            MakeCategory("cd-specific", "CD тоифаси", "CD toifasi", "Категория CD", 25, null),
+            MakeCategory("cd-specific", "CD тоифаси", "CD toifasi", "Категория CD", 26, null),
             MakeCategory("uncategorized", "Таснифланмаган", "Tasniflanmagan", "Без категории", 99, null),
         };
 
@@ -198,18 +216,35 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
         if (await db.ExamPoolRules.AnyAsync(ct))
             return;
 
-        var template = await db.ExamTemplates.FirstAsync(t => t.IsActive, ct);
+        var template = await db.ExamTemplates.FirstAsync(t => t.IsActive && !t.TimeLimitPerQuestionSeconds.HasValue, ct);
         var now = DateTimeOffset.UtcNow;
 
-        // Pull 20 random questions from any active category for the exam
-        var anyCategory = await db.Categories.FirstOrDefaultAsync(c => c.Slug == "uncategorized", ct);
-        if (anyCategory is null)
+        // Spread the 20-question exam across all real PDD categories (one rule per
+        // category). 'uncategorized' is excluded — questions there are pending admin
+        // review and not exam-eligible. 'road-signs' is the parent group container
+        // (its child sub-categories are the real signs categories), 'cd-specific' is
+        // license-class-only (handled by LicenseCategory filter at query time).
+        var pddCategories = await db.Categories
+            .Where(c => c.IsActive
+                     && c.Slug != "uncategorized"
+                     && c.Slug != "road-signs"
+                     && c.Slug != "cd-specific")
+            .OrderBy(c => c.SortOrder)
+            .ToListAsync(ct);
+
+        if (pddCategories.Count == 0)
         {
-            logger.LogWarning("Category 'uncategorized' not found, skipping pool rules");
+            logger.LogWarning("No PDD categories found, skipping exam pool rules");
             return;
         }
 
-        db.ExamPoolRules.Add(MakePoolRule(template.Id, anyCategory.Id, null, 20, now));
+        // Each rule contributes 1 question; StartExamCommand shuffles + trims to
+        // template.TotalQuestions. Pulling 1-per-category means light categories
+        // (e.g. towing, highway) still get representation.
+        foreach (var cat in pddCategories)
+            db.ExamPoolRules.Add(MakePoolRule(template.Id, cat.Id, null, 1, now));
+
+        logger.LogInformation("Seeded {Count} exam pool rules across PDD categories", pddCategories.Count);
     }
 
     private async Task SeedSpeedChallengeTemplateAsync(CancellationToken ct)
@@ -241,14 +276,28 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
             return;
 
         var now = DateTimeOffset.UtcNow;
-        var anyCategory = await db.Categories.FirstOrDefaultAsync(c => c.Slug == "uncategorized", ct);
-        if (anyCategory is null)
+
+        // Same one-rule-per-PDD-category pattern as the standard exam.
+        // Excludes uncategorized (admin-review queue), road-signs (parent group),
+        // and cd-specific (filtered separately by LicenseCategory at query time).
+        var pddCategories = await db.Categories
+            .Where(c => c.IsActive
+                     && c.Slug != "uncategorized"
+                     && c.Slug != "road-signs"
+                     && c.Slug != "cd-specific")
+            .OrderBy(c => c.SortOrder)
+            .ToListAsync(ct);
+
+        if (pddCategories.Count == 0)
         {
-            logger.LogWarning("Category 'uncategorized' not found, skipping speed challenge pool rules");
+            logger.LogWarning("No PDD categories found, skipping speed challenge pool rules");
             return;
         }
 
-        db.ExamPoolRules.Add(MakePoolRule(template.Id, anyCategory.Id, null, 20, now));
+        foreach (var cat in pddCategories)
+            db.ExamPoolRules.Add(MakePoolRule(template.Id, cat.Id, null, 1, now));
+
+        logger.LogInformation("Seeded {Count} speed challenge pool rules", pddCategories.Count);
     }
 
     private async Task SeedQuestionsAsync(CancellationToken ct)
@@ -709,41 +758,41 @@ public class DbSeeder(AppDbContext db, ICacheService cache, ILogger<DbSeeder> lo
         var labels = new List<HazardLabel>
         {
             Hazard("explosive", "GHS01", T("Портловчи моддалар", "Portlovchi moddalar", "Взрывчатые вещества"),
-                T("Портлаш хавфи мавжуд бўлган моддалар ва аралашмалар", "Portlash xavfi mavjud bo'lgan moddalar va aralashmalar", "Вещества и смеси, представляющие опасность взрыва"), 1, now, "questions/visual/hazard/221ba9efeaad4805b52c43ff4ab3411e.webp"),
+                T("Портлаш хавфи мавжуд бўлган моддалар ва аралашмалар", "Portlash xavfi mavjud bo'lgan moddalar va aralashmalar", "Вещества и смеси, представляющие опасность взрыва"), 1, now),
             Hazard("flammable-gas", "GHS02", T("Ёнувчи газлар", "Yonuvchi gazlar", "Воспламеняющиеся газы"),
-                T("Ҳаво билан аралашганда ёнувчи аралашма ҳосил қиладиган газлар", "Havo bilan aralashganda yonuvchi aralashma hosil qiladigan gazlar", "Газы, образующие воспламеняющиеся смеси с воздухом"), 2, now, "questions/visual/hazard/7f9a94bd95de4d4f8ad3f7c94349cb87.webp"),
+                T("Ҳаво билан аралашганда ёнувчи аралашма ҳосил қиладиган газлар", "Havo bilan aralashganda yonuvchi aralashma hosil qiladigan gazlar", "Газы, образующие воспламеняющиеся смеси с воздухом"), 2, now),
             Hazard("flammable-aerosol", "GHS02a", T("Ёнувчи аэрозоллар", "Yonuvchi aerozollar", "Воспламеняющиеся аэрозоли"),
-                T("Ёнувчи компонентлари бор аэрозоль идишлар", "Yonuvchi komponentlari bor aerozol idishlar", "Аэрозольные упаковки с воспламеняющимися компонентами"), 3, now, "questions/visual/hazard/79d41157779b45aa805755ae94fb1c2b.webp"),
+                T("Ёнувчи компонентлари бор аэрозоль идишлар", "Yonuvchi komponentlari bor aerozol idishlar", "Аэрозольные упаковки с воспламеняющимися компонентами"), 3, now),
             Hazard("oxidizing-gas", "GHS03", T("Оксидловчи газлар", "Oksidlovchi gazlar", "Окисляющие газы"),
-                T("Бошқа моддаларнинг ёнишига сабаб бўладиган газлар", "Boshqa moddalarning yonishiga sabab bo'ladigan gazlar", "Газы, способствующие горению других веществ"), 4, now, "questions/visual/hazard/3b1256de6b734cb2b055df996d621125.webp"),
+                T("Бошқа моддаларнинг ёнишига сабаб бўладиган газлар", "Boshqa moddalarning yonishiga sabab bo'ladigan gazlar", "Газы, способствующие горению других веществ"), 4, now),
             Hazard("gas-under-pressure", "GHS04", T("Босим остидаги газлар", "Bosim ostidagi gazlar", "Газы под давлением"),
-                T("Юқори босим остида сақланаётган газлар", "Yuqori bosim ostida saqlanayotgan gazlar", "Газы, хранящиеся под высоким давлением"), 5, now, "questions/visual/hazard/b3174bb02ba5482e92e89d5e30f49fec.webp"),
+                T("Юқори босим остида сақланаётган газлар", "Yuqori bosim ostida saqlanayotgan gazlar", "Газы, хранящиеся под высоким давлением"), 5, now),
             Hazard("flammable-liquid", "GHS02b", T("Ёнувчи суюқликлар", "Yonuvchi suyuqliklar", "Воспламеняющиеся жидкости"),
-                T("Паст ёниш нуқтасига эга бўлган суюқликлар", "Past yonish nuqtasiga ega bo'lgan suyuqliklar", "Жидкости с низкой температурой вспышки"), 6, now, "questions/visual/hazard/dcc3b8dc02fa4568b0503699be79e128.webp"),
+                T("Паст ёниш нуқтасига эга бўлган суюқликлар", "Past yonish nuqtasiga ega bo'lgan suyuqliklar", "Жидкости с низкой температурой вспышки"), 6, now),
             Hazard("flammable-solid", "GHS02c", T("Ёнувчи қаттиқ моддалар", "Yonuvchi qattiq moddalar", "Воспламеняющиеся твёрдые вещества"),
-                T("Ишқаланиш ёки қисқа муддатли тутантиришдан ёнадиган қаттиқ моддалар", "Ishqalanish yoki qisqa muddatli tutantirishdan yonadigan qattiq moddalar", "Твёрдые вещества, воспламеняющиеся от трения или кратковременного воздействия огня"), 7, now, "questions/visual/hazard/ef5111a5a08844909c89b0986d877287.webp"),
+                T("Ишқаланиш ёки қисқа муддатли тутантиришдан ёнадиган қаттиқ моддалар", "Ishqalanish yoki qisqa muddatli tutantirishdan yonadigan qattiq moddalar", "Твёрдые вещества, воспламеняющиеся от трения или кратковременного воздействия огня"), 7, now),
             Hazard("self-reactive", "GHS01a", T("Ўз-ўзидан реакцияга кирадиган", "O'z-o'zidan reaksiyaga kiradigan", "Самореактивные вещества"),
-                T("Термик ностабил бўлган ва ташқи ёниш манбаисиз парчаланиши мумкин", "Termik nostabil bo'lgan va tashqi yonish manba'isiz parchalanishi mumkin", "Термически нестабильные вещества, способные к разложению без внешнего источника огня"), 8, now, "questions/visual/hazard/1fea4869b9c94b1fb16b3a2814640b07.webp"),
+                T("Термик ностабил бўлган ва ташқи ёниш манбаисиз парчаланиши мумкин", "Termik nostabil bo'lgan va tashqi yonish manba'isiz parchalanishi mumkin", "Термически нестабильные вещества, способные к разложению без внешнего источника огня"), 8, now),
             Hazard("pyrophoric", "GHS02d", T("Пирофорик моддалар", "Piroforik moddalar", "Пирофорные вещества"),
-                T("Ҳаво билан алоқада ўз-ўзидан ёнадиган моддалар", "Havo bilan aloqada o'z-o'zidan yonadigan moddalar", "Вещества, самовоспламеняющиеся при контакте с воздухом"), 9, now, "questions/visual/hazard/8c86f09e89274bbea298e809476dd919.webp"),
+                T("Ҳаво билан алоқада ўз-ўзидан ёнадиган моддалар", "Havo bilan aloqada o'z-o'zidan yonadigan moddalar", "Вещества, самовоспламеняющиеся при контакте с воздухом"), 9, now),
             Hazard("self-heating", "GHS02e", T("Ўз-ўзидан қизийдиган", "O'z-o'zidan qiziydigan", "Самонагревающиеся вещества"),
-                T("Ташқи энергия манбаисиз ўз-ўзидан қизиб кетадиган моддалар", "Tashqi energiya manba'isiz o'z-o'zidan qizib ketadigan moddalar", "Вещества, способные самонагреваться без внешнего источника энергии"), 10, now, "questions/visual/hazard/988e37aa023944bd8d1ef4ae8a982070.webp"),
+                T("Ташқи энергия манбаисиз ўз-ўзидан қизиб кетадиган моддалар", "Tashqi energiya manba'isiz o'z-o'zidan qizib ketadigan moddalar", "Вещества, способные самонагреваться без внешнего источника энергии"), 10, now),
             Hazard("water-reactive", "GHS02f", T("Сув билан реакцияга кирадиган", "Suv bilan reaksiyaga kiradigan", "Реагирующие с водой"),
-                T("Сув билан алоқада ёнувчи газ ажратадиган моддалар", "Suv bilan aloqada yonuvchi gaz ajratadigan moddalar", "Вещества, выделяющие воспламеняющиеся газы при контакте с водой"), 11, now, "questions/visual/hazard/3b8992365d8043eebf3e017768175d89.webp"),
+                T("Сув билан алоқада ёнувчи газ ажратадиган моддалар", "Suv bilan aloqada yonuvchi gaz ajratadigan moddalar", "Вещества, выделяющие воспламеняющиеся газы при контакте с водой"), 11, now),
             Hazard("oxidizer", "GHS03a", T("Оксидловчи моддалар", "Oksidlovchi moddalar", "Окислители"),
-                T("Бошқа моддаларнинг ёнишини тезлаштирадиган моддалар", "Boshqa moddalarning yonishini tezlashtiradigan moddalar", "Вещества, способствующие воспламенению или усиливающие горение"), 12, now, "questions/visual/hazard/45c3d65e481f4fe39117a7e05f1993bd.webp"),
+                T("Бошқа моддаларнинг ёнишини тезлаштирадиган моддалар", "Boshqa moddalarning yonishini tezlashtiradigan moddalar", "Вещества, способствующие воспламенению или усиливающие горение"), 12, now),
             Hazard("organic-peroxide", "GHS01b", T("Органик пероксидлар", "Organik peroksidlar", "Органические пероксиды"),
-                T("Ёниш ва портлаш хавфи бор органик моддалар", "Yonish va portlash xavfi bor organik moddalar", "Органические вещества с опасностью возгорания и взрыва"), 13, now, "questions/visual/hazard/85be6a33af3d4e1fbcf50c84766cfdac.webp"),
+                T("Ёниш ва портлаш хавфи бор органик моддалар", "Yonish va portlash xavfi bor organik moddalar", "Органические вещества с опасностью возгорания и взрыва"), 13, now),
             Hazard("toxic", "GHS06", T("Заҳарли моддалар", "Zaharli moddalar", "Токсичные вещества"),
-                T("Кам миқдорда ҳам инсон саломатлигига жиддий хавф туғдирадиган моддалар", "Kam miqdorda ham inson salomatligiga jiddiy xavf tug'diradigan moddalar", "Вещества, представляющие серьёзную опасность для здоровья даже в малых дозах"), 14, now, "questions/visual/hazard/fdf617dd2d1d428abf97e6e442e42e2a.webp"),
+                T("Кам миқдорда ҳам инсон саломатлигига жиддий хавф туғдирадиган моддалар", "Kam miqdorda ham inson salomatligiga jiddiy xavf tug'diradigan moddalar", "Вещества, представляющие серьёзную опасность для здоровья даже в малых дозах"), 14, now),
             Hazard("irritant", "GHS07", T("Зарарли моддалар", "Zararli moddalar", "Вредные вещества"),
-                T("Тери ва кўзни таъсирлантирувчи моддалар", "Teri va ko'zni ta'sirlantiruuvchi moddalar", "Вещества, раздражающие кожу и глаза"), 15, now, "questions/visual/hazard/77fbbda129cf4d76b2a09bc046782608.webp"),
+                T("Тери ва кўзни таъсирлантирувчи моддалар", "Teri va ko'zni ta'sirlantiruuvchi moddalar", "Вещества, раздражающие кожу и глаза"), 15, now),
             Hazard("corrosive", "GHS05", T("Емирувчи моддалар", "Yemiruvchi moddalar", "Коррозионные вещества"),
-                T("Тери, кўз ва металларни емирадиган моддалар", "Teri, ko'z va metallarni yemiradigan moddalar", "Вещества, разрушающие кожу, глаза и металлы"), 16, now, "questions/visual/hazard/7b8f7c7438374d61837c8974779223c0.webp"),
+                T("Тери, кўз ва металларни емирадиган моддалар", "Teri, ko'z va metallarni yemiradigan moddalar", "Вещества, разрушающие кожу, глаза и металлы"), 16, now),
             Hazard("health-hazard", "GHS08", T("Соғлиққа хавфли", "Sog'liqqa xavfli", "Опасность для здоровья"),
-                T("Узоқ муддатли таъсирда саратон ёки бошқа оғир касалликларга олиб келадиган моддалар", "Uzoq muddatli ta'sirda saraton yoki boshqa og'ir kasalliklarga olib keladigan moddalar", "Вещества, вызывающие рак или другие тяжёлые заболевания при длительном воздействии"), 17, now, "questions/visual/hazard/9ad2aca17fdb4eca8080dc1a5cdbbd0d.webp"),
+                T("Узоқ муддатли таъсирда саратон ёки бошқа оғир касалликларга олиб келадиган моддалар", "Uzoq muddatli ta'sirda saraton yoki boshqa og'ir kasalliklarga olib keladigan moddalar", "Вещества, вызывающие рак или другие тяжёлые заболевания при длительном воздействии"), 17, now),
             Hazard("environmental-hazard", "GHS09", T("Атроф-муҳитга хавфли", "Atrof-muhitga xavfli", "Опасность для окружающей среды"),
-                T("Сув организмларига заҳарли бўлган моддалар", "Suv organizmlariga zaharli bo'lgan moddalar", "Вещества, токсичные для водных организмов"), 18, now, "questions/visual/hazard/2b533aec59604788ba714eebc8a05f66.webp"),
+                T("Сув организмларига заҳарли бўлган моддалар", "Suv organizmlariga zaharli bo'lgan moddalar", "Вещества, токсичные для водных организмов"), 18, now),
         };
 
         db.HazardLabels.AddRange(labels);

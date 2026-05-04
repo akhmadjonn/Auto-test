@@ -12,12 +12,8 @@ public record UpdateRoadSignCategoryCommand(
     Guid Id,
     string Slug,
     string Code,
-    string NameUz,
-    string NameUzLatin,
-    string NameRu,
-    string DescriptionUz,
-    string DescriptionUzLatin,
-    string DescriptionRu,
+    LocalizedText Name,
+    LocalizedText Description,
     int SortOrder,
     bool IsActive) : IRequest<ApiResponse>;
 
@@ -29,12 +25,14 @@ public class UpdateRoadSignCategoryCommandValidator : AbstractValidator<UpdateRo
         RuleFor(x => x.Slug).NotEmpty().MaximumLength(100)
             .Matches("^[a-z0-9-]+$").WithMessage("Slug must contain only lowercase letters, numbers, and hyphens.");
         RuleFor(x => x.Code).NotEmpty().MaximumLength(10);
-        RuleFor(x => x.NameUz).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.NameUzLatin).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.NameRu).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.DescriptionUz).NotEmpty();
-        RuleFor(x => x.DescriptionUzLatin).NotEmpty();
-        RuleFor(x => x.DescriptionRu).NotEmpty();
+        RuleFor(x => x.Name).NotNull();
+        RuleFor(x => x.Name.Uz).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.UzLatin).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.Ru).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Description).NotNull();
+        RuleFor(x => x.Description.Uz).NotEmpty().When(x => x.Description is not null);
+        RuleFor(x => x.Description.UzLatin).NotEmpty().When(x => x.Description is not null);
+        RuleFor(x => x.Description.Ru).NotEmpty().When(x => x.Description is not null);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
     }
 }
@@ -61,8 +59,8 @@ public class UpdateRoadSignCategoryCommandHandler(
 
         category.Slug = request.Slug;
         category.Code = request.Code;
-        category.Name = new LocalizedText(request.NameUz, request.NameUzLatin, request.NameRu);
-        category.Description = new LocalizedText(request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu);
+        category.Name = request.Name;
+        category.Description = request.Description;
         category.SortOrder = request.SortOrder;
         category.IsActive = request.IsActive;
         category.UpdatedAt = dateTime.UtcNow;

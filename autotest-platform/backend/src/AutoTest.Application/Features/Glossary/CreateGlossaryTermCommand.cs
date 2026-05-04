@@ -11,12 +11,8 @@ namespace AutoTest.Application.Features.Glossary;
 
 public record CreateGlossaryTermCommand(
     Guid GlossaryCategoryId,
-    string TermUz,
-    string TermUzLatin,
-    string TermRu,
-    string DefinitionUz,
-    string DefinitionUzLatin,
-    string DefinitionRu,
+    LocalizedText Term,
+    LocalizedText Definition,
     int SortOrder,
     Guid[]? RelatedQuestionIds) : IRequest<ApiResponse<Guid>>;
 
@@ -25,12 +21,14 @@ public class CreateGlossaryTermCommandValidator : AbstractValidator<CreateGlossa
     public CreateGlossaryTermCommandValidator()
     {
         RuleFor(x => x.GlossaryCategoryId).NotEmpty();
-        RuleFor(x => x.TermUz).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.TermUzLatin).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.TermRu).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.DefinitionUz).NotEmpty().MaximumLength(5000);
-        RuleFor(x => x.DefinitionUzLatin).NotEmpty().MaximumLength(5000);
-        RuleFor(x => x.DefinitionRu).NotEmpty().MaximumLength(5000);
+        RuleFor(x => x.Term).NotNull();
+        RuleFor(x => x.Term.Uz).NotEmpty().MaximumLength(500).When(x => x.Term is not null);
+        RuleFor(x => x.Term.UzLatin).NotEmpty().MaximumLength(500).When(x => x.Term is not null);
+        RuleFor(x => x.Term.Ru).NotEmpty().MaximumLength(500).When(x => x.Term is not null);
+        RuleFor(x => x.Definition).NotNull();
+        RuleFor(x => x.Definition.Uz).NotEmpty().MaximumLength(5000).When(x => x.Definition is not null);
+        RuleFor(x => x.Definition.UzLatin).NotEmpty().MaximumLength(5000).When(x => x.Definition is not null);
+        RuleFor(x => x.Definition.Ru).NotEmpty().MaximumLength(5000).When(x => x.Definition is not null);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
     }
 }
@@ -51,8 +49,8 @@ public class CreateGlossaryTermCommandHandler(
         {
             Id = Guid.NewGuid(),
             GlossaryCategoryId = request.GlossaryCategoryId,
-            Term = new LocalizedText(request.TermUz, request.TermUzLatin, request.TermRu),
-            Definition = new LocalizedText(request.DefinitionUz, request.DefinitionUzLatin, request.DefinitionRu),
+            Term = request.Term,
+            Definition = request.Definition,
             SortOrder = request.SortOrder,
             RelatedQuestionIds = request.RelatedQuestionIds ?? [],
             CreatedAt = dateTime.UtcNow

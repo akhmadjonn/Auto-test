@@ -12,12 +12,8 @@ public record UpdateFirstAidStepCommand(
     Guid ProcedureId,
     Guid StepId,
     int StepOrder,
-    string TitleUz,
-    string TitleUzLatin,
-    string TitleRu,
-    string DescriptionUz,
-    string DescriptionUzLatin,
-    string DescriptionRu) : IRequest<ApiResponse>;
+    LocalizedText Title,
+    LocalizedText Description) : IRequest<ApiResponse>;
 
 public class UpdateFirstAidStepCommandValidator : AbstractValidator<UpdateFirstAidStepCommand>
 {
@@ -26,12 +22,14 @@ public class UpdateFirstAidStepCommandValidator : AbstractValidator<UpdateFirstA
         RuleFor(x => x.ProcedureId).NotEmpty();
         RuleFor(x => x.StepId).NotEmpty();
         RuleFor(x => x.StepOrder).GreaterThan(0);
-        RuleFor(x => x.TitleUz).NotEmpty();
-        RuleFor(x => x.TitleUzLatin).NotEmpty();
-        RuleFor(x => x.TitleRu).NotEmpty();
-        RuleFor(x => x.DescriptionUz).NotEmpty();
-        RuleFor(x => x.DescriptionUzLatin).NotEmpty();
-        RuleFor(x => x.DescriptionRu).NotEmpty();
+        RuleFor(x => x.Title).NotNull();
+        RuleFor(x => x.Title.Uz).NotEmpty().When(x => x.Title is not null);
+        RuleFor(x => x.Title.UzLatin).NotEmpty().When(x => x.Title is not null);
+        RuleFor(x => x.Title.Ru).NotEmpty().When(x => x.Title is not null);
+        RuleFor(x => x.Description).NotNull();
+        RuleFor(x => x.Description.Uz).NotEmpty().When(x => x.Description is not null);
+        RuleFor(x => x.Description.UzLatin).NotEmpty().When(x => x.Description is not null);
+        RuleFor(x => x.Description.Ru).NotEmpty().When(x => x.Description is not null);
     }
 }
 
@@ -51,8 +49,8 @@ public class UpdateFirstAidStepCommandHandler(
             return ApiResponse.Fail("STEP_NOT_FOUND", "First aid step not found or does not belong to the specified procedure.");
 
         step.StepOrder = request.StepOrder;
-        step.Title = new LocalizedText(request.TitleUz, request.TitleUzLatin, request.TitleRu);
-        step.Description = new LocalizedText(request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu);
+        step.Title = request.Title;
+        step.Description = request.Description;
         step.UpdatedAt = dateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);

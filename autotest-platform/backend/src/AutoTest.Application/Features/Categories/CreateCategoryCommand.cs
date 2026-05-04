@@ -10,12 +10,8 @@ using Microsoft.Extensions.Logging;
 namespace AutoTest.Application.Features.Categories;
 
 public record CreateCategoryCommand(
-    string NameUz,
-    string NameUzLatin,
-    string NameRu,
-    string DescriptionUz,
-    string DescriptionUzLatin,
-    string DescriptionRu,
+    LocalizedText Name,
+    LocalizedText Description,
     string Slug,
     string? IconUrl,
     Guid? ParentId,
@@ -26,9 +22,10 @@ public class CreateCategoryCommandValidator : AbstractValidator<CreateCategoryCo
 {
     public CreateCategoryCommandValidator()
     {
-        RuleFor(x => x.NameUz).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.NameUzLatin).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.NameRu).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Name).NotNull();
+        RuleFor(x => x.Name.Uz).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.UzLatin).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.Ru).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
         RuleFor(x => x.Slug).NotEmpty().MaximumLength(100)
             .Matches("^[a-z0-9-]+$").WithMessage("Slug must contain only lowercase letters, numbers, and hyphens.");
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
@@ -43,12 +40,10 @@ public class CreateCategoryCommandHandler(
 {
     public async Task<ApiResponse<Guid>> Handle(CreateCategoryCommand request, CancellationToken ct)
     {
-        // Check slug uniqueness
         var slugExists = await db.Categories.AnyAsync(c => c.Slug == request.Slug, ct);
         if (slugExists)
             return ApiResponse<Guid>.Fail("SLUG_DUPLICATE", $"Category with slug '{request.Slug}' already exists.");
 
-        // Validate parent exists if provided
         if (request.ParentId.HasValue)
         {
             var parentExists = await db.Categories.AnyAsync(c => c.Id == request.ParentId.Value, ct);
@@ -59,8 +54,8 @@ public class CreateCategoryCommandHandler(
         var category = new Category
         {
             Id = Guid.NewGuid(),
-            Name = new LocalizedText(request.NameUz, request.NameUzLatin, request.NameRu),
-            Description = new LocalizedText(request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu),
+            Name = request.Name,
+            Description = request.Description,
             Slug = request.Slug,
             IconUrl = request.IconUrl,
             ParentId = request.ParentId,

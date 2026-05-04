@@ -40,17 +40,18 @@ public class GetAdminPlansQueryHandler(
 
 // CREATE plan
 public record CreatePlanCommand(
-    string NameUz, string NameUzLatin, string NameRu,
-    string DescriptionUz, string DescriptionUzLatin, string DescriptionRu,
+    LocalizedText Name,
+    LocalizedText Description,
     long PriceInTiyins, int DurationDays, string Features, bool IsActive) : IRequest<ApiResponse<AdminPlanDto>>;
 
 public class CreatePlanCommandValidator : AbstractValidator<CreatePlanCommand>
 {
     public CreatePlanCommandValidator()
     {
-        RuleFor(x => x.NameUz).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.NameUzLatin).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.NameRu).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Name).NotNull();
+        RuleFor(x => x.Name.Uz).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.UzLatin).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.Ru).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
         RuleFor(x => x.PriceInTiyins).GreaterThan(0);
         RuleFor(x => x.DurationDays).GreaterThan(0);
     }
@@ -68,8 +69,8 @@ public class CreatePlanCommandHandler(
         var plan = new SubscriptionPlan
         {
             Id = Guid.NewGuid(),
-            Name = new LocalizedText(request.NameUz, request.NameUzLatin, request.NameRu),
-            Description = new LocalizedText(request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu),
+            Name = request.Name,
+            Description = request.Description,
             PriceInTiyins = request.PriceInTiyins,
             DurationDays = request.DurationDays,
             Features = request.Features,
@@ -85,8 +86,8 @@ public class CreatePlanCommandHandler(
 
         logger.LogInformation("Plan created: {PlanId}", plan.Id);
         return ApiResponse<AdminPlanDto>.Ok(new AdminPlanDto(
-            plan.Id, request.NameUz, request.NameUzLatin, request.NameRu,
-            request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu,
+            plan.Id, request.Name.Uz, request.Name.UzLatin, request.Name.Ru,
+            request.Description.Uz, request.Description.UzLatin, request.Description.Ru,
             plan.PriceInTiyins, plan.DurationDays, plan.Features, plan.IsActive, now));
     }
 }
@@ -94,8 +95,8 @@ public class CreatePlanCommandHandler(
 // UPDATE plan
 public record UpdatePlanCommand(
     Guid Id,
-    string NameUz, string NameUzLatin, string NameRu,
-    string DescriptionUz, string DescriptionUzLatin, string DescriptionRu,
+    LocalizedText Name,
+    LocalizedText Description,
     long PriceInTiyins, int DurationDays, string Features) : IRequest<ApiResponse>;
 
 public class UpdatePlanCommandValidator : AbstractValidator<UpdatePlanCommand>
@@ -103,7 +104,10 @@ public class UpdatePlanCommandValidator : AbstractValidator<UpdatePlanCommand>
     public UpdatePlanCommandValidator()
     {
         RuleFor(x => x.Id).NotEmpty();
-        RuleFor(x => x.NameUz).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Name).NotNull();
+        RuleFor(x => x.Name.Uz).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.UzLatin).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.Ru).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
         RuleFor(x => x.PriceInTiyins).GreaterThan(0);
         RuleFor(x => x.DurationDays).GreaterThan(0);
     }
@@ -121,8 +125,8 @@ public class UpdatePlanCommandHandler(
         if (plan is null)
             return ApiResponse.Fail("PLAN_NOT_FOUND", "Plan not found.");
 
-        plan.Name = new LocalizedText(request.NameUz, request.NameUzLatin, request.NameRu);
-        plan.Description = new LocalizedText(request.DescriptionUz, request.DescriptionUzLatin, request.DescriptionRu);
+        plan.Name = request.Name;
+        plan.Description = request.Description;
         plan.PriceInTiyins = request.PriceInTiyins;
         plan.DurationDays = request.DurationDays;
         plan.Features = request.Features;

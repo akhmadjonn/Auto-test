@@ -10,9 +10,7 @@ namespace AutoTest.Application.Features.Glossary;
 
 public record UpdateGlossaryCategoryCommand(
     Guid Id,
-    string NameUz,
-    string NameUzLatin,
-    string NameRu,
+    LocalizedText Name,
     string Slug,
     string? Icon,
     int SortOrder) : IRequest<ApiResponse>;
@@ -22,9 +20,10 @@ public class UpdateGlossaryCategoryCommandValidator : AbstractValidator<UpdateGl
     public UpdateGlossaryCategoryCommandValidator()
     {
         RuleFor(x => x.Id).NotEmpty();
-        RuleFor(x => x.NameUz).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.NameUzLatin).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.NameRu).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Name).NotNull();
+        RuleFor(x => x.Name.Uz).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.UzLatin).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
+        RuleFor(x => x.Name.Ru).NotEmpty().MaximumLength(200).When(x => x.Name is not null);
         RuleFor(x => x.Slug).NotEmpty().MaximumLength(100)
             .Matches("^[a-z0-9-]+$").WithMessage("Slug must contain only lowercase letters, numbers, and hyphens.");
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
@@ -47,7 +46,7 @@ public class UpdateGlossaryCategoryCommandHandler(
         if (slugExists)
             return ApiResponse.Fail("SLUG_DUPLICATE", $"Glossary category with slug '{request.Slug}' already exists.");
 
-        category.Name = new LocalizedText(request.NameUz, request.NameUzLatin, request.NameRu);
+        category.Name = request.Name;
         category.Slug = request.Slug;
         category.Icon = request.Icon;
         category.SortOrder = request.SortOrder;

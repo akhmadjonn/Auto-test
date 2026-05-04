@@ -1,5 +1,5 @@
-using AutoTest.Application.Common.Models;
 using AutoTest.Application.Features.Admin;
+using AutoTest.Domain.Common.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,11 +28,11 @@ public class AdminPlansController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePlanCommand command, CancellationToken ct)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePlanBody body, CancellationToken ct)
     {
-        if (id != command.Id)
-            return BadRequest(ApiResponse.Fail("ID_MISMATCH", "Route ID does not match body ID."));
-
+        var command = new UpdatePlanCommand(
+            id, body.Name, body.Description, body.PriceInTiyins,
+            body.DurationDays, body.Features);
         var result = await mediator.Send(command, ct);
         return result.Success ? Ok(result) : NotFound(result);
     }
@@ -46,3 +46,10 @@ public class AdminPlansController(IMediator mediator) : ControllerBase
 }
 
 public record TogglePlanStatusRequest(bool IsActive);
+
+public record UpdatePlanBody(
+    LocalizedText Name,
+    LocalizedText Description,
+    long PriceInTiyins,
+    int DurationDays,
+    string Features);

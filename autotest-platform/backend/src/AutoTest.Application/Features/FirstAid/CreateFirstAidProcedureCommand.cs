@@ -9,14 +9,14 @@ using Microsoft.Extensions.Logging;
 
 namespace AutoTest.Application.Features.FirstAid;
 
+// Accepts nested LocalizedText to match the JSON shape the frontend sends
+// (`{ "name": { "uz": ..., "uzLatin": ..., "ru": ... } }`). The previous
+// flat NameUz / NameUzLatin / NameRu binding silently failed because JSON
+// was nested → all three flat fields stayed empty → validation rejected it.
 public record CreateFirstAidProcedureCommand(
     string Slug,
-    string NameUz,
-    string NameUzLatin,
-    string NameRu,
-    string? SummaryUz,
-    string? SummaryUzLatin,
-    string? SummaryRu,
+    LocalizedText Name,
+    LocalizedText? Summary,
     int SortOrder) : IRequest<ApiResponse<Guid>>;
 
 public class CreateFirstAidProcedureCommandValidator : AbstractValidator<CreateFirstAidProcedureCommand>
@@ -24,9 +24,10 @@ public class CreateFirstAidProcedureCommandValidator : AbstractValidator<CreateF
     public CreateFirstAidProcedureCommandValidator()
     {
         RuleFor(x => x.Slug).NotEmpty().Matches("^[a-z0-9-]+$").WithMessage("Slug must contain only lowercase letters, digits, and hyphens.");
-        RuleFor(x => x.NameUz).NotEmpty();
-        RuleFor(x => x.NameUzLatin).NotEmpty();
-        RuleFor(x => x.NameRu).NotEmpty();
+        RuleFor(x => x.Name).NotNull();
+        RuleFor(x => x.Name.Uz).NotEmpty().When(x => x.Name is not null);
+        RuleFor(x => x.Name.UzLatin).NotEmpty().When(x => x.Name is not null);
+        RuleFor(x => x.Name.Ru).NotEmpty().When(x => x.Name is not null);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
     }
 }
@@ -43,16 +44,12 @@ public class CreateFirstAidProcedureCommandHandler(
         if (slugExists)
             return ApiResponse<Guid>.Fail("SLUG_ALREADY_EXISTS", $"A procedure with slug '{request.Slug}' already exists.");
 
-        var summary = request.SummaryUz is not null && request.SummaryUzLatin is not null && request.SummaryRu is not null
-            ? new LocalizedText(request.SummaryUz, request.SummaryUzLatin, request.SummaryRu)
-            : null;
-
         var procedure = new FirstAidProcedure
         {
             Id = Guid.NewGuid(),
             Slug = request.Slug,
-            Name = new LocalizedText(request.NameUz, request.NameUzLatin, request.NameRu),
-            Summary = summary,
+            Name = request.Name,
+            Summary = request.Summary,
             SortOrder = request.SortOrder,
             CreatedAt = dateTime.UtcNow,
             UpdatedAt = dateTime.UtcNow
