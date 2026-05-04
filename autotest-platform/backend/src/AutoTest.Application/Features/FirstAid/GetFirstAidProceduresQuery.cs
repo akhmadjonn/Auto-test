@@ -20,6 +20,7 @@ public record FirstAidProcedureListDto(
 
 public class GetFirstAidProceduresQueryHandler(
     IApplicationDbContext db,
+    IFileStorageService storage,
     ICacheService cache,
     ILogger<GetFirstAidProceduresQueryHandler> logger) : IRequestHandler<GetFirstAidProceduresQuery, ApiResponse<List<FirstAidProcedureListDto>>>
 {
@@ -37,17 +38,26 @@ public class GetFirstAidProceduresQueryHandler(
             .OrderBy(p => p.SortOrder)
             .ToListAsync(ct);
 
-        var procedures = entities.Select(p => new FirstAidProcedureListDto(
-            p.Id,
-            p.Slug,
-            p.Name,
-            p.Summary,
-            p.IconUrl,
-            p.SortOrder,
-            p.Steps.Count)).ToList();
+        var procedures = new List<FirstAidProcedureListDto>(entities.Count);
+        foreach (var p in entities)
+        {
+            var iconUrl = string.IsNullOrEmpty(p.IconUrl)
+                ? string.Empty
+                : await storage.GetPresignedUrlAsync(p.IconUrl, ct);
 
-        await cache.SetAsync(CacheKey, procedures, TimeSpan.FromHours(24), ct);
-        logger.LogDebug("First aid procedures loaded from DB, cached for 24h");
+            procedures.Add(new FirstAidProcedureListDto(
+                p.Id,
+                p.Slug,
+                p.Name,
+                p.Summary,
+                iconUrl,
+                p.SortOrder,
+                p.Steps.Count));
+        }
+
+        // Cache TTL must stay under the presigned URL expiry (1h) to avoid stale URLs.
+        await cache.SetAsync(CacheKey, procedures, TimeSpan.FromMinutes(50), ct);
+        logger.LogDebug("First aid procedures loaded from DB, cached for 50min");
 
         return ApiResponse<List<FirstAidProcedureListDto>>.Ok(procedures);
     }

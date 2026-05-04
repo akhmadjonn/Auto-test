@@ -61,12 +61,16 @@ public class GetFirstAidProcedureQueryHandler(
                 presignedUrl));
         }
 
+        var iconUrl = string.IsNullOrEmpty(procedure.IconUrl)
+            ? string.Empty
+            : await storage.GetPresignedUrlAsync(procedure.IconUrl, ct);
+
         var dto = new FirstAidProcedureDto(
             procedure.Id,
             procedure.Slug,
             procedure.Name,
             procedure.Summary,
-            procedure.IconUrl,
+            iconUrl,
             procedure.SortOrder,
             steps);
 
