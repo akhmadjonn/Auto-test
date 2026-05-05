@@ -45,7 +45,7 @@ public class AuthFlowIntegrationTests
     public async Task FullAuthFlow_SendOtp_VerifyOtp_GetCurrentUser()
     {
         using var db = TestDbContextFactory.Create();
-        var code = "123456";
+        var code = "1234";
 
         // --- Step 1: Send OTP ---
         _otpService.IsRateLimitedAsync(Phone, Arg.Any<CancellationToken>()).Returns(false);
@@ -149,7 +149,7 @@ public class AuthFlowIntegrationTests
         await db.SaveChangesAsync();
 
         // Verify OTP for existing user (mock uses trimmed phone)
-        _otpService.VerifyAsync(Phone2, "111111", Arg.Any<CancellationToken>()).Returns(true);
+        _otpService.VerifyAsync(Phone2, "1111", Arg.Any<CancellationToken>()).Returns(true);
         _jwtService.IssueTokensAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
             .Returns(("token", "refresh"));
 
@@ -157,7 +157,7 @@ public class AuthFlowIntegrationTests
             _otpService, _jwtService, db, _lockService, _dateTime,
             Substitute.For<ILogger<VerifyOtpCommandHandler>>());
 
-        var result = await verifyHandler.Handle(new VerifyOtpCommand(Phone2WithPlus, "111111"), CancellationToken.None);
+        var result = await verifyHandler.Handle(new VerifyOtpCommand(Phone2WithPlus, "1111"), CancellationToken.None);
 
         result.Success.Should().BeTrue();
         result.Data!.IsNewUser.Should().BeFalse();

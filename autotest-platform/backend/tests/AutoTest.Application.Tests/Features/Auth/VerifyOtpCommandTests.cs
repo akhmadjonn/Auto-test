@@ -38,12 +38,12 @@ public class VerifyOtpCommandTests
     public async Task Handle_ValidOtp_ReturnsTokens()
     {
         using var db = TestDbContextFactory.Create();
-        _otpService.VerifyAsync(Phone, "123456", Arg.Any<CancellationToken>()).Returns(true);
+        _otpService.VerifyAsync(Phone, "1234", Arg.Any<CancellationToken>()).Returns(true);
         _jwtService.IssueTokensAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
             .Returns(("access-token", "refresh-token"));
 
         var handler = CreateHandler(db);
-        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "123456"), CancellationToken.None);
+        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "1234"), CancellationToken.None);
 
         result.Success.Should().BeTrue();
         result.Data.Should().NotBeNull();
@@ -67,12 +67,12 @@ public class VerifyOtpCommandTests
         db.Users.Add(existingUser);
         await db.SaveChangesAsync();
 
-        _otpService.VerifyAsync(Phone, "123456", Arg.Any<CancellationToken>()).Returns(true);
+        _otpService.VerifyAsync(Phone, "1234", Arg.Any<CancellationToken>()).Returns(true);
         _jwtService.IssueTokensAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
             .Returns(("access-token", "refresh-token"));
 
         var handler = CreateHandler(db);
-        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "123456"), CancellationToken.None);
+        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "1234"), CancellationToken.None);
 
         result.Success.Should().BeTrue();
         result.Data!.IsNewUser.Should().BeFalse();
@@ -82,10 +82,10 @@ public class VerifyOtpCommandTests
     public async Task Handle_ExpiredOtp_ReturnsFail()
     {
         using var db = TestDbContextFactory.Create();
-        _otpService.VerifyAsync(Phone, "123456", Arg.Any<CancellationToken>()).Returns(false);
+        _otpService.VerifyAsync(Phone, "1234", Arg.Any<CancellationToken>()).Returns(false);
 
         var handler = CreateHandler(db);
-        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "123456"), CancellationToken.None);
+        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "1234"), CancellationToken.None);
 
         result.Success.Should().BeFalse();
         result.Error!.Code.Should().Be("OTP_INVALID");
@@ -95,10 +95,10 @@ public class VerifyOtpCommandTests
     public async Task Handle_WrongCode_ReturnsFail()
     {
         using var db = TestDbContextFactory.Create();
-        _otpService.VerifyAsync(Phone, "000000", Arg.Any<CancellationToken>()).Returns(false);
+        _otpService.VerifyAsync(Phone, "0000", Arg.Any<CancellationToken>()).Returns(false);
 
         var handler = CreateHandler(db);
-        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "000000"), CancellationToken.None);
+        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "0000"), CancellationToken.None);
 
         result.Success.Should().BeFalse();
         result.Error!.Code.Should().Be("OTP_INVALID");
@@ -108,7 +108,7 @@ public class VerifyOtpCommandTests
     public void Validator_EmptyPhone_Invalid()
     {
         var validator = new VerifyOtpCommandValidator();
-        var result = validator.Validate(new VerifyOtpCommand("", "123456"));
+        var result = validator.Validate(new VerifyOtpCommand("", "1234"));
         result.IsValid.Should().BeFalse();
     }
 
@@ -116,7 +116,7 @@ public class VerifyOtpCommandTests
     public void Validator_NonDigitCode_Invalid()
     {
         var validator = new VerifyOtpCommandValidator();
-        var result = validator.Validate(new VerifyOtpCommand(PhoneWithPlus, "abcdef"));
+        var result = validator.Validate(new VerifyOtpCommand(PhoneWithPlus, "abcd"));
         result.IsValid.Should().BeFalse();
     }
 
@@ -124,7 +124,7 @@ public class VerifyOtpCommandTests
     public void Validator_ShortCode_Invalid()
     {
         var validator = new VerifyOtpCommandValidator();
-        var result = validator.Validate(new VerifyOtpCommand(PhoneWithPlus, "123"));
+        var result = validator.Validate(new VerifyOtpCommand(PhoneWithPlus, "12"));
         result.IsValid.Should().BeFalse();
     }
 
@@ -136,7 +136,7 @@ public class VerifyOtpCommandTests
             .Returns((false, 0));
 
         var handler = CreateHandler(db);
-        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "123456"), CancellationToken.None);
+        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "1234"), CancellationToken.None);
 
         result.Success.Should().BeFalse();
         result.Error!.Code.Should().Be("OTP_TOO_MANY_ATTEMPTS");
@@ -150,12 +150,12 @@ public class VerifyOtpCommandTests
         using var db = TestDbContextFactory.Create();
         _otpService.CheckAndIncrementVerifyAttemptsAsync(Phone, Arg.Any<CancellationToken>())
             .Returns((true, 4));
-        _otpService.VerifyAsync(Phone, "123456", Arg.Any<CancellationToken>()).Returns(true);
+        _otpService.VerifyAsync(Phone, "1234", Arg.Any<CancellationToken>()).Returns(true);
         _jwtService.IssueTokensAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
             .Returns(("access-token", "refresh-token"));
 
         var handler = CreateHandler(db);
-        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "123456"), CancellationToken.None);
+        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "1234"), CancellationToken.None);
 
         result.Success.Should().BeTrue();
         // Verify attempt counter should be reset after successful OTP
@@ -168,10 +168,10 @@ public class VerifyOtpCommandTests
         using var db = TestDbContextFactory.Create();
         _otpService.CheckAndIncrementVerifyAttemptsAsync(Phone, Arg.Any<CancellationToken>())
             .Returns((true, 3));
-        _otpService.VerifyAsync(Phone, "000000", Arg.Any<CancellationToken>()).Returns(false);
+        _otpService.VerifyAsync(Phone, "0000", Arg.Any<CancellationToken>()).Returns(false);
 
         var handler = CreateHandler(db);
-        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "000000"), CancellationToken.None);
+        var result = await handler.Handle(new VerifyOtpCommand(PhoneWithPlus, "0000"), CancellationToken.None);
 
         result.Success.Should().BeFalse();
         result.Error!.Code.Should().Be("OTP_INVALID");

@@ -85,7 +85,7 @@ public class OtpService(IConnectionMultiplexer redis, IConfiguration configurati
     }
 
     private static string GenerateCode() =>
-        Random.Shared.Next(100_000, 999_999).ToString();
+        Random.Shared.Next(0, 10_000).ToString("D4");
 
     private string ComputeHash(string phoneNumber, string code)
     {
