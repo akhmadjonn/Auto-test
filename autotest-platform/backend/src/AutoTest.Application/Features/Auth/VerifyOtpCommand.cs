@@ -18,7 +18,7 @@ public class VerifyOtpCommandValidator : AbstractValidator<VerifyOtpCommand>
     public VerifyOtpCommandValidator()
     {
         RuleFor(x => x.PhoneNumber).NotEmpty();
-        RuleFor(x => x.Code).NotEmpty().Length(6).Matches(@"^\d{6}$");
+        RuleFor(x => x.Code).NotEmpty().Length(4).Matches(@"^\d{4}$");
     }
 }
 

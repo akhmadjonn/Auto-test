@@ -64,9 +64,9 @@ x-api-env: &api-env
   # ── OTP whitelist (test phones bypass real SMS) ─────────────────────────────
   # Format: OtpSettings__WhitelistNumbers__<phone>=<fixed-otp>
   # Add more via .env using the same pattern (Compose merges env from .env at runtime).
-  OtpSettings__WhitelistNumbers__998901234567: "111111"
-  OtpSettings__WhitelistNumbers__998000000001: "111111"
-  OtpSettings__WhitelistNumbers__998000000002: "111111"
+  OtpSettings__WhitelistNumbers__998901234567: "1111"
+  OtpSettings__WhitelistNumbers__998000000001: "1111"
+  OtpSettings__WhitelistNumbers__998000000002: "1111"
 
 services:
   postgres:

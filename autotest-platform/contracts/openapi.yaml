@@ -115,8 +115,8 @@ components:
           pattern: '^998[0-9]{9}$'
         code:
           type: string
-          minLength: 6
-          maxLength: 6
+          minLength: 4
+          maxLength: 4
 
     AuthResponse:
       type: object

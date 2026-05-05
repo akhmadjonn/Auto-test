@@ -49,7 +49,7 @@ IApplicationDbContext, ICurrentUser, IFileStorageService, ISmsService, IPaymentP
 ## Infrastructure Services
 - EskizSmsService: HTTP client for Eskiz.uz (auth email/password → JWT, POST /message/sms/send)
 - JwtTokenService: access 15min + refresh 30d (Redis), rotation on use
-- OtpService: 6-digit, HMAC-SHA256 hash in Redis, TTL 5min, rate limit 3/15min
+- OtpService: 4-digit, HMAC-SHA256 hash in Redis, TTL 5min, rate limit 3/15min
 - PaymePaymentProvider: Subscribe API (cards.create → verify → receipts.create → receipts.pay), test URL checkout.test.paycom.uz/api
 - ClickPaymentProvider: Card Token API (card_token/create → verify → payment)
 - PaymeWebhookHandler: JSON-RPC 2.0 (CheckPerformTransaction, CreateTransaction, PerformTransaction, CancelTransaction, CheckTransaction, GetStatement), auth HTTP Basic Paycom:KEY

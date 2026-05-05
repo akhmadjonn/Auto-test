@@ -1,7 +1,7 @@
 // Full E2E Integration Test Script
 const API = 'http://localhost:5228/api/v1';
 const PHONE = '998901234567';
-const OTP_CODE = '111111';
+const OTP_CODE = '1111';
 
 let TOKEN = '';
 let REFRESH_TOKEN = '';
