@@ -62,10 +62,11 @@ public class StartMarathonCommandHandler(
         var userId = currentUser.UserId.Value;
         var now = dateTime.UtcNow;
 
-        // Resume an existing in-progress marathon — scope is frozen via persisted SessionQuestions
+        // Resume an existing active marafon (or block if any other timed mode is active/paused)
         var existing = await db.ExamSessions
             .Include(s => s.SessionQuestions)
-            .FirstOrDefaultAsync(s => s.UserId == userId && s.Status == ExamStatus.InProgress, ct);
+            .FirstOrDefaultAsync(s => s.UserId == userId
+                && (s.Status == ExamStatus.InProgress || s.Status == ExamStatus.Paused), ct);
 
         if (existing is not null && existing.Mode == ExamMode.Marathon)
         {

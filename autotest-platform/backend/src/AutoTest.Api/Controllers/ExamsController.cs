@@ -96,6 +96,20 @@ public class ExamsController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPost("{sessionId}/pause")]
+    public async Task<IActionResult> Pause(Guid sessionId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new PauseExamCommand(sessionId), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("{sessionId}/resume")]
+    public async Task<IActionResult> Resume(Guid sessionId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ResumeExamCommand(sessionId), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("history")]
     public async Task<IActionResult> GetHistory([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? mode = null, CancellationToken ct = default)
     {

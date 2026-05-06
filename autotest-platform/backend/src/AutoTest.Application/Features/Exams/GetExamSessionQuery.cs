@@ -91,6 +91,7 @@ public class GetExamSessionQueryHandler(
                 ExamStatus.Completed => "completed",
                 ExamStatus.Expired => "expired",
                 ExamStatus.Abandoned => "abandoned",
+                ExamStatus.Paused => "paused",
                 _ => "completed"
             },
             session.SessionQuestions.Count,

@@ -13,3 +13,4 @@ COMPETITOR-ANALYSIS-REPORT.md
 MIGRATION-PLAN.md
 SCHEMA-COMPARISON.md
 autotest-platform/backend/tools/Avtolider.DataMigration/scripts/extract_dump.py
+.claude/scheduled_tasks.lock
