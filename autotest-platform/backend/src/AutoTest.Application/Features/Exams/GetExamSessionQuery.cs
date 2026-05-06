@@ -1,6 +1,7 @@
 using AutoTest.Application.Common.Interfaces;
 using AutoTest.Application.Common.Models;
 using AutoTest.Domain.Common.Enums;
+using AutoTest.Domain.Common.ValueObjects;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,6 +52,8 @@ public class GetExamSessionQueryHandler(
 
         var urlMap = await storage.GetPresignedUrlsBatchAsync(allImageKeys, ct);
 
+        var includeExplanation = session.Mode == ExamMode.Marathon;
+
         var questionDtos = session.SessionQuestions
             .OrderBy(sq => sq.Order)
             .Select(sq =>
@@ -63,7 +66,21 @@ public class GetExamSessionQueryHandler(
                     return new ExamAnswerOptionDto(a.Id, a.Text, optImg);
                 }).ToList();
 
-                return new ExamQuestionDto(sq.Id, q.Id, sq.Order, q.Text, imgUrl, optDtos, sq.SelectedAnswerId);
+                // Reveal verdict fields ONLY for already-answered questions (anti-cheat: unanswered stay blind)
+                Guid? correctAnswerId = null;
+                bool? isCorrect = null;
+                LocalizedText? explanation = null;
+                if (sq.SelectedAnswerId is not null)
+                {
+                    correctAnswerId = q.AnswerOptions.FirstOrDefault(a => a.IsCorrect)?.Id;
+                    isCorrect = sq.IsCorrect;
+                    if (includeExplanation)
+                        explanation = q.Explanation;
+                }
+
+                return new ExamQuestionDto(
+                    sq.Id, q.Id, sq.Order, q.Text, imgUrl, optDtos,
+                    sq.SelectedAnswerId, correctAnswerId, isCorrect, explanation);
             }).ToList();
 
         return ApiResponse<ExamSessionDto>.Ok(new ExamSessionDto(

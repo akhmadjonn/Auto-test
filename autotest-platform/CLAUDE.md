@@ -34,7 +34,13 @@ Avtolider is a subscription-based web platform for the Uzbekistan UBDD driving l
 ## Exam Modes
 - **Exam (Imtihon)**: random 20 questions, 25 min timer, matching real UBDD exam
 - **Ticket (Bilet)**: select ticket 1-57+, get that ticket's fixed 20 questions, 25 min timer
-- **Marathon (Maraton)**: ALL 1,200 questions, NO timer, progress saves, can resume
+- **Marafon**: scoped pool of questions (All / by Category / by Ticket range), NO timer, progress saves, can resume. Initial response ships 20 questions; remaining are paginated via `GET /exams/{id}/questions?from=N&take=M`.
+
+## Answer Feedback Policy (instant verdict + lock-first-answer)
+Across all session-based modes (Exam, Ticket, Marafon, SpeedChallenge), `POST /exams/{id}/answer` returns `{isCorrect, correctAnswerId, explanation?}` synchronously:
+- **Lock-first-answer:** the first submission per `SessionQuestion` is authoritative. Subsequent POSTs for the same question are idempotent — they return the original verdict without re-scoring or re-awarding XP. This prevents score manipulation after the user sees the correct answer reveal.
+- **Explanation gating:** populated ONLY in Marafon mode (no timer, learning context). In Exam / Ticket / SpeedChallenge the explanation stays `null` mid-session and is revealed in bulk on the result page.
+- **Anti-cheat surface:** option lists in `ExamQuestionDto` stay blind (no `IsCorrect`) for unanswered questions. Verdict fields (`correctAnswerId`, `isCorrect`, `explanation`) are populated in `GET /exams/{id}` and `GET /exams/{id}/questions` ONLY for questions the user has already committed an answer to. Inspecting network responses cannot reveal a not-yet-answered question's correct option.
 
 ## Git Workflow
 - main — production, develop — integration

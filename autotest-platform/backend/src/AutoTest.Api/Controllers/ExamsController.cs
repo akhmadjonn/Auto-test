@@ -63,6 +63,18 @@ public class ExamsController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 
+    [HttpGet("{sessionId}/questions")]
+    public async Task<IActionResult> GetQuestionsBatch(
+        Guid sessionId,
+        [FromQuery] int from = 1,
+        [FromQuery] int take = 20,
+        [FromQuery] Language language = Language.UzLatin,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetExamQuestionsBatchQuery(sessionId, from, take, language), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("{sessionId}/result")]
     public async Task<IActionResult> GetResult(Guid sessionId, [FromQuery] Language language = Language.UzLatin, CancellationToken ct = default)
     {

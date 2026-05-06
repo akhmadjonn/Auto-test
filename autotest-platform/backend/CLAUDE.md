@@ -71,8 +71,8 @@ IApplicationDbContext, ICurrentUser, IFileStorageService, ISmsService, IPaymentP
 ## Exam & Practice Logic
 StartExam: validate subscription/free-tier (read free_daily_exam_limit from SystemSettings) → check rate limit → load template + pool rules → SELECT random questions ORDER BY RANDOM() → shuffle → create session with expires_at → return WITHOUT correct answers
 StartTicketExam: load specific ticket's 20 fixed questions → create session with timer → same flow
-StartMarathon: load ALL questions in order → create session WITHOUT timer → save progress every 10 answers → can resume
-SubmitAnswer: validate session active + not expired → store answer → NO feedback in exam mode
+StartMarathon (UI: "Marafon"): apply scope filter (All / Category / TicketRange) → load matching questions in ticket order → create session WITHOUT timer → ship first 20 in start response, paginate the rest via GET /exams/{id}/questions → save progress every 10 answers → can resume
+SubmitAnswer: validate session active + not expired → store answer (lock-first-answer: idempotent if already answered) → return ExamAnswerFeedbackDto {isCorrect, correctAnswerId, explanation?}. Explanation only populated for Marafon. Inspecting `ExamQuestionDto` for unanswered questions reveals nothing — correctAnswerId/isCorrect/explanation fields populate ONLY when SelectedAnswerId is set.
 CompleteExam: calculate score server-side → update spaced repetition states → return WITH correct answers + explanations
 
 ## Leitner Spaced Repetition
