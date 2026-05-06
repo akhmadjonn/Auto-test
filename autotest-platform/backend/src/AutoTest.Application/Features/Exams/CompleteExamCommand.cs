@@ -92,6 +92,8 @@ public class CompleteExamCommandHandler(
         session.CompletedAt = now;
         session.TimeTakenSeconds = timeTaken;
         session.UpdatedAt = now;
+        session.PausedAt = null;
+        session.RemainingSecondsAtPause = null;
 
         // Update Leitner spaced repetition states and category stats sequentially
         // (DbContext is not thread-safe — cannot run in parallel)

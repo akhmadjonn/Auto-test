@@ -14,6 +14,9 @@ public class ExamSession : BaseAuditableEntity
     public DateTimeOffset? ExpiresAt { get; set; }
     public int? TimeLimitPerQuestionSeconds { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
+    // Pause snapshot — set when Status transitions to Paused; cleared on Resume.
+    public DateTimeOffset? PausedAt { get; set; }
+    public int? RemainingSecondsAtPause { get; set; }
     public LicenseCategory LicenseCategory { get; set; }
     public int? TicketNumber { get; set; }
 

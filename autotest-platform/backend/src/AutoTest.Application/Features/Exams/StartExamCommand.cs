@@ -28,6 +28,12 @@ public record ExamSessionDto(
     public int? TimeLimitPerQuestionSeconds { get; init; }
 }
 
+// Verdict fields (CorrectAnswerId, IsCorrect, Explanation) are populated ONLY when
+// SelectedAnswerId is not null — i.e. the user has already committed an answer. This
+// preserves the anti-cheat property: blind options for unanswered questions, full reveal
+// for already-answered ones (so revisits and resumes show the past verdict). Explanation
+// is gated further to marathon mode only — exam/ticket/speed-challenge keep explanations
+// for the end-of-session result page.
 public record ExamQuestionDto(
     Guid Id,
     Guid QuestionId,
@@ -35,7 +41,10 @@ public record ExamQuestionDto(
     LocalizedText Text,
     string? ImageUrl,
     List<ExamAnswerOptionDto> AnswerOptions,
-    Guid? SelectedAnswerId = null);
+    Guid? SelectedAnswerId = null,
+    Guid? CorrectAnswerId = null,
+    bool? IsCorrect = null,
+    LocalizedText? Explanation = null);
 
 public record ExamAnswerOptionDto(Guid Id, LocalizedText Text, string? ImageUrl);
 
@@ -68,7 +77,8 @@ public class StartExamCommandHandler(
 
         // Prevent multiple concurrent active sessions (max_active_sessions = 1)
         var hasActiveSession = await db.ExamSessions
-            .AnyAsync(s => s.UserId == userId && s.Status == ExamStatus.InProgress, ct);
+            .AnyAsync(s => s.UserId == userId
+                && (s.Status == ExamStatus.InProgress || s.Status == ExamStatus.Paused), ct);
         if (hasActiveSession)
             return ApiResponse<ExamSessionDto>.Fail("ACTIVE_SESSION_EXISTS",
                 "You already have an active exam session. Complete or abandon it first.");

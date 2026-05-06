@@ -39,7 +39,8 @@ public class StartTicketExamCommandHandler(
         var now = dateTime.UtcNow;
 
         var hasActiveSession = await db.ExamSessions
-            .AnyAsync(s => s.UserId == userId && s.Status == ExamStatus.InProgress, ct);
+            .AnyAsync(s => s.UserId == userId
+                && (s.Status == ExamStatus.InProgress || s.Status == ExamStatus.Paused), ct);
         if (hasActiveSession)
             return ApiResponse<ExamSessionDto>.Fail("ACTIVE_SESSION_EXISTS",
                 "You already have an active exam session. Complete or abandon it first.");

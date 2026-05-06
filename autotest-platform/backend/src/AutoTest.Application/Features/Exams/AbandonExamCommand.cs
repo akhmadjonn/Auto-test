@@ -21,7 +21,7 @@ public class AbandonExamCommandHandler(
         var session = await db.ExamSessions
             .FirstOrDefaultAsync(s => s.Id == request.SessionId
                 && s.UserId == currentUser.UserId
-                && s.Status == ExamStatus.InProgress, ct);
+                && (s.Status == ExamStatus.InProgress || s.Status == ExamStatus.Paused), ct);
 
         if (session is null)
             return ApiResponse.Fail("SESSION_NOT_FOUND", "Active session not found.");
@@ -29,6 +29,8 @@ public class AbandonExamCommandHandler(
         session.Status = ExamStatus.Abandoned;
         session.CompletedAt = dateTime.UtcNow;
         session.UpdatedAt = dateTime.UtcNow;
+        session.PausedAt = null;
+        session.RemainingSecondsAtPause = null;
 
         await db.SaveChangesAsync(ct);
 

@@ -298,6 +298,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AnswerOptionDto'
+        selectedAnswerId:
+          type: string
+          format: uuid
+          nullable: true
+          description: User's committed answer if any (revisit / resume)
+        correctAnswerId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Populated only when selectedAnswerId is set (anti-cheat)
+        isCorrect:
+          type: boolean
+          nullable: true
+          description: Populated only when selectedAnswerId is set
+        explanation:
+          allOf:
+            - $ref: '#/components/schemas/LocalizedText'
+          nullable: true
+          description: Marathon-only — explanation revealed mid-session for already-answered questions
 
     ExamSessionDto:
       type: object
@@ -322,7 +341,7 @@ components:
           description: Null for marathon mode (no timer)
         mode:
           type: string
-          enum: [exam, ticket, marathon]
+          enum: [exam, ticket, marathon, speedChallenge, hardMode, review, practice]
         ticketNumber:
           type: integer
           nullable: true
@@ -345,16 +364,57 @@ components:
           type: integer
           nullable: true
 
-    SubmitAnswerResponse:
+    ExamAnswerFeedbackDto:
       type: object
-      required: [recorded, answeredCount, totalCount]
+      required: [isCorrect, correctAnswerId]
       properties:
-        recorded:
+        isCorrect:
           type: boolean
-        answeredCount:
+        correctAnswerId:
+          type: string
+          format: uuid
+        explanation:
+          allOf:
+            - $ref: '#/components/schemas/LocalizedText'
+          nullable: true
+          description: Populated only for marathon mode
+
+    StartMarathonRequest:
+      type: object
+      properties:
+        licenseCategory:
+          type: string
+          enum: [AB, CD]
+          default: AB
+        scope:
+          type: string
+          enum: [All, Category, TicketRange]
+          default: All
+        categoryId:
+          type: string
+          format: uuid
+          nullable: true
+        ticketFrom:
           type: integer
-        totalCount:
+          nullable: true
+        ticketTo:
           type: integer
+          nullable: true
+
+    ExamQuestionsBatchDto:
+      type: object
+      required: [from, take, totalQuestions, questions]
+      properties:
+        from:
+          type: integer
+        take:
+          type: integer
+        totalQuestions:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExamQuestionDto'
 
     ExamResultQuestionDto:
       type: object
@@ -1462,11 +1522,10 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties: {}
+              $ref: '#/components/schemas/StartMarathonRequest'
       responses:
         '200':
-          description: Marathon started (all questions, no timer)
+          description: Marafon started — initial 20-question batch, fetch the rest via GET /exams/{examId}/questions
           content:
             application/json:
               schema:
@@ -1507,7 +1566,7 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/SubmitAnswerResponse'
+                        $ref: '#/components/schemas/ExamAnswerFeedbackDto'
 
   /exams/{examId}/complete:
     post:
@@ -1560,6 +1619,48 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/ExamSessionDto'
+
+  /exams/{examId}/questions:
+    get:
+      tags: [Exams]
+      operationId: getExamQuestionsBatch
+      summary: Paginated batch fetch of session questions (used by marafon to load 20-at-a-time)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: take
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 50
+      responses:
+        '200':
+          description: Slice of session questions ordered by Order ascending
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExamQuestionsBatchDto'
 
   /exams/history:
     get:

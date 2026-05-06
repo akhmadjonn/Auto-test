@@ -63,6 +63,18 @@ public class ExamsController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 
+    [HttpGet("{sessionId}/questions")]
+    public async Task<IActionResult> GetQuestionsBatch(
+        Guid sessionId,
+        [FromQuery] int from = 1,
+        [FromQuery] int take = 20,
+        [FromQuery] Language language = Language.UzLatin,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetExamQuestionsBatchQuery(sessionId, from, take, language), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("{sessionId}/result")]
     public async Task<IActionResult> GetResult(Guid sessionId, [FromQuery] Language language = Language.UzLatin, CancellationToken ct = default)
     {
@@ -81,6 +93,20 @@ public class ExamsController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Abandon(Guid sessionId, CancellationToken ct)
     {
         var result = await mediator.Send(new AbandonExamCommand(sessionId), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("{sessionId}/pause")]
+    public async Task<IActionResult> Pause(Guid sessionId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new PauseExamCommand(sessionId), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("{sessionId}/resume")]
+    public async Task<IActionResult> Resume(Guid sessionId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ResumeExamCommand(sessionId), ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
