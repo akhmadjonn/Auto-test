@@ -10,21 +10,21 @@ public static class SmsTemplates
 
     private const string OtpUzLatin =
     """
-    Avtolider - tasdiqlash kodingiz: {code}
+    Avtolider platformasiga kirish uchun tasdiqlash kodi: {code}
     Kod 5 daqiqa amal qiladi. Hech kimga bermang!
     @avtolider.uz #{code}
     """;
 
 private const string OtpUzCyrillic =
     """
-    Avtolider — тасдиқлаш кодингиз: {code}
+    Avtolider платформасига кириш учун тасдиқлаш коди: {code}
     Код 5 дақиқа амал қилади. Ҳеч кимга берманг!
     @avtolider.uz #{code}
     """;
 
 private const string OtpRu =
     """
-    Avtolider — ваш код подтверждения: {code}
+    Avtolider — код для входа в платформу: {code}
     Код действителен 5 минут. Никому не сообщайте!
     @avtolider.uz #{code}
     """;
